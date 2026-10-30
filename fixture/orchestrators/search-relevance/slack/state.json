@@ -1,0 +1,9 @@
+{
+  "me": { "id": "U0MIA", "name": "Mia" },
+  "watches": {
+    "#search-relevance": { "channel": "C0SEARCH", "last_ts": "1761550000.000100", "summary": "Search relevance endpoints and ranking" },
+    "https://example.slack.com/archives/C0SEARCH/p1761400000123456": { "channel": "C0SEARCH", "thread_ts": "1761400000.123456", "last_ts": "1761540000.000200", "summary": "Ranking weights for the relevance score" }
+  },
+  "last_check": "2026-10-27T14:32:00Z",
+  "error": null
+}

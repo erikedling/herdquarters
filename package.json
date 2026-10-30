@@ -1,0 +1,25 @@
+{
+  "name": "herdquarters",
+  "productName": "Herdquarters",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "description": "Delegate tasks to a team of coding agents and keep track of all of them in one place",
+  "main": "main.js",
+  "scripts": {
+    "start": "node scripts/brand.js && electron .",
+    "brand": "node scripts/brand.js",
+    "postinstall": "node scripts/brand.js",
+    "icon": "electron scripts/make-icon.js",
+    "art": "electron scripts/make-art.js",
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0"
+  }
+}

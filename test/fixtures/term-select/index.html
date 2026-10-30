@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../../node_modules/@xterm/xterm/css/xterm.css">
+<style>body{margin:0} .host{width:800px;height:400px}</style>
+<script src="../../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../../../renderer/term-select.js"></script>
+<script>
+// Drag across "hello" on row 0 after the application turned mouse reporting
+// on, the way `herdr agent attach` does. Returns what xterm ended up with.
+window.scenario = async function scenario(withFix, plain) {
+  const el = document.createElement('div'); el.className = 'host'; document.body.appendChild(el);
+  const term = new Terminal({ allowProposedApi: true });
+  term.open(el);
+  const sent = [];
+  term.onData((d) => sent.push(d));
+  const write = (s) => new Promise((res, rej) => term.write(s, () => { try { if (withFix) window.termSelect.keepSelectable(term, res); else res(); } catch (e) { rej(e); } }));
+  await write((plain ? '' : '\x1b[?1000h\x1b[?1002h\x1b[?1003h\x1b[?1006h') + 'hello world');
+  const screen = el.querySelector('.xterm-screen');
+  const r = screen.getBoundingClientRect();
+  const cell = term._core._renderService.dimensions.css.cell;
+  const at = (col) => ({ clientX: r.left + col * cell.width + 1, clientY: r.top + cell.height / 2 });
+  // detail = click count; xterm starts a selection only for detail 1..3
+  const fire = (target, type, col, buttons) => target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, detail: 1, ...at(col) }));
+  fire(screen, 'mousedown', 0, 1);
+  fire(document, 'mousemove', 5, 1);
+  fire(document, 'mouseup', 5, 0);
+  return { mode: term.modes.mouseTrackingMode, selection: term.getSelection(), sentMouse: sent.some((d) => d.startsWith('\x1b[<')), cell: { w: cell.width, h: cell.height }, rect: { l: r.left, t: r.top, w: r.width }, pos: term.getSelectionPosition() || null };
+};
+</script>

@@ -1,0 +1,32 @@
+name: Bug report
+description: Something in Herdquarters doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the Office tab
+        2. ...
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: macOS, Node.js, herdr, and Claude Code or Pi.
+      placeholder: macOS 15.1, Node 22.11, herdr 0.4, Claude Code 2.1
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Run with OFFICE_DEBUG=1 npm start for more output.
+      render: text

@@ -1,0 +1,250 @@
+/* "Office" layout: a cozy pixel office per repo, in the welcome tour's style
+   (scenes.js): pale striped wall with windows, wooden floor, rugs for the
+   desk pods. Same DOM as the building layout (floor > floor-label + rooms >
+   room > door + desks > desk); only the styling and the desk artwork
+   (figure-office.js) differ. */
+
+/* Other themes tint the floor and walls toward their accent. */
+body.layout-office {
+  --office-tint: 0%;
+  --plank: color-mix(in srgb, #efcfa6, var(--accent) var(--office-tint));
+  --plank-line: color-mix(in srgb, #e3bd8f, var(--accent) var(--office-tint));
+  --wall: color-mix(in srgb, #eef3ff, var(--accent) var(--office-tint));
+  --wall-stripe: color-mix(in srgb, #e3eaf8, var(--accent) var(--office-tint));
+  --skirting: color-mix(in srgb, #cfd6e6, var(--accent) var(--office-tint));
+  --frame: #b98d5e;
+  --ink: #2b2d42;
+  --paper: #ffffff;
+  --round: "SF Pro Rounded", ui-rounded, "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme]:not([data-theme="midnight"]) body.layout-office { --office-tint: 12%; }
+
+body.layout-office .building {
+  display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; align-content: flex-start;
+  gap: 24px; padding: 20px 22px; background: var(--bg);
+}
+body.layout-office .empty-building { color: var(--muted); }
+
+/* floor = repo: one room sized to the pods inside it, so several repos share a row */
+body.layout-office .floor {
+  display: flex; flex-direction: column; min-height: 0;
+  width: fit-content; max-width: 100%; min-width: 340px; margin: 0;
+  border: 6px solid var(--frame); border-top: none; border-bottom-width: 8px; border-radius: 0 0 12px 12px;
+  background-color: var(--plank);
+  background-image: repeating-linear-gradient(180deg, transparent 0 15px, var(--plank-line) 15px 18px);
+  background-position: 0 98px;
+  image-rendering: pixelated;
+}
+body.layout-office .floor:first-child { margin-top: 0; border-top: none; border-radius: 0 0 12px 12px; }
+
+/* the back wall: windows on the left, a sign with the repo name, agent
+   count, worktree buttons, door on the right. The sign, count, buttons and
+   door set the room's minimum width; the windows take whatever is left
+   (flex-basis 0) and only whole windows are painted. */
+body.layout-office .floor-label {
+  position: relative; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 14px;
+  height: 90px; padding: 0 16px 0 20px; border-right: none;
+  background: var(--wall) repeating-linear-gradient(90deg, transparent 0 39px, var(--wall-stripe) 39px 42px);
+  border-bottom: 8px solid var(--skirting);
+  image-rendering: pixelated;
+}
+body.layout-office .floor-label::before {
+  content: ""; flex: 1 1 0; min-width: 0; max-width: 168px; height: 51px; margin-right: 6px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='51' viewBox='0 0 24 17' shape-rendering='crispEdges'%3E%3Crect x='1' y='0' width='22' height='17' fill='%238a6a4f'/%3E%3Crect x='0' y='1' width='24' height='15' fill='%238a6a4f'/%3E%3Crect x='1' y='1' width='22' height='15' fill='%23bfe3ff'/%3E%3Crect x='1' y='11' width='22' height='5' fill='%23d8efff'/%3E%3Crect x='4' y='5' width='7' height='3' fill='%23fff'/%3E%3Crect x='3' y='6' width='9' height='1' fill='%23fff'/%3E%3Crect x='6' y='3' width='3' height='4' fill='%23fff'/%3E%3Crect x='5' y='4' width='5' height='2' fill='%23fff'/%3E%3Crect x='16' y='8' width='4' height='2' fill='%23fff'/%3E%3Crect x='12' y='0' width='1' height='17' fill='%238a6a4f'/%3E%3Crect x='0' y='8' width='24' height='1' fill='%238a6a4f'/%3E%3C/svg%3E") 0 0 / 72px 51px space no-repeat;
+}
+body.layout-office .floor-label::after {
+  content: ""; flex: none; width: 54px; height: 81px; margin-left: auto; align-self: flex-end;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='81' viewBox='0 0 18 27' shape-rendering='crispEdges'%3E%3Crect x='0' y='0' width='18' height='27' fill='%238a5a3c'/%3E%3Crect x='1' y='1' width='16' height='26' fill='%23c08a52'/%3E%3Crect x='4' y='3' width='10' height='9' fill='%23d39b63'/%3E%3Crect x='3' y='4' width='12' height='7' fill='%23d39b63'/%3E%3Crect x='4' y='14' width='10' height='11' fill='%23d39b63'/%3E%3Crect x='3' y='15' width='12' height='9' fill='%23d39b63'/%3E%3Crect x='13' y='14' width='2' height='2' fill='%23ffd66b'/%3E%3C/svg%3E") no-repeat;
+}
+body.layout-office .floor-name {
+  flex: none;
+  background: var(--paper); color: var(--ink); border: 3px solid #8a6a4f; border-radius: 10px; padding: 7px 14px;
+  font: 800 16px/1.2 var(--round); letter-spacing: .01em;
+  box-shadow: 0 3px 0 rgba(43, 45, 66, .15); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+body.layout-office .floor-count {
+  flex: none;
+  background: #dce8ff; color: #2f55c9; padding: 5px 11px; border-radius: 999px;
+  font: 800 12px/1 var(--round);
+}
+body.layout-office .floor-actions { flex: none; margin: 0 0 0 4px; flex-wrap: nowrap; }
+body.layout-office .floor-actions .btn { background: var(--paper); color: var(--ink); border-color: #cfd6e6; border-radius: 999px; font-family: var(--round); font-weight: 700; }
+body.layout-office .floor-actions .btn:hover { background: #f2f5fc; }
+body.layout-office .floor-label > :last-child { margin-right: 24px; }   /* keep clear of the door */
+body.layout-office .floor-add { opacity: .7; }
+body.layout-office .floor:hover .floor-add { opacity: 1; }
+
+/* room = checkout: a rug with a desk pod on it, a sign and two potted plants.
+   Pods wrap into rows; a pod is as wide as the desk columns it needs (1..3). */
+body.layout-office .rooms { flex-wrap: wrap; overflow: visible; padding: 22px 28px 14px; gap: 30px 46px; align-items: flex-start; }
+body.layout-office .room {
+  position: relative; min-width: 0; max-width: none; padding: 0 0 8px;
+  /* never narrower than 260px so the sign can show a branch name */
+  width: max(260px, calc(var(--cols, 3) * 132px + (var(--cols, 3) - 1) * 8px + 34px));
+  background: #dce8ff; border: 3px solid #b9cbef; border-radius: 14px;
+}
+body.layout-office .room[data-cols="1"] { --cols: 1; }
+body.layout-office .room[data-cols="2"] { --cols: 2; }
+body.layout-office .room[data-cols="3"] { --cols: 3; }
+body.layout-office .room.linked { background: #ffe1e8; border: 3px dashed #f0b3c3; }
+body.layout-office .room.focused { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+body.layout-office .room::before, body.layout-office .room::after {
+  content: ""; position: absolute; bottom: -6px; width: 27px; height: 36px; pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='27' height='36' viewBox='0 0 9 12' shape-rendering='crispEdges'%3E%3Crect x='2' y='7' width='5' height='5' fill='%23e07a5f'/%3E%3Crect x='1' y='8' width='7' height='3' fill='%23e07a5f'/%3E%3Crect x='1' y='7' width='7' height='1' fill='%23c8644a'/%3E%3Crect x='4' y='1' width='1' height='6' fill='%233a9e6a'/%3E%3Crect x='1' y='2' width='2' height='3' fill='%234fbf72'/%3E%3Crect x='0' y='3' width='4' height='1' fill='%234fbf72'/%3E%3Crect x='6' y='0' width='2' height='3' fill='%234fbf72'/%3E%3Crect x='5' y='1' width='4' height='1' fill='%234fbf72'/%3E%3Crect x='6' y='4' width='2' height='3' fill='%233a9e6a'/%3E%3Crect x='5' y='5' width='4' height='1' fill='%233a9e6a'/%3E%3C/svg%3E") no-repeat;
+}
+body.layout-office .room::before { left: -18px; }
+body.layout-office .room::after { right: -18px; }
+
+/* the sign: branch on top, folder underneath. The + – ✕ buttons sit in the
+   pod's top-right corner instead, so the sign is only about the checkout. */
+body.layout-office .door {
+  margin: 30px 12px 4px; width: auto; max-width: calc(100% - 24px); justify-content: center;
+  background: var(--paper); color: var(--ink); border: 3px solid #6b7290; border-radius: 10px;
+  box-shadow: 0 3px 0 rgba(43, 45, 66, .15);
+  padding: 5px 12px; font: 800 13px/1.25 var(--round);
+}
+body.layout-office .door-icon { color: #6b7290; }
+body.layout-office .door-branch { color: var(--ink); }
+body.layout-office .room.linked .door { border-color: #c96a85; }
+body.layout-office .room.linked .door-branch { color: #a83a5a; }
+body.layout-office .door-sub { color: #7a8296; font-weight: 600; }
+body.layout-office .door-actions {
+  position: absolute; top: 5px; right: 6px; gap: 3px; z-index: 2;
+}
+body.layout-office .door-actions .icon-btn { background: rgba(43, 45, 66, .8); color: #fff; border-color: transparent; border-radius: 8px; }
+body.layout-office .door-actions .icon-btn:hover { background: var(--active-line); }
+body.layout-office .door-actions .icon-btn.danger:hover { background: var(--blocked); }
+
+/* desks: rows of three, like a real pod */
+body.layout-office .desks {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start;
+  gap: 4px 8px; padding: 6px 14px 4px;
+}
+body.layout-office .desk { width: 132px; padding: 0; border-radius: 10px; }
+body.layout-office .desk:hover { background: rgba(255,255,255,.45); }
+body.layout-office .desk.open { background: color-mix(in srgb, var(--accent) 22%, transparent); outline-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+body.layout-office .desk.focused .figure { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 90%, transparent)); }
+body.layout-office .desk.pose-empty { opacity: .8; }
+body.layout-office .desk .nameplate { display: none; }
+body.layout-office .desk::after { display: none; }
+body.layout-office .desk-actions .icon-btn { background: rgba(43, 45, 66, .8); color: #fff; border-radius: 8px; }
+body.layout-office .figure-office { display: block; }
+
+/* pixel figure animations: whole-unit steps so nothing blurs */
+body.layout-office .pose-working .arm-l { transform-origin: 16px 38px; animation: px-type 0.36s steps(1) infinite alternate; }
+body.layout-office .pose-working .arm-r { transform-origin: 28px 38px; animation: px-type 0.36s steps(1) infinite alternate-reverse; }
+@keyframes px-type { from { transform: translateY(0); } to { transform: translateY(-1px); } }
+
+body.layout-office .pose-done .arm-r.wave { transform-origin: 43px 42px; animation: px-wave 0.5s steps(1) infinite alternate; }
+@keyframes px-wave { from { transform: translateX(0); } to { transform: translateX(-2px) translateY(1px); } }
+body.layout-office .pose-done .bubble { animation: px-pop 1.2s steps(1) infinite; }
+@keyframes px-pop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+
+body.layout-office .pose-blocked .person { animation: px-hop 0.8s steps(1) infinite; }
+body.layout-office .pose-alert .person { animation: px-hop 0.5s steps(1) infinite; }
+body.layout-office .pose-alert .arm-r.raise { transform-origin: 43px 42px; animation: px-shake 0.25s steps(1) infinite alternate; }
+@keyframes px-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+body.layout-office .pose-blocked .arm-r.raise { transform-origin: 43px 42px; animation: px-shake 0.4s steps(1) infinite alternate; }
+@keyframes px-shake { from { transform: translateX(0); } to { transform: translateX(-1px); } }
+
+body.layout-office .pose-idle .head, body.layout-office .pose-unknown .head { transform-origin: 22px 38px; animation: px-nod 3s steps(1) infinite; }
+@keyframes px-nod { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(1px); } }
+
+/* working: the laptop's glow flickers as the code scrolls by */
+body.layout-office .pose-working .glow { animation: px-glow 1.2s steps(1) infinite; }
+@keyframes px-glow { 0%, 100% { opacity: 1; } 40% { opacity: .55; } 70% { opacity: .85; } }
+
+/* idle: the whole desk sits back a little so working desks stand out when
+   scanning a room; the mug steams */
+body.layout-office .desk.pose-idle .figure, body.layout-office .desk.pose-unknown .figure { opacity: .68; filter: saturate(.55); }
+body.layout-office .desk.pose-idle.focused .figure, body.layout-office .desk.pose-unknown.focused .figure { opacity: 1; filter: saturate(.55) drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 90%, transparent)); }
+body.layout-office .desk.pose-idle:hover .figure, body.layout-office .desk.pose-unknown:hover .figure { opacity: 1; }
+body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinite; }
+@keyframes px-steam { 0% { transform: translate(0, 0); } 33% { transform: translate(1px, -1px); } 66% { transform: translate(0, -2px); } 100% { transform: translate(0, 0); } }
+
+/* boss room: the orchestrator's colour on the wall trim, whiteboard on the wall */
+body.layout-office .floor.boss { border-color: var(--orch); }
+body.layout-office .floor.boss .floor-label { border-bottom-color: var(--orch); }
+body.layout-office .floor.boss .floor-label::before { display: none; }
+body.layout-office .floor.boss .whiteboard {
+  margin: 0 0 0 4px; min-width: 200px; max-width: 360px; font-family: var(--round);
+  background: var(--paper); color: var(--ink); border: 3px solid #9aa3bd; border-radius: 10px; box-shadow: 0 3px 0 rgba(43, 45, 66, .15);
+}
+body.layout-office .room.boss { background: #fff1c9; border: 3px solid var(--orch); }
+body.layout-office .room.boss .door { background: var(--paper); border-color: var(--orch); }
+body.layout-office .room.boss .door-icon { color: #c9a227; }
+
+/* visitors stand in the aisle of the boss pod, right of the boss desk */
+body.layout-office .room.boss { display: flex; flex-direction: column; min-width: 320px; }
+body.layout-office .room.boss .desks { justify-content: flex-start; }
+body.layout-office .visitors { position: absolute; right: 26px; bottom: 16px; padding: 0; gap: 2px 6px; max-width: calc(100% - 170px); justify-content: flex-end; }
+body.layout-office .visitor-name { font: 800 10px/1 var(--round); color: var(--ink); background: var(--paper); border: 2px solid #9aa3bd; border-radius: 999px; padding: 2px 6px; }
+
+/* office animals (animals.js): the floor is their containing block. One SVG
+   holds every pose of the animal; the mode class picks which shows. */
+body.layout-office .floor { position: relative; }
+.pet { position: absolute; left: 12px; top: calc(100% - 56px); width: 54px; height: 54px; z-index: 3; cursor: pointer; transition: left 1.6s linear, top 1.6s linear; }
+.pet-sprite { display: block; overflow: visible; }
+.pet.left .pet-sprite { transform: scaleX(-1); }
+.pet .pet-pose, .pet .pet-heart, .pet .pet-dots { display: none; }
+.pet.mode-sit .pet-sit, .pet.mode-wag .pet-sit, .pet.mode-wait .pet-sit, .pet.mode-greet .pet-sit, .pet.mode-nap .pet-nap, .pet.mode-lie .pet-lie { display: inline; }
+.pet.mode-trot .pet-walk, .pet.mode-stroll .pet-walk { display: inline; }
+.pet .pet-step.b, .pet .pet-tail.b { visibility: hidden; }
+.pet.mode-trot .pet-step.a, .pet.mode-stroll .pet-step.a { animation: pet-frame-a 0.3s steps(1) infinite; }
+.pet.mode-trot .pet-step.b, .pet.mode-stroll .pet-step.b { animation: pet-frame-b 0.3s steps(1) infinite; }
+@keyframes pet-frame-a { 0% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes pet-frame-b { 0% { visibility: hidden; } 50%, 100% { visibility: visible; } }
+
+/* strolling: across the bottom of the floor and back, turning at each end.
+   The dog runs half a lap behind so the two do not walk on top of each other. */
+.pet.mode-stroll { transition: none; animation: pet-stroll 36s linear infinite; }
+.pet.mode-stroll .pet-sprite { animation: pet-turn 36s steps(1) infinite; }
+.pet.dog.mode-stroll, .pet.dog.mode-stroll .pet-sprite { animation-delay: -18s; }
+@keyframes pet-stroll { 0%, 4% { left: 12px; } 46%, 54% { left: calc(100% - 66px); } 96%, 100% { left: 12px; } }
+@keyframes pet-turn { 0% { transform: none; } 50% { transform: scaleX(-1); } }
+
+/* cat sitting by a desk that needs you: the tail swishes */
+.pet.cat.mode-sit .pet-sit { animation: pet-swish 1.2s steps(1) infinite; }
+@keyframes pet-swish { 50% { transform: translateX(1px); } }
+/* cat napping: breathing and drifting z's */
+.pet.mode-nap .pet-nap { animation: pet-breathe 2.4s steps(1) infinite; }
+@keyframes pet-breathe { 50% { transform: translateY(-1px); } }
+.pet.mode-nap .pet-z { animation: pet-z 2.4s steps(1) infinite; }
+@keyframes pet-z { 0% { transform: translate(0, 1px); opacity: .4; } 33% { transform: translate(1px, 0); opacity: .8; } 66% { transform: translate(0, -1px); opacity: 1; } }
+/* dog: wags slowly by a desk that needs you, fast and hopping at a finished one */
+.pet.dog.mode-sit .pet-tail.a { animation: pet-frame-a 0.8s steps(1) infinite; }
+.pet.dog.mode-sit .pet-tail.b { animation: pet-frame-b 0.8s steps(1) infinite; }
+.pet.dog.mode-wag .pet-tail.a { animation: pet-frame-a 0.2s steps(1) infinite; }
+.pet.dog.mode-wag .pet-tail.b { animation: pet-frame-b 0.2s steps(1) infinite; }
+.pet.dog.mode-wag .pet-sit { animation: pet-hop 0.6s steps(1) infinite; }
+@keyframes pet-hop { 50% { transform: translateY(-1px); } }
+.pet.dog.mode-lie .pet-lie { animation: pet-breathe 3s steps(1) infinite; }
+
+/* waiting by the door for a worker at the boss: fidgeting, sighing dots */
+.pet.mode-wait .pet-sit { animation: pet-fidget 2.4s steps(1) infinite; }
+@keyframes pet-fidget { 15% { transform: translateX(1px); } 30% { transform: none; } 55% { transform: translateY(-1px); } 65% { transform: none; } 80% { transform: translateX(-1px); } }
+.pet.dog.mode-wait .pet-tail.a { animation: pet-frame-a 0.5s steps(1) infinite; }
+.pet.dog.mode-wait .pet-tail.b { animation: pet-frame-b 0.5s steps(1) infinite; }
+.pet.mode-wait .pet-dots { display: inline; }
+.pet.mode-wait .pet-dot { animation: pet-dot 3s steps(1) infinite; }
+.pet.mode-wait .pet-dot.d1 { animation-delay: .4s; }
+.pet.mode-wait .pet-dot.d2 { animation-delay: .8s; }
+@keyframes pet-dot { 0% { opacity: 1; } 60%, 100% { opacity: 0; } }
+/* greeting the worker back: the dog jumps with its tail going, the cat
+   rubs side to side, hearts all the while */
+.pet.mode-greet .pet-heart { display: inline; animation: pet-heart 0.9s steps(4) infinite; }
+.pet.dog.mode-greet .pet-sit { animation: pet-jump 0.5s steps(1) infinite; }
+@keyframes pet-jump { 30% { transform: translateY(-3px); } 60% { transform: translateY(-1px); } }
+.pet.dog.mode-greet .pet-tail.a { animation: pet-frame-a 0.15s steps(1) infinite; }
+.pet.dog.mode-greet .pet-tail.b { animation: pet-frame-b 0.15s steps(1) infinite; }
+.pet.cat.mode-greet .pet-sit { animation: pet-rub 0.8s steps(1) infinite; }
+@keyframes pet-rub { 25% { transform: translateX(1px); } 50% { transform: translate(1px, -1px); } 75% { transform: translateX(-1px); } }
+
+/* petted: a heart pops up */
+.pet.petted .pet-heart { display: inline; animation: pet-heart 1.2s steps(4) forwards; }
+@keyframes pet-heart { from { transform: translateY(2px); opacity: 1; } to { transform: translateY(-4px); opacity: 0; } }
+
+/* the paw in the top bar only matters in this layout; dim while the animals are off */
+#pets-btn { display: none; }
+body.layout-office #pets-btn { display: inline-block; }
+#pets-btn.off { opacity: .35; filter: grayscale(1); }

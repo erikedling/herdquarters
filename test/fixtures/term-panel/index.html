@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../../node_modules/@xterm/xterm/css/xterm.css">
+<link rel="stylesheet" href="../../../renderer/style.css">
+<style>body{margin:0} .term-host{width:800px;height:400px}</style>
+<!-- the panel chrome terminal.js expects, as in renderer/index.html -->
+<aside id="termpanel" hidden>
+  <div id="termpanel-resizer"></div>
+  <span id="term-dot"></span><div id="term-title"></div><div id="term-sub"></div>
+  <button id="term-layout"></button><button id="term-close"></button>
+  <div id="term-host" class="term-host"></div>
+  <div id="term-status" hidden></div>
+</aside>
+<script>
+  window.__errors = [];
+  window.addEventListener('error', (e) => window.__errors.push(String(e.message)));
+  window.addEventListener('unhandledrejection', (e) => window.__errors.push(String(e.reason && e.reason.message || e.reason)));
+  // stand-ins for preload.js and settings.js
+  window.__inputs = [];
+  window.__clip = { hasImage: false, hasText: false, text: '' };
+  window.__opened = [];
+  window.office = {
+    clipboardPeek: async () => window.__clip,
+    openExternal: async (url) => { window.__opened.push(url); return { ok: true }; },
+    term: {
+      open: async ({ cols, rows }) => { window.__resized = [cols, rows]; window.__opens = (window.__opens || 0) + 1; return 's' + window.__opens; }, close: async () => {}, input: (_id, data) => window.__inputs.push(data),
+      resize: (_id, cols, rows) => { window.__resized = [cols, rows]; }, scroll() {}, onData(cb) { window.office.term._emitFrame = (data) => cb({ id: 's' + window.__opens, data }); },
+      onExit(cb) { window.office.term._emitExit = (reason) => cb({ id: 's' + window.__opens, reason }); },
+    },
+  };
+  window.officeSettings = { get: () => ({ termLayout: 'split' }), set() {} };
+</script>
+<script src="../../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="../../../node_modules/@xterm/addon-webgl/lib/addon-webgl.js"></script>
+<script src="../../../renderer/term-select.js"></script>
+<script src="../../../renderer/term-keys.js"></script>
+<script src="../../../renderer/term-copy.js"></script>
+<script src="../../../renderer/term-links.js"></script>
+<script src="../../../renderer/terminal.js"></script>
+<script>
+const tick = (ms = 50) => new Promise((r) => setTimeout(r, ms));
+function clipboardEvent(type) {
+  return new ClipboardEvent(type, { bubbles: true, cancelable: true, clipboardData: new DataTransfer() });
+}
+window.scenario = async function scenario() {
+  await window.officeTerminal.open({ paneId: 'p1', title: 'desk', floor: 'f', room: 'r', pose: 'idle' });
+  await tick();
+  const host = document.getElementById('term-host');
+  const textarea = host.querySelector('.xterm-helper-textarea');
+  const term = window.__term(); // exposed by terminal.js for tests
+
+  // fit: the columns fit inside the host's padding, and herdr is told the same size
+  const hostStyle = getComputedStyle(host);
+  const fit = {
+    // xterm has no public cell width; FitAddon reads the same internals.
+    textWidth: term.cols * term._core._renderService.dimensions.css.cell.width,
+    contentWidth: host.clientWidth - parseFloat(hostStyle.paddingLeft) - parseFloat(hostStyle.paddingRight),
+    paddingRight: parseFloat(hostStyle.paddingRight),
+    resized: window.__resized, size: [term.cols, term.rows],
+  };
+  const write = (s) => new Promise((res) => term.write(s, res));
+
+  // paste: image wins over text
+  window.__clip = { hasImage: true, hasText: true, text: 'link' };
+  window.__inputs.length = 0;
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  const image = [...window.__inputs];
+
+  // paste: text only
+  window.__clip = { hasImage: false, hasText: true, text: 'hello' };
+  window.__inputs.length = 0;
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  const text = [...window.__inputs];
+
+  // copy: a line herdr wrapped over two rows, drawn the way its frames do it
+  const cols = term.cols;
+  const long = 'https://example.com/' + 'x'.repeat(cols - 20) + 'tail-of-the-line';
+  const pad = (s) => s + ' '.repeat(Math.max(0, cols - s.length));
+  await write('\x1b[2J\x1b[1;1H' + long.slice(0, cols) + '\x1b[2;1H' + pad(long.slice(cols)) + '\x1b[3;1H' + pad('first') + '\x1b[4;1H' + pad('second'));
+  const copy = () => { const ev = clipboardEvent('copy'); textarea.dispatchEvent(ev); return ev.clipboardData.getData('text/plain'); };
+  term.select(0, 0, cols + long.length - cols);
+  const copyWrapped = { text: copy(), expected: long, selection: term.getSelection() };
+  term.select(0, 2, cols + 6);
+  const copyPlain = { text: copy(), selection: term.getSelection() };
+
+  // links: the wrapped URL on rows 0-1 is one link, clicking it opens it
+  const links = await new Promise((res) => window.termLinks.linkProvider(term, (u) => window.__opened.push(u)).provideLinks(2, (l) => res(l || [])));
+  links[0]?.activate(new MouseEvent('click'), links[0].text);
+  const link = links.length ? { count: links.length, text: links[0].text, range: links[0].range, opened: [...window.__opened] } : { count: 0 };
+
+  // selection holds the output: a frame that rewrites row 4 waits until the selection clears
+  const row = (y) => term.buffer.active.getLine(y).translateToString(false).trimEnd(); // herdr pads rows with real spaces
+  term.select(0, 2, 5);
+  window.office.term._emitFrame('\x1b[4;1HREPLACED');
+  await tick(100);
+  const hold = { during: row(3), status: document.getElementById('term-status').hidden ? '' : document.getElementById('term-status').textContent, selection: term.getSelection() };
+  term.clearSelection();
+  await tick(100);
+  hold.after = row(3);
+  hold.statusAfter = document.getElementById('term-status').hidden;
+  // a double-click opens one attachment, not two
+  const desk2 = { paneId: 'p2', title: 'desk2', floor: 'f', room: 'r', pose: 'idle' };
+  const before = window.__opens;
+  await Promise.all([window.officeTerminal.open(desk2), window.officeTerminal.open(desk2)]);
+  const doubleOpen = window.__opens - before;
+  // after the stream dies, clicking the same desk attaches again
+  window.office.term._emitExit('attach failed');
+  await tick();
+  const statusAfterExit = document.getElementById('term-status').textContent;
+  await window.officeTerminal.open(desk2);
+  const reopen = window.__opens - before;
+  return { fit, image, text, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors: window.__errors };
+};
+</script>
