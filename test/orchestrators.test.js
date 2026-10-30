@@ -14,7 +14,7 @@ function store() {
 
 test('folder() accepts what slugify() produces', () => {
   const s = store();
-  for (const name of ['Search relevance', 'Release 2026', '123 go', 'o']) {
+  for (const name of ['Dark mode', 'Release 2026', '123 go', 'o']) {
     const slug = slugify(name);
     assert.strictEqual(s.folder(slug), path.join(s.dir, slug));
   }
@@ -601,12 +601,12 @@ test('restore() saves when it asked herdr for the workspace before asking', asyn
 const { parseBoard } = require('../orchestrators');
 
 test('parseBoard() puts each task under the ### heading above it, and the counts stay flat', () => {
-  const b = parseBoard(['# T', '## Tasks', '- [ ] loose', '### ABC-1 Billing', '- [x] fix (@w)', '- [ ] deploy',
+  const b = parseBoard(['# T', '## Tasks', '- [ ] loose', '### ABC-1 Settings', '- [x] fix (@w)', '- [ ] deploy',
     '### ABC-2 Colours', '- [x] ABC-2 merged #9', '## Blockers', '### not a group', '## Questions', '- why?'].join('\n'));
   assert.deepStrictEqual(b.tasks.map((t) => [t.text, t.group, t.done, t.owner]), [
     ['loose', null, false, null],
-    ['fix', 'ABC-1 Billing', true, 'w'],
-    ['deploy', 'ABC-1 Billing', false, null],
+    ['fix', 'ABC-1 Settings', true, 'w'],
+    ['deploy', 'ABC-1 Settings', false, null],
     ['ABC-2 merged #9', 'ABC-2 Colours', true, null],
   ]);
   assert.strictEqual(b.questions.length, 1);
@@ -804,14 +804,14 @@ test('addWatch() and removeWatch() edit WATCHES.md; list() carries the watches',
   const { s } = storeWith(fakeClient());
   await s.create({ name: 'Ears', root: tmp(), branch: 'x/e' });
   s.dispose();
-  assert.deepStrictEqual(s.addWatch('ears', ' #Checkout-Redesign '), { kind: 'channel', target: '#checkout-redesign', note: '' });
+  assert.deepStrictEqual(s.addWatch('ears', ' #Design-System '), { kind: 'channel', target: '#design-system', note: '' });
   s.addWatch('ears', 'https://example.slack.com/archives/C01/p1729680000123456');
-  s.addWatch('ears', '#checkout-redesign');
+  s.addWatch('ears', '#design-system');
   assert.deepStrictEqual(s.list()[0].slack.watches.map((w) => [w.kind, w.target]), [
-    ['channel', '#checkout-redesign'], ['thread', 'https://example.slack.com/archives/C01/p1729680000123456'],
+    ['channel', '#design-system'], ['thread', 'https://example.slack.com/archives/C01/p1729680000123456'],
   ]);
   assert.throws(() => s.addWatch('ears', 'checkout'), /Slack link, #channel or @name/);
-  s.removeWatch('ears', '#checkout-redesign');
+  s.removeWatch('ears', '#design-system');
   assert.deepStrictEqual(s.list()[0].slack.watches.map((w) => w.target), ['https://example.slack.com/archives/C01/p1729680000123456']);
 });
 
@@ -822,11 +822,11 @@ test('list() reads the watcher state and waiting messages; dismissWaiting() mark
   const folder = s.slackFolder('wait');
   fs.writeFileSync(path.join(folder, 'state.json'), JSON.stringify({ last_check: '2026-10-27T14:32:00Z', error: null, watches: { '#a': { summary: 'Checkout redesign' } } }));
   const file = 'C0456-1729680000.123456.md';
-  fs.writeFileSync(path.join(folder, 'waiting', file), '---\nstatus: open\nwatch: #a\nlink: https://example.slack.com/archives/C0456/p1729680000123456\nauthor: Patrik\ntitle: VAT in the discount price?\nwhy: aimed at you\n---\nShould it include VAT?\n');
+  fs.writeFileSync(path.join(folder, 'waiting', file), '---\nstatus: open\nwatch: #a\nlink: https://example.slack.com/archives/C0456/p1729680000123456\nauthor: Patrik\ntitle: Brand blue on dark buttons?\nwhy: aimed at you\n---\nShould it include VAT?\n');
   let { slack } = s.list()[0];
   assert.strictEqual(slack.interval, 10);
   assert.strictEqual(slack.state.watches['#a'].summary, 'Checkout redesign');
-  assert.deepStrictEqual(slack.waiting.map((m) => [m.file, m.status, m.author, m.title]), [[file, 'open', 'Patrik', 'VAT in the discount price?']]);
+  assert.deepStrictEqual(slack.waiting.map((m) => [m.file, m.status, m.author, m.title]), [[file, 'open', 'Patrik', 'Brand blue on dark buttons?']]);
   s.dismissWaiting('wait', file);
   ({ slack } = s.list()[0]);
   assert.strictEqual(slack.waiting[0].dismissed, 'true');

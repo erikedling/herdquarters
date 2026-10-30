@@ -21,9 +21,9 @@ test('a short board renders every task as written, in board order', () => {
 });
 
 test('a short board keeps its ### headings in place', () => {
-  const rows = boardRows(tasksOf(['### ABC-1 Billing', '- [x] fix', '- [ ] deploy', '- [ ] after']));
+  const rows = boardRows(tasksOf(['### ABC-1 Settings', '- [x] fix', '- [ ] deploy', '- [ ] after']));
   assert.deepStrictEqual(rows.map((r) => r.kind), ['heading', 'task', 'task', 'task']);
-  assert.strictEqual(rows[0].label, 'ABC-1 Billing');
+  assert.strictEqual(rows[0].label, 'ABC-1 Settings');
 });
 
 test('ticket keys group a long board and drop the "n. KEY" prefix from each step', () => {

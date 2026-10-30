@@ -7,7 +7,7 @@ const assert = require('node:assert');
 const { createWorktreeLister } = require('../worktrees');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const BRANCH = 'mia/search-relevance';
+const BRANCH = 'mia/dark-mode';
 
 // n repos, each with a worker workspace on BRANCH, plus `bosses` workspaces
 // that are not git checkouts. attached: false leaves out the `worktree` herdr

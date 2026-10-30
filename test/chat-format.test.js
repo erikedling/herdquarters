@@ -21,25 +21,25 @@ test('md(): paragraphs, bold, code, lists and links, with HTML escaped', () => {
 
 test('linkTarget(): what a link in the chat opens', () => {
   assert.deepStrictEqual(linkTarget('hq://desk/wB:p1'), { kind: 'desk', id: 'wB:p1' });
-  assert.deepStrictEqual(linkTarget('hq://tab/search-relevance'), { kind: 'tab', slug: 'search-relevance' });
-  assert.deepStrictEqual(linkTarget('hq://slack/search-relevance'), { kind: 'slack', slug: 'search-relevance' });
+  assert.deepStrictEqual(linkTarget('hq://tab/dark-mode'), { kind: 'tab', slug: 'dark-mode' });
+  assert.deepStrictEqual(linkTarget('hq://slack/dark-mode'), { kind: 'slack', slug: 'dark-mode' });
   assert.deepStrictEqual(linkTarget('https://example.com/a'), { kind: 'web', url: 'https://example.com/a' });
   assert.strictEqual(linkTarget('hq://nope/x'), null);
   assert.strictEqual(linkTarget('file:///etc/passwd'), null);
 });
 
 test('officeMarkdown(): every ticket and person, with the links to use', () => {
-  const o = { slug: 'search', name: 'Search relevance', branch: 'mia/search', board: { tasks: [{ done: true }, { done: false }], questions: ['q'] } };
+  const o = { slug: 'dark-mode', name: 'Dark mode', branch: 'mia/dark-mode', board: { tasks: [{ done: true }, { done: false }], questions: ['q'] } };
   const desks = [
-    { id: 'wB:p1', kind: 'agent', character: 0, role: 'boss', orch: { slug: 'search' }, floor: 'Search relevance', pose: 'working' },
-    { id: 'wC:p1', kind: 'agent', character: 1, role: 'worker', orch: { slug: 'search' }, floor: 'catalog-api', pose: 'idle' },
-    { id: 'wR:p1', kind: 'agent', character: 2, floor: 'platform-infra', pose: 'blocked' },
-    { id: 'wR:p2', kind: 'shell', character: 3, floor: 'platform-infra', pose: 'idle' },
+    { id: 'wB:p1', kind: 'agent', character: 0, role: 'boss', orch: { slug: 'dark-mode' }, floor: 'Dark mode', pose: 'working' },
+    { id: 'wC:p1', kind: 'agent', character: 1, role: 'worker', orch: { slug: 'dark-mode' }, floor: 'api', pose: 'idle' },
+    { id: 'wR:p1', kind: 'agent', character: 2, floor: 'infra', pose: 'blocked' },
+    { id: 'wR:p2', kind: 'shell', character: 3, floor: 'infra', pose: 'idle' },
   ];
   const text = officeMarkdown({ orchestrators: [o], desks, names: ['Maja', 'Jonas', 'Patrik', 'Sara'], now: 0 });
-  assert.match(text, /- \[Search relevance\]\(hq:\/\/tab\/search\) — branch `mia\/search`, 1\/2 tasks, 1 waiting on you · Slack: hq:\/\/slack\/search/);
-  assert.match(text, /- \[Maja\]\(hq:\/\/desk\/wB:p1\) — boss of Search relevance, working/);
-  assert.match(text, /- \[Jonas\]\(hq:\/\/desk\/wC:p1\) — worker in catalog-api for Search relevance, idle/);
-  assert.match(text, /- \[Patrik\]\(hq:\/\/desk\/wR:p1\) — in platform-infra, needs the user/);
+  assert.match(text, /- \[Dark mode\]\(hq:\/\/tab\/dark-mode\) — branch `mia\/dark-mode`, 1\/2 tasks, 1 waiting on you · Slack: hq:\/\/slack\/dark-mode/);
+  assert.match(text, /- \[Maja\]\(hq:\/\/desk\/wB:p1\) — boss of Dark mode, working/);
+  assert.match(text, /- \[Jonas\]\(hq:\/\/desk\/wC:p1\) — worker in api for Dark mode, idle/);
+  assert.match(text, /- \[Patrik\]\(hq:\/\/desk\/wR:p1\) — in infra, needs the user/);
   assert.doesNotMatch(text, /Sara/); // a plain shell is nobody to talk to
 });

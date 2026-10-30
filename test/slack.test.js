@@ -9,15 +9,15 @@ const { parseWatches, watchFromInput, addWatchLine, removeWatchLine, slackDue, f
 test('parseWatches() reads kind, target and note, and skips anything else', () => {
   const raw = [
     '# Watches',
-    '- thread https://example.slack.com/archives/C0123/p1729680000123 — ABC-1732 discount pricing',
-    '- channel #checkout-redesign',
+    '- thread https://example.slack.com/archives/C0123/p1729680000123 — ABC-1732 button contrast',
+    '- channel #design-system',
     '* dm @patrik - reviews',
     '- folder /tmp',
     'some prose',
   ].join('\n');
   assert.deepStrictEqual(parseWatches(raw), [
-    { kind: 'thread', target: 'https://example.slack.com/archives/C0123/p1729680000123', note: 'ABC-1732 discount pricing' },
-    { kind: 'channel', target: '#checkout-redesign', note: '' },
+    { kind: 'thread', target: 'https://example.slack.com/archives/C0123/p1729680000123', note: 'ABC-1732 button contrast' },
+    { kind: 'channel', target: '#design-system', note: '' },
     { kind: 'dm', target: '@patrik', note: 'reviews' },
   ]);
   assert.deepStrictEqual(parseWatches(''), []);
@@ -31,7 +31,7 @@ test('watchFromInput() knows thread, channel and DM links, #channel and @name', 
     ['https://example.slack.com/archives/C0123ABC', { kind: 'channel', target: 'https://example.slack.com/archives/C0123ABC' }],
     ['https://example.slack.com/archives/D0456/p1729680000123456', { kind: 'thread', target: 'https://example.slack.com/archives/D0456/p1729680000123456' }],
     ['https://example.slack.com/archives/D0456', { kind: 'dm', target: 'https://example.slack.com/archives/D0456' }],
-    ['  #Checkout-Redesign ', { kind: 'channel', target: '#checkout-redesign' }],
+    ['  #Design-System ', { kind: 'channel', target: '#design-system' }],
     ['@patrik.l', { kind: 'dm', target: '@patrik.l' }],
   ];
   for (const [input, want] of cases) assert.deepStrictEqual(watchFromInput(input), want, input);

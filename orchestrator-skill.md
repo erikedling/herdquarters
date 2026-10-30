@@ -95,7 +95,7 @@ the board:
 
 ```markdown
 ## Questions
-- Which service in recommendation-service: recommendation-api or ranking-worker? (@search-re-recommendation-service)
+- Which page gets the toggle first in web: settings or the header? (@dark-mode-web)
 ```
 
 Keep the worker's agent name in the parentheses so the office knows who is

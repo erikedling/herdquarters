@@ -1,17 +1,17 @@
-# Account admin feedback: one ticket at a time
+# Notes app feedback: one ticket at a time
 Updated: 2026-01-15 16:03
 
 ## Tasks
-- [x] 1. ABC-101 Run the admin app locally + repro steps (@demo-worker-app)
-- [x] 1. ABC-101 Frontend fix: invoices newest first + show all/less (@demo-worker-app)
+- [x] 1. ABC-101 Run the notes app locally + repro steps (@demo-worker-app)
+- [x] 1. ABC-101 Frontend fix: activity newest first + show all/less (@demo-worker-app)
 - [x] 1. ABC-101 Draft PR opened, screenshots + reviewers by the user (@demo-worker-app)
 - [x] 1. ABC-101 Triage bot reviews (false positive: replied + resolved, no code change)
 - [x] 1. ABC-101 PR merged
 - [x] 1. ABC-101 Deployed dev → stage → prod, ticket Done
 - [x] 1. ABC-101 Cleanup: dev env stopped, branch reset to main (@demo-worker-app)
-- [x] 2. ABC-102 Investigate: free future plan = cancellation, paid = downgrade
+- [x] 2. ABC-102 Investigate: archived notes vanish, shared notes go read-only
 - [x] 2. ABC-102 Dev env up for baseline screenshots of both test users (@demo-worker-app)
-- [x] 2. ABC-102 Fix: cancellation yellow / downgrade orange, shared helper + tests (uncommitted) (@demo-worker-app)
+- [x] 2. ABC-102 Fix: archived grey / read-only blue, shared helper + tests (uncommitted) (@demo-worker-app)
 - [x] 2. ABC-102 Draft PR opened, screenshots + reviewers by the user (@demo-worker-app)
 - [x] 2. ABC-102 Triage bot reviews (one clean, one asks for inline test fixtures)
 - [x] 2. ABC-102 Inline test fixtures, merge main, pushed; review thread resolved (@demo-worker-app)
@@ -19,7 +19,7 @@ Updated: 2026-01-15 16:03
 - [x] 2. ABC-102 Reviewer nits pushed (@demo-worker-app)
 - [x] 2. ABC-102 PR description fixed, reviewer answered, follow-up ticket drafted (not created)
 - [x] 2. ABC-102 Fresh bot reviews: one colour-only a11y finding
-- [x] 2. ABC-102 Row-label icons for pending states (a11y), live locally, uncommitted (@demo-worker-app)
+- [x] 2. ABC-102 Row-label icons for archived states (a11y), live locally, uncommitted (@demo-worker-app)
 - [x] 2. ABC-102 Icons pushed, PR icon section added, threads resolved (@demo-worker-app)
 - [x] 2. ABC-102 Dev env stopped for the weekend (@demo-worker-app)
 - [x] 2. ABC-102 PR approved, branch updated with main
@@ -28,14 +28,14 @@ Updated: 2026-01-15 16:03
 - [x] 2. ABC-102 Cleanup: worktree branch reset to main (@demo-worker-app)
 - [x] 2. ABC-102 Ticket: Done
 - [x] 3. ABC-103 Ticket: assigned to the user, current cycle, In Progress
-- [x] 3. ABC-103 Investigated: codes live in their own table, not in the list response; baseline env up (@demo-worker-app)
-- [x] 3. ABC-103 Exact code lookup implemented in service + admin + frontend, all checks pass (uncommitted)
+- [x] 3. ABC-103 Investigated: tags live in their own table, not in the list response; baseline env up (@demo-worker-app)
+- [x] 3. ABC-103 Exact tag lookup implemented in api + web, all checks pass (uncommitted)
 - [x] 3. ABC-103 E2E verified locally, all pass, stack running (@demo-worker-app)
 - [x] 3. ABC-103 The user took after screenshots
 - [x] 3. ABC-103 Committed, draft PR opened (@demo-worker-app)
 - [x] 3. ABC-103 PR ready for review; bot reviews requested
 - [x] 3. ABC-103 Triage: both bot findings valid, same line
-- [x] 3. ABC-103 Fix committed (longer searches looked up too), not pushed (@demo-worker-app)
+- [x] 3. ABC-103 Fix committed (longer tags looked up too), not pushed (@demo-worker-app)
 - [x] 3. ABC-103 Review fix pushed (@demo-worker-app)
 - [x] 3. ABC-103 PR body updated, both threads replied + resolved
 - [x] 3. ABC-103 Round 2: one approve, 0 findings; CI green
@@ -47,13 +47,13 @@ Updated: 2026-01-15 16:03
 - [x] 3. ABC-103 Reviewer threads answered by the user
 - [x] 3. ABC-103 Reviewer fixes pushed (timeout, single-word lookup), verified locally, CI green (@demo-worker-app)
 - [x] 3. ABC-103 PR description updated for the reviewer fixes
-- [x] 3. ABC-103 Endpoint test removed, PR description updated, CI green (@demo-worker-app)
-- [x] 3. ABC-103 Follow-up ticket created (admin tests)
+- [x] 3. ABC-103 Old lookup test removed, PR description updated, CI green (@demo-worker-app)
+- [x] 3. ABC-103 Follow-up ticket created (api tests)
 - [x] 3. ABC-103 PR approved by the first reviewer
 - [x] 3. ABC-103 PR approved by the second reviewer (main merged in), CI green, mergeable
 - [x] 3. ABC-103 PR merged
-- [x] 3. ABC-103 Frontend deployed dev → stage → prod
-- [x] 3. ABC-103 Service + admin re-run: integration tests passed, deployed stage → prod
+- [x] 3. ABC-103 Web deployed dev → stage → prod
+- [x] 3. ABC-103 Api re-run: integration tests passed, deployed stage → prod
 - [x] 3. ABC-103 Cleanup: local stack stopped, branch reset to main (@demo-worker-app)
 - [x] 3. ABC-103 Ticket: Done
 - [x] 4. ABC-104 Ticket: assigned to the user, current cycle, In Progress
@@ -70,7 +70,7 @@ Updated: 2026-01-15 16:03
 - [ ] 4. ABC-104 PR 1: human review, then the user merges
 - [x] 4. ABC-104 PR 2 mapping decided: tokens first, dark overrides for the gaps
 - [ ] 4. ABC-104 PR 2: implement core views, light pixel-identical, dark review locally, uncommitted (@demo-worker-app)
-- [ ] 5. ABC-105 Delete account with active plan (parked until product answers) (@demo-worker-app)
+- [ ] 5. ABC-105 Delete a notebook with shared notes (parked until design answers) (@demo-worker-app)
 
 ## Blockers
 

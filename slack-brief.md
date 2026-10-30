@@ -43,7 +43,7 @@ folder.
    `#name` is found with `slack_search_channels`, an `@name` with
    `slack_search_users` (its DM is the conversation with that user). Write a
    one-line `summary` of what the conversation is about, from the note, the
-   messages and the board, e.g. "Discount pricing, ABC-1732".
+   messages and the board, e.g. "Button contrast, ABC-1732".
 4. Read what is new since `last_ts` (`slack_read_thread` for a thread,
    `slack_read_channel` for a channel or DM, and the threads under new channel
    messages that have replies). A watch with no `last_ts` is read back one
@@ -96,7 +96,7 @@ link: <permalink to the message>
 author: <the sender's first name>
 asked: <ISO time of the message>
 found: <ISO time of this check>
-title: <one line the user sees on the ticket, the ask in their words: "Should the discount price include VAT?">
+title: <one line the user sees on the ticket, the ask in their words: "Should the dark buttons use the brand blue?">
 why: <aimed at you | thread you posted in | related: <what it relates to> | unsure: <why it might be>>
 ---
 <the message, shortened to a few lines>

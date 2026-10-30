@@ -152,12 +152,12 @@
     window.officeActions.showModal({
       title: 'New orchestrator',
       body: `
-        <label>Name<input id="wz-name" type="text" placeholder="Search relevance" autofocus></label>
+        <label>Name<input id="wz-name" type="text" placeholder="Dark mode" autofocus></label>
         <label>Root folder with your repos
           <span class="wz-inline"><input id="wz-root" type="text" placeholder="~/code" value="${esc(savedRoot)}"><button id="wz-browse" class="btn small" type="button">Browse…</button></span>
         </label>
         <div id="wz-list" class="hint wz-repos"></div>
-        <label>Worktree branch <span class="hint">(the boss creates it in each repo it needs)</span><input id="wz-branch" type="text" placeholder="mia/search-relevance"></label>
+        <label>Worktree branch <span class="hint">(the boss creates it in each repo it needs)</span><input id="wz-branch" type="text" placeholder="mia/dark-mode"></label>
         <p id="wz-branch-warn" class="warn wz-warn" hidden></p>
         <label>Base <span class="hint">(optional, defaults to each repo's current HEAD)</span><input id="wz-base" type="text" placeholder="main"></label>
         <div class="wz-agent"><span class="hint">Agent for the boss, its workers, QA and ops</span>

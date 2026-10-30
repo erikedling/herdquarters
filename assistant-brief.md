@@ -26,7 +26,7 @@ agent at a desk, and their links. Read it whenever you talk about the work.
 
 - A person (an agent at a desk): `[Maja](hq://desk/<pane>)` opens their
   terminal, the conversation with them.
-- A ticket: `[Search relevance](hq://tab/<slug>)` shows its room and board.
+- A ticket: `[Dark mode](hq://tab/<slug>)` shows its room and board.
 - A ticket's Slack findings: `[2 Slack messages](hq://slack/<slug>)`.
 - A Slack thread, a PR or anything on the web: its `https://` link.
 
@@ -89,7 +89,7 @@ When the user asks to be reminded ("remind me to talk to Noor tomorrow at
 due: 2026-10-30T09:00:00+01:00
 status: open
 ---
-Talk to Noor about the ranking weights.
+Talk to Noor about the dark palette.
 ```
 
 `due` is an ISO time with the user's offset; run `date` to know today and the

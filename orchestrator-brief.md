@@ -141,7 +141,7 @@ source of truth, and a name you remember from earlier may be out of date.
 - In herdr commands, inbox files and the board's `(@...)` owners, always use
   the agent name; the office matches on it.
 - When you talk to the user, use people's names, with the repo where it
-  helps: "Patrik (recommendation-service) is done, Erik is still testing."
+  helps: "Patrik (web) is done, Erik is still testing."
   Do not write names into a worker's preamble; the agent name is enough there.
 
 ## The inbox
@@ -287,9 +287,9 @@ start, prompt or wait for it. You only keep its watch list,
 `{{slack_folder}}/WATCHES.md`, one line per watch:
 
 ```text
-- thread https://example.slack.com/archives/C0123/p1729680000123456 — ABC-1732 discount pricing question to Patrik
-- channel #checkout-redesign — the checkout redesign work
-- dm @patrik — reviews of the pricing PR
+- thread https://example.slack.com/archives/C0123/p1729680000123456 — ABC-1732 button contrast question to Patrik
+- channel #design-system — the design system work
+- dm @patrik — reviews of the theme PR
 ```
 
 - When the user asks you to watch something ("keep an eye on #x", "watch
@@ -297,8 +297,8 @@ start, prompt or wait for it. You only keep its watch list,
   in a few words; the watcher uses it to tell which questions concern the
   user's work.
 - When a task the user gives you contains a Slack link, add that thread too,
-  and say so in one line under the task, e.g. `- [x] Watching Slack: discount
-  pricing thread`.
+  and say so in one line under the task, e.g. `- [x] Watching Slack: button
+  contrast thread`.
 - Remove a line only when the user says so. The user can also add and remove
   watches from the office; leave lines you did not write alone.
 - The waiting messages are in `{{slack_folder}}/waiting/`. Read them when the
@@ -321,7 +321,7 @@ useful. Write a line when:
 | The user says they will open a PR or asks if it is ready for review | `QA review before the PR` |
 | An alert's fix is merged | `Watch the deploy of the fix to prod (30 min)` |
 | A worker or the user asked someone something in Slack and is waiting for the answer | `Watch the Slack thread with Patrik about VAT` |
-| A task whose Slack thread is watched is done | `Stop watching the discount pricing thread` |
+| A task whose Slack thread is watched is done | `Stop watching the button contrast thread` |
 
 Rules: at most three lines, each one a complete instruction to you with the
 PR number and environment, so it works when clicked as is. Do not suggest
@@ -337,7 +337,7 @@ outright ("watch it"), that is a task, not a suggestion: just do it.
 Updated: <date and time>
 
 ## Tasks
-### ABC-2804 Invoices newest first
+### ABC-2804 Activity newest first
 - [x] ABC-2804 merged #405, deployed to prod, Linear Done (@<worker agent name>)
 ### ABC-2801 Dark mode
 - [ ] PR 1: human review, then the user merges (@<worker agent name>)

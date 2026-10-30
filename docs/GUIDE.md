@@ -167,7 +167,7 @@ the alert resolved, with a "Recovered" notice.
 Under the boss's whiteboard, **Slack · …** opens a dialog: paste a Slack link
 (Copy link on a message, thread or channel), or type `#channel` or `@name`, and
 press Enter to watch it; ✕ stops watching. You can also ask the boss ("watch
-#checkout-redesign"), and it adds the thread of any Slack link in a task on its
+#design-system"), and it adds the thread of any Slack link in a task on its
 own. The list is `slack/WATCHES.md` in the boss's folder. The office runs the
 clock (every 10 minutes by default, set in the dialog): it starts a Claude agent
 in `slack/` (brief: `slack-brief.md`), then before each check types `/clear` and
@@ -393,7 +393,7 @@ Turn this off with "Start herdr" in settings. The server's output goes to
 
 - `OFFICE_FIXTURE=1 npm start` renders a fake session with every pose and many of the characters.
 - `OFFICE_DEV_SETTINGS='{"theme":"ocean"}' npm start` applies a settings patch on launch;
-  `{"activeTab":"search-relevance"}` opens the fixture's orchestrator tab.
+  `{"activeTab":"dark-mode"}` opens the fixture's orchestrator tab.
 - `OFFICE_ASSISTANT=talk|dream|idle|wave` sets the assistant's mood in fixture runs, `OFFICE_CHAT=1` opens its chat.
 - `OFFICE_MODAL=<create|closed|remove|orchestrator|archived|slack:<slug>> npm start` opens that dialog on launch;
   `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings.
