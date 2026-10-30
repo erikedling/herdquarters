@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2f42"/>
+      <stop offset="1" stop-color="#151826"/>
+    </linearGradient>
+    <clipPath id="squircle"><rect x="0" y="0" width="1024" height="1024" rx="224"/></clipPath>
+  </defs>
+  <!-- macOS-style rounded square; everything below is clipped to it -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="url(#sky)"/>
+  <g clip-path="url(#squircle)">
+  <!-- stars -->
+  <g fill="#dfe3f0" opacity="0.7">
+    <rect x="160" y="192" width="24" height="24"/><rect x="800" y="416" width="24" height="24"/>
+    <rect x="256" y="128" width="16" height="16"/><rect x="768" y="160" width="16" height="16"/><rect x="880" y="128" width="16" height="16"/>
+  </g>
+  <!-- moon -->
+  <rect x="864" y="256" width="96" height="96" fill="#f7dcc4"/><rect x="896" y="240" width="64" height="16" fill="#f7dcc4"/><rect x="848" y="272" width="16" height="64" fill="#f7dcc4"/>
+  <rect x="912" y="288" width="32" height="32" fill="#e0b48a"/>
+  <!-- ground -->
+  <rect x="0" y="896" width="1024" height="128" fill="#111420"/>
+  <rect x="0" y="896" width="1024" height="16" fill="#3a4157"/>
+  <!-- building: shadow, body, lit face -->
+  <rect x="192" y="160" width="640" height="48" fill="#4a527a"/>
+  <rect x="224" y="208" width="576" height="688" fill="#2f3549"/>
+  <rect x="256" y="208" width="544" height="688" fill="#3a4157"/>
+  <rect x="464" y="112" width="16" height="48" fill="#8a8fa8"/><rect x="456" y="96" width="32" height="16" fill="#e4573d"/>
+  <!-- windows: idle grey, working amber, done green, blocked red, like the desks -->
+  <g>
+    <rect x="304" y="272" width="80" height="80" fill="#f2c531"/><rect x="416" y="272" width="80" height="80" fill="#f2c531"/><rect x="528" y="272" width="80" height="80" fill="#2b2f3f"/><rect x="640" y="272" width="80" height="80" fill="#f2c531"/>
+    <rect x="304" y="400" width="80" height="80" fill="#2bb3a3"/><rect x="416" y="400" width="80" height="80" fill="#f2c531"/><rect x="528" y="400" width="80" height="80" fill="#f2c531"/><rect x="640" y="400" width="80" height="80" fill="#2b2f3f"/>
+    <rect x="304" y="528" width="80" height="80" fill="#f2c531"/><rect x="416" y="528" width="80" height="80" fill="#e4573d"/><rect x="528" y="528" width="80" height="80" fill="#f2c531"/><rect x="640" y="528" width="80" height="80" fill="#2bb3a3"/>
+    <rect x="304" y="656" width="80" height="80" fill="#2b2f3f"/><rect x="416" y="656" width="80" height="80" fill="#f2c531"/><rect x="528" y="656" width="80" height="80" fill="#f2c531"/><rect x="640" y="656" width="80" height="80" fill="#f2c531"/>
+  </g>
+  <!-- window frames (cross bars) -->
+  <g fill="#3a4157" opacity="0.55">
+    <rect x="336" y="272" width="16" height="464"/><rect x="448" y="272" width="16" height="464"/><rect x="560" y="272" width="16" height="464"/><rect x="672" y="272" width="16" height="464"/>
+    <rect x="304" y="304" width="416" height="16"/><rect x="304" y="432" width="416" height="16"/><rect x="304" y="560" width="416" height="16"/><rect x="304" y="688" width="416" height="16"/>
+  </g>
+  <!-- door with light spilling out -->
+  <rect x="464" y="768" width="96" height="128" fill="#f2c531"/>
+  <rect x="480" y="784" width="64" height="112" fill="#c98e5a"/>
+  <rect x="528" y="832" width="12" height="12" fill="#2b2f3f"/>
+  <rect x="432" y="896" width="160" height="16" fill="#8a7440"/>
+  </g>
+</svg>

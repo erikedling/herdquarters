@@ -1,0 +1,9 @@
+{
+  "me": { "id": "U0MIA", "name": "Mia" },
+  "watches": {
+    "#dark-mode": { "channel": "C0DARK", "last_ts": "1761550000.000100", "summary": "Dark mode for web and api" },
+    "https://example.slack.com/archives/C0DARK/p1761400000123456": { "channel": "C0DARK", "thread_ts": "1761400000.123456", "last_ts": "1761540000.000200", "summary": "The dark palette" }
+  },
+  "last_check": "2026-10-27T14:32:00Z",
+  "error": null
+}
