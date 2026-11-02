@@ -84,7 +84,7 @@ function ensureAssistant() {
     orchestratorsDir: ensureOrchestrators().dir,
     template: require('node:fs').readFileSync(path.join(__dirname, 'assistant-brief.md'), 'utf8'),
   });
-  session = new AssistantSession({ dir: assistant.dir });
+  session = new AssistantSession({ dir: assistant.dir, addDirs: [assistant.orchestratorsDir] });
   session.on('session', ({ id }) => assistant.tick({ session_id: id }));
   session.on('delta', ({ text }) => toRenderer('assistant-chat', { type: 'delta', text }));
   session.on('tool', ({ name }) => toRenderer('assistant-chat', { type: 'tool', name }));

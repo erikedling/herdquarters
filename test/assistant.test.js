@@ -5,8 +5,8 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { AssistantStore, runAssistant, assistantDue, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES } = require('../assistant');
-const { parseLine, userLine } = require('../assistant-session');
+const { AssistantStore, assistantSettings, runAssistant, assistantDue, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES } = require('../assistant');
+const { AssistantSession, parseLine, userLine } = require('../assistant-session');
 
 // Local times, so the weekday and morning checks follow this machine's clock.
 const at = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
@@ -74,6 +74,31 @@ test('prepare() writes the brief and an empty memory, and keeps what the assista
   store.prepare();
   assert.strictEqual(store.met(), true);
   for (const sub of ['memory/projects', 'memory/journal', 'reminders']) assert.ok(fs.existsSync(path.join(dir, sub)), sub);
+});
+
+test('prepare() rewrites the permissions: orchestrators are read only, even in an old install', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const orchestratorsDir = '/Users/u/Library/Application Support/agent-office/orchestrators';
+  fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.claude', 'settings.json'), '{"permissions":{"allow":["Read"]}}');
+  new AssistantStore({ dir, orchestratorsDir, template: '', claudeConfig: path.join(dir, 'claude.json') }).prepare();
+  const { permissions } = JSON.parse(fs.readFileSync(path.join(dir, '.claude', 'settings.json'), 'utf8'));
+  assert.deepStrictEqual(permissions, assistantSettings(orchestratorsDir).permissions);
+  assert.ok(permissions.deny.includes(`Edit(/${orchestratorsDir}/**)`));
+  assert.ok(permissions.allow.includes('Write(./**)'));
+});
+
+test('the session may list and read the orchestrators folder', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const fake = path.join(dir, 'claude');
+  fs.writeFileSync(fake, `#!/bin/sh\nprintf '%s\\n' "$@" > "${path.join(dir, 'args')}"\n`, { mode: 0o755 });
+  const session = new AssistantSession({ dir, addDirs: ['/a b/orchestrators'], claude: fake });
+  const exited = new Promise((resolve) => session.on('exit', resolve));
+  session.start('s1');
+  await exited;
+  const args = fs.readFileSync(path.join(dir, 'args'), 'utf8').trim().split('\n');
+  assert.strictEqual(args[args.indexOf('--add-dir') + 1], '/a b/orchestrators');
+  assert.strictEqual(args[args.indexOf('--resume') + 1], 's1');
 });
 
 test('the assistant can be renamed; its brief says the new name', () => {
