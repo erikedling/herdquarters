@@ -10,8 +10,9 @@
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
+  const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
   const SCALE = 2;                  // CSS px per sprite pixel
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -65,9 +66,10 @@
   let pinned = null;                // { point: () => {x,y}, peck: () => element | null }
   let party = null;                 // celebrating: { point, until }
   let nextIdle = 0, nextBlink = 0, nextHeart = 0, lastPeck = 0;
-  let spin = null;                  // a flip: { start }
+  let flip = null;                  // a backflip: { start, landed }
   let hover = false, petting = false;
   let alert = false;                // something unread: a "!" above its head
+  let drag = null;                  // the user is holding it: { pointerId, x, y, on }
   const mouse = { x: -999, y: -999, t: 0, speed: 0 };
   const parts = [];                 // particles
 
@@ -84,6 +86,14 @@
   const sleepy = () => hour() >= 15 && hour() < 18;
   let yawnedOn = '';
 
+  // Dropped by the user: it stays on that edge for STAY_MS, and goTo() only
+  // lets it walk along it. A new pin (a call, an unread message, the chat; not
+  // a ticket visit), a celebration or the edge scrolling away ends the stay.
+  const STAY_MS = 5 * 60_000;
+  const GRAVITY = 0.0025; // px/ms², for the fall after a drop
+  let stayUntil = 0;
+  const staying = () => performance.now() < stayUntil;
+
   function play(name, then) { once = { name, start: performance.now(), then }; }
   const playing = (name) => once?.name === name;
 
@@ -94,7 +104,7 @@
   const PERCH = '.tab, .floor-name, .whiteboard, .ticket, .slack-sign, .next-chip';
   const LINES = ['#reception', '#statusbar'];
   function visible(el, x, y) {
-    const at = document.elementFromPoint(x, y);
+    const at = document.elementsFromPoint(x, y).find((e) => e !== $hit);
     return !!at && (at === el || el.contains(at));
   }
   function perches() {
@@ -117,13 +127,16 @@
   let nextGround = 0;
   const covered = () => document.body.classList.contains('panel-open') || !document.getElementById('modal')?.hidden || !document.getElementById('settings')?.hidden;
 
-  // Go to a point: walk when it is along the same edge, else fly.
-  function goTo(to, edge = null) {
+  // Go to a point: walk when it is along the same edge, else fly. force: fly
+  // even while it stays where the user dropped it.
+  function goTo(to, edge = null, { force = false } = {}) {
     const dx = to.x - pos.x, dy = to.y - pos.y;
     const dist = Math.hypot(dx, dy);
+    const walk = Math.abs(dy) < 3 && Math.abs(dx) < 220 && !reduced;
+    if (!walk && staying()) { if (!force) return; stayUntil = 0; }
     if (dist < 3) { pos = { ...to }; surface = edge || surface; return; }
     if (Math.abs(dx) > 1) facing = dx > 0 ? 1 : -1;
-    if (Math.abs(dy) < 3 && Math.abs(dx) < 220 && !reduced) {
+    if (walk) {
       motion = { kind: 'walk', from: { ...pos }, to, start: performance.now(), ms: Math.abs(dx) * 22, edge: edge || surface };
     } else {
       play('takeoff');
@@ -136,6 +149,8 @@
     const k = Math.max(0, Math.min(1, (t - motion.start) / motion.ms));
     if (motion.kind === 'walk') {
       pos = { x: motion.from.x + (motion.to.x - motion.from.x) * k, y: motion.from.y + (motion.to.y - motion.from.y) * k };
+    } else if (motion.kind === 'fall') {
+      pos = { x: motion.from.x, y: motion.from.y + (motion.to.y - motion.from.y) * k * k };
     } else {
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
       pos = { x: motion.from.x + (motion.to.x - motion.from.x) * e, y: motion.from.y + (motion.to.y - motion.from.y) * e - Math.sin(Math.PI * k) * motion.peak };
@@ -145,7 +160,7 @@
       motion = null;
       pos = { ...m.to };
       surface = m.edge || null;
-      if (m.kind === 'fly') { play('land'); dust(); }
+      if (m.kind !== 'walk') { play('land'); dust(); }
       nextIdle = t + 1200 + Math.random() * 2000;
     }
   }
@@ -153,21 +168,23 @@
   // ---- what to do next, while standing ----
 
   function think(t) {
-    if (motion || (once && !['blink', 'look'].includes(once.name))) return;
+    if (drag?.on || motion || (once && !['blink', 'look'].includes(once.name))) return;
     if (party) {
       const p = party.point();
       if (p && Math.hypot(p.x - pos.x, p.y - pos.y) > 6) return goTo(p);
-      if (!playing('celebrate')) { play('celebrate'); spin = { start: t }; }
+      if (!flip && !reduced) flip = { start: t, landed: false };
+      if (!playing('celebrate')) play('celebrate');
       if (Math.random() < 0.25) confetti(6);
       if (Date.now() > party.until) party = null;
       return;
     }
+    if (flip) return;
     // Not on anything any more: hop down to the nearest edge.
     if (!pinned && !party && t > nextGround) {
       nextGround = t + 1000;
       if (!grounded()) {
         const near = perches().map((e) => ({ e, x: Math.max(e.left, Math.min(e.right, pos.x)) })).sort((a, b) => Math.hypot(a.x - pos.x, a.e.y - pos.y) - Math.hypot(b.x - pos.x, b.e.y - pos.y))[0];
-        return near ? goTo({ x: near.x, y: near.e.y }, near.e) : goTo(home());
+        return near ? goTo({ x: near.x, y: near.e.y }, near.e, { force: true }) : goTo(home(), null, { force: true });
       }
     }
     if (pinned) {
@@ -210,12 +227,13 @@
   function currentPose(t) {
     if (once) {
       const a = ANIM[once.name];
-      const i = Math.floor((t - once.start) / a.ms);
+      const i = Math.max(0, Math.floor((t - once.start) / a.ms));
       if (i < a.frames.length) return a.frames[i];
       const then = once.then; once = null; then?.();
     }
     let name = 'idle';
-    if (motion?.kind === 'fly') name = 'fly';
+    if (drag?.on) name = 'hover';
+    else if (motion?.kind === 'fly' || motion?.kind === 'fall') name = 'fly';
     else if (motion?.kind === 'walk') name = 'walk';
     else if (party) name = 'celebrate';
     else if (mood === 'dream' || (night() && !pinned && mood === 'idle')) name = 'sleep';
@@ -285,6 +303,10 @@
     const dt = Math.min(50, t - last); last = t;
     updatePalette();
     step(t);
+    const f = flip && backflip(t - flip.start);
+    if (flip && !f) flip = null;
+    if (f?.phase === 'land' && !flip.landed) { flip.landed = true; dust(); }
+    const lift = f ? f.lift : 0;
     think(t);
     if (hover && t > nextHeart) { nextHeart = t + (petting ? 260 : 900); heart(); }
     if ((mood === 'dream' || (night() && mood === 'idle' && !motion && !pinned)) && Math.random() < dt / 900) zzz();
@@ -295,27 +317,33 @@
       const h = home();
       pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the status bar's line
       // A shadow on the ground: under its feet, or where it will land while flying.
-      const ground = motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
-      const height = Math.max(0, ground - pos.y);
-      ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
-      ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
-
-      const pose = currentPose(t);
-      ctx.save();
-      ctx.translate(Math.round(pos.x), Math.round(pos.y));
-      ctx.scale(facing * SCALE, SCALE);
-      if (spin) {
-        const k = (t - spin.start) / 600;
-        if (k >= 1) spin = null; else { ctx.translate(0, -12); ctx.rotate(k * Math.PI * 2 * facing); ctx.translate(0, 12); }
+      const ground = motion?.kind === 'fall' ? motion.to.y : motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
+      const height = Math.max(0, ground - pos.y + lift);
+      if (!drag?.on) {
+        ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
+        ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
       }
+
+      let pose = currentPose(t);
+      if (f) {
+        // Rounded so the sprite cache sees a few poses, not one per frame.
+        const sy = Math.round(f.squash * 50) / 50;
+        pose = { ...pose, sy: (pose.sy || 1) * sy, sx: (pose.sx || 1) * (1 + (1 - sy) * 0.7) };
+        if (f.phase === 'air') pose = { ...pose, legs: 'tuck', wing: 'up' };
+      }
+      ctx.save();
+      ctx.translate(Math.round(pos.x), Math.round(pos.y - lift));
+      ctx.scale(facing * SCALE, SCALE);
+      // Head back over its tail; the facing scale mirrors it, so a backflip both ways.
+      if (f?.angle) { ctx.translate(0, -12); ctx.rotate(-f.angle); ctx.translate(0, 12); }
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sprite(pose), -SIZE / 2 + 1, -GROUND);
       ctx.restore();
       drawParts(t, dt);
-      if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
+      if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - lift - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
     }
     // The box for the mouse follows the body.
-    $hit.style.transform = `translate(${Math.round(pos.x - 26)}px, ${Math.round(pos.y - 52)}px)`;
+    $hit.style.transform = `translate(${Math.round(pos.x - 26)}px, ${Math.round(pos.y - lift - 52)}px)`;
     window.officeAssistant?.birdMoved(pos);
     requestAnimationFrame(frame);
   }
@@ -336,7 +364,7 @@
     mouse.speed = Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y) / dt;
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = t;
     // Swept at fast: it startles, drops a feather or two and flies off.
-    if (!hidden && !motion && !hover && !pinned && !party && mood !== 'dream' && mouse.speed > 2.2 && Math.hypot(mouse.x - pos.x, mouse.y - (pos.y - 24)) < 70) {
+    if (!hidden && !motion && !flip && !hover && !pinned && !party && mood !== 'dream' && mouse.speed > 2.2 && Math.hypot(mouse.x - pos.x, mouse.y - (pos.y - 24)) < 70) {
       feathers(3);
       play('startle', () => {
         const list = perches().filter((p) => Math.abs(p.y - pos.y) > 60 || Math.abs((p.left + p.right) / 2 - pos.x) > 200);
@@ -345,21 +373,79 @@
       });
     }
   });
-  let holdTimer = null, held = false, clickTimer = null;
+  let holdTimer = null, held = false, clickTimer = null, dragged = false;
   $hit.addEventListener('mouseenter', () => { hover = true; });
   $hit.addEventListener('mouseleave', () => { hover = false; petting = false; clearTimeout(holdTimer); });
-  $hit.addEventListener('mousedown', () => { held = false; holdTimer = setTimeout(() => { held = true; petting = true; }, 350); });
   window.addEventListener('mouseup', () => { clearTimeout(holdTimer); petting = false; });
-  // A click opens the chat; a double click is a flip, not two clicks.
+
+  // ---- picked up and dropped ----
+
+  // Where its feet go while held: the body under the pointer, inside the
+  // window and above the status bar.
+  function heldAt(x, y) {
+    const floor = document.getElementById('statusbar')?.getBoundingClientRect().top ?? window.innerHeight;
+    return { x: Math.max(26, Math.min(window.innerWidth - 26, x)), y: Math.max(60, Math.min(floor, y + 26)) };
+  }
+  $hit.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    held = false; dragged = false;
+    holdTimer = setTimeout(() => { held = true; petting = true; }, 350);
+    drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, on: false };
+    $hit.setPointerCapture(e.pointerId);
+  });
+  $hit.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    if (!drag.on) {
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
+      drag.on = true;
+      clearTimeout(holdTimer); clearTimeout(clickTimer);
+      petting = false; motion = null; once = null; flip = null; surface = null; stayUntil = 0;
+      $hit.classList.add('held');
+    }
+    const p = heldAt(e.clientX, e.clientY);
+    if (Math.abs(p.x - pos.x) > 1) facing = p.x > pos.x ? 1 : -1;
+    pos = p;
+  });
+  function release(e) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const was = drag.on;
+    drag = null;
+    $hit.classList.remove('held');
+    if (was) { dragged = true; drop(); }
+  }
+  $hit.addEventListener('pointerup', release);
+  $hit.addEventListener('pointercancel', release);
+  $hit.addEventListener('lostpointercapture', release);
+
+  // Let go: it falls to the nearest edge below, or the status bar's line,
+  // and stays there.
+  function drop() {
+    const bar = document.getElementById('statusbar')?.getBoundingClientRect();
+    const line = { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
+    const { edge, point: to } = window.birdDrop.landing(perches(), pos, line);
+    stayUntil = performance.now() + STAY_MS;
+    nextIdle = performance.now() + 1500;
+    const h = Math.max(0, to.y - pos.y);
+    if (reduced || h < 3) {
+      pos = to; surface = edge;
+      if (!reduced) { play('land'); dust(); }
+      return;
+    }
+    motion = { kind: 'fall', from: { ...pos }, to, start: performance.now(), ms: Math.sqrt((2 * h) / GRAVITY), edge };
+  }
+
+  // A click opens the chat; a double click is a flip, not two clicks. A
+  // drag is neither.
   $hit.addEventListener('click', () => {
+    if (dragged) { dragged = false; held = false; return; }
     if (held) { held = false; return; }
     clearTimeout(clickTimer);
     clickTimer = setTimeout(() => window.officeAssistant?.toggleChat(), 230);
   });
   $hit.addEventListener('dblclick', () => {
     clearTimeout(clickTimer);
-    spin = { start: performance.now() };
-    play('hop');
+    if (reduced) play('hop');
+    else if (!flip) flip = { start: performance.now(), landed: false };
     confetti(8);
   });
 
@@ -370,9 +456,13 @@
     setAlert(a) { alert = a; },
     // Stay at point() (re-read every frame, so it follows a moving target);
     // peck(): the element to peck at once there. null lets it roam.
-    pin(point, { peck = null } = {}) { pinned = point ? { point, peck } : null; if (!point) nextIdle = performance.now() + 800; },
-    // A happy spin with confetti at point() for a few seconds.
-    celebrate(point) { party = { point, until: Date.now() + 3500 }; },
+    pin(point, { peck = null } = {}) {
+      if (point && !peck && point !== pinned?.point) stayUntil = 0;
+      pinned = point ? { point, peck } : null;
+      if (!point) nextIdle = performance.now() + 800;
+    },
+    // Happy backflips with confetti at point() for a few seconds.
+    celebrate(point) { stayUntil = 0; party = { point, until: Date.now() + 3500 }; },
     // The office is behind something (the terminal): stop drawing.
     setHidden(h) { hidden = h; $hit.hidden = h; },
     position: () => ({ ...pos }),

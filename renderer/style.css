@@ -595,6 +595,10 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .seg label { flex: 1; display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; cursor: pointer; }
 .seg label:has(input:checked) { border-color: var(--working); background: var(--door); }
 .seg input { accent-color: var(--accent); margin: 0; }
+.settings-days .settings-check-text { align-items: flex-start; }
+.seg-days label { position: relative; justify-content: center; padding: 5px 0; }
+.seg-days input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-days label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
 .settings-foot { display: flex; margin-top: auto; padding-top: 8px; }
 .settings-foot .btn { flex: 1; }
 .settings-check { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
@@ -684,6 +688,7 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .bird-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 26; pointer-events: none; }
 .bird { position: fixed; left: 0; top: 0; z-index: 27; width: 52px; height: 54px; cursor: pointer; will-change: transform; }
 .bird[hidden] { display: none; }
+.bird.held { cursor: grabbing; }
 /* a ticket card PiPi pecks at */
 .tab.pecked { animation: card-pecked .28s ease-in-out; }
 @keyframes card-pecked { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(-1px, 1px) rotate(-0.6deg); } 60% { transform: translate(1px, 0) rotate(0.5deg); } }
