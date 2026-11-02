@@ -10,8 +10,9 @@
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
+  const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
   const SCALE = 2;                  // CSS px per sprite pixel
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -65,7 +66,7 @@
   let pinned = null;                // { point: () => {x,y}, peck: () => element | null }
   let party = null;                 // celebrating: { point, until }
   let nextIdle = 0, nextBlink = 0, nextHeart = 0, lastPeck = 0;
-  let spin = null;                  // a flip: { start }
+  let flip = null;                  // a backflip: { start, landed }
   let hover = false, petting = false;
   let alert = false;                // something unread: a "!" above its head
   const mouse = { x: -999, y: -999, t: 0, speed: 0 };
@@ -157,11 +158,13 @@
     if (party) {
       const p = party.point();
       if (p && Math.hypot(p.x - pos.x, p.y - pos.y) > 6) return goTo(p);
-      if (!playing('celebrate')) { play('celebrate'); spin = { start: t }; }
+      if (!flip && !reduced) flip = { start: t, landed: false };
+      if (!playing('celebrate')) play('celebrate');
       if (Math.random() < 0.25) confetti(6);
       if (Date.now() > party.until) party = null;
       return;
     }
+    if (flip) return;
     // Not on anything any more: hop down to the nearest edge.
     if (!pinned && !party && t > nextGround) {
       nextGround = t + 1000;
@@ -285,6 +288,9 @@
     const dt = Math.min(50, t - last); last = t;
     updatePalette();
     step(t);
+    const f = flip && backflip(t - flip.start);
+    if (flip && !f) flip = null;
+    if (f?.phase === 'land' && !flip.landed) { flip.landed = true; dust(); }
     think(t);
     if (hover && t > nextHeart) { nextHeart = t + (petting ? 260 : 900); heart(); }
     if ((mood === 'dream' || (night() && mood === 'idle' && !motion && !pinned)) && Math.random() < dt / 900) zzz();
@@ -296,23 +302,29 @@
       pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the status bar's line
       // A shadow on the ground: under its feet, or where it will land while flying.
       const ground = motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
-      const height = Math.max(0, ground - pos.y);
+      const lift = f ? f.lift : 0;
+      const height = Math.max(0, ground - pos.y + lift);
       ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
       ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
 
-      const pose = currentPose(t);
-      ctx.save();
-      ctx.translate(Math.round(pos.x), Math.round(pos.y));
-      ctx.scale(facing * SCALE, SCALE);
-      if (spin) {
-        const k = (t - spin.start) / 600;
-        if (k >= 1) spin = null; else { ctx.translate(0, -12); ctx.rotate(k * Math.PI * 2 * facing); ctx.translate(0, 12); }
+      // undefined for a frame when play() started after this frame's time.
+      let pose = currentPose(t) || {};
+      if (f) {
+        // Rounded so the sprite cache sees a few poses, not one per frame.
+        const sy = Math.round(f.squash * 50) / 50;
+        pose = { ...pose, sy: (pose.sy || 1) * sy, sx: (pose.sx || 1) * (1 + (1 - sy) * 0.7) };
+        if (f.phase === 'air') pose = { ...pose, legs: 'tuck', wing: 'up' };
       }
+      ctx.save();
+      ctx.translate(Math.round(pos.x), Math.round(pos.y - lift));
+      ctx.scale(facing * SCALE, SCALE);
+      // Head back over its tail; the facing scale mirrors it, so a backflip both ways.
+      if (f?.angle) { ctx.translate(0, -12); ctx.rotate(-f.angle); ctx.translate(0, 12); }
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sprite(pose), -SIZE / 2 + 1, -GROUND);
       ctx.restore();
       drawParts(t, dt);
-      if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
+      if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - lift - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
     }
     // The box for the mouse follows the body.
     $hit.style.transform = `translate(${Math.round(pos.x - 26)}px, ${Math.round(pos.y - 52)}px)`;
@@ -336,7 +348,7 @@
     mouse.speed = Math.hypot(e.clientX - mouse.x, e.clientY - mouse.y) / dt;
     mouse.x = e.clientX; mouse.y = e.clientY; mouse.t = t;
     // Swept at fast: it startles, drops a feather or two and flies off.
-    if (!hidden && !motion && !hover && !pinned && !party && mood !== 'dream' && mouse.speed > 2.2 && Math.hypot(mouse.x - pos.x, mouse.y - (pos.y - 24)) < 70) {
+    if (!hidden && !motion && !flip && !hover && !pinned && !party && mood !== 'dream' && mouse.speed > 2.2 && Math.hypot(mouse.x - pos.x, mouse.y - (pos.y - 24)) < 70) {
       feathers(3);
       play('startle', () => {
         const list = perches().filter((p) => Math.abs(p.y - pos.y) > 60 || Math.abs((p.left + p.right) / 2 - pos.x) > 200);
@@ -358,8 +370,8 @@
   });
   $hit.addEventListener('dblclick', () => {
     clearTimeout(clickTimer);
-    spin = { start: performance.now() };
-    play('hop');
+    if (reduced) play('hop');
+    else if (!flip) flip = { start: performance.now(), landed: false };
     confetti(8);
   });
 
@@ -371,7 +383,7 @@
     // Stay at point() (re-read every frame, so it follows a moving target);
     // peck(): the element to peck at once there. null lets it roam.
     pin(point, { peck = null } = {}) { pinned = point ? { point, peck } : null; if (!point) nextIdle = performance.now() + 800; },
-    // A happy spin with confetti at point() for a few seconds.
+    // Happy backflips with confetti at point() for a few seconds.
     celebrate(point) { party = { point, until: Date.now() + 3500 }; },
     // The office is behind something (the terminal): stop drawing.
     setHidden(h) { hidden = h; $hit.hidden = h; },
