@@ -361,7 +361,7 @@
       ctx.drawImage(sprite(pose), -SIZE / 2 + 1, -GROUND);
       ctx.restore();
       // The ring it hit, outlined over it, so its body does not hide what scored.
-      if (motion?.kind === 'stuck' && b) {
+      if (motion?.kind === 'stuck' && motion.ring >= 0 && b) {
         ctx.globalAlpha = Math.min(1, (motion.until - t) / 300);
         drawRingOutline(b, motion.ring);
         ctx.globalAlpha = 1;
