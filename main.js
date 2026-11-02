@@ -292,18 +292,25 @@ const assistantCall = (fn) => {
   if (process.env.OFFICE_FIXTURE) return { ok: true };
   try { const r = fn(ensureAssistant()); sendAssistant(); return { ok: true, ...(r || {}) }; } catch (err) { return { ok: false, error: String(err.message || err) }; }
 };
-ipcMain.handle('assistant-configure', (_e, patch) => (process.env.OFFICE_FIXTURE ? (fixtureConfig = { ...fixtureConfig, ...patch }, sendAssistant(), { ok: true }) : assistantCall((a) => {
-  const before = a.config().name;
-  const config = a.configure(patch);
-  if (config.enabled === false) session.stop();
-  // A new name: the brief says it from the next message on.
-  if (config.name !== before) {
-    a.prepare();
-    a.appendChat({ role: 'note', text: `🐦 ${before} is now called ${config.name}` });
-    toRenderer('assistant-chat', { type: 'history', chat: a.chat() });
+ipcMain.handle('assistant-configure', (_e, patch) => {
+  if (process.env.OFFICE_FIXTURE) {
+    fixtureConfig = { ...fixtureConfig, ...patch };
+    sendAssistant();
+    return { ok: true };
   }
-  return { config };
-})));
+  return assistantCall((a) => {
+    const before = a.config().name;
+    const config = a.configure(patch);
+    if (config.enabled === false) session.stop();
+    // A new name: the brief says it from the next message on.
+    if (config.name !== before) {
+      a.prepare();
+      a.appendChat({ role: 'note', text: `🐦 ${before} is now called ${config.name}` });
+      toRenderer('assistant-chat', { type: 'history', chat: a.chat() });
+    }
+    return { config };
+  });
+});
 ipcMain.handle('assistant-dismiss', (_e, { file }) => assistantCall((a) => a.dismissReminder(file)));
 ipcMain.handle('assistant-seen', () => assistantCall((a) => a.markMorningSeen()));
 ipcMain.handle('assistant-history', () => (process.env.OFFICE_FIXTURE ? require('./fixture').assistantChat() : ensureAssistant().chat()));
