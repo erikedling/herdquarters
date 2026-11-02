@@ -43,7 +43,7 @@
   function syncAssistantName() {
     const name = cleanName(settings.assistantName);
     for (const $n of document.querySelectorAll('.assistant-name')) if ($n.textContent !== name) $n.textContent = name;
-    document.getElementById('bird')?.setAttribute('title', `${name}: click to chat, hold to pet, double-click for a flip`);
+    document.getElementById('bird')?.setAttribute('title', `${name}: click to chat, hold to pet, drag to move, double-click for a flip`);
     document.getElementById('chat-tab')?.setAttribute('title', `Chat with ${name}`);
     window.officeAssistant?.renamed?.();
   }
