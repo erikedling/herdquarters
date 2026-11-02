@@ -10,7 +10,7 @@
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
   const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
@@ -90,6 +90,7 @@
   // lets it walk along it. A new pin (a call, an unread message, the chat; not
   // a ticket visit), a celebration or the edge scrolling away ends the stay.
   const STAY_MS = 5 * 60_000;
+  const GRAVITY = 0.0025; // px/ms², for the fall after a drop
   let stayUntil = 0;
   const staying = () => performance.now() < stayUntil;
 
@@ -419,10 +420,9 @@
   // Let go: it falls to the nearest edge below, or the status bar's line,
   // and stays there.
   function drop() {
-    const below = perches().filter((e) => e.y >= pos.y - 2 && pos.x >= e.left - 16 && pos.x <= e.right + 16).sort((a, b) => a.y - b.y)[0];
     const bar = document.getElementById('statusbar')?.getBoundingClientRect();
-    const edge = below || { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
-    const to = { x: Math.max(edge.left, Math.min(edge.right, pos.x)), y: edge.y };
+    const line = { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
+    const { edge, point: to } = window.birdDrop.landing(perches(), pos, line);
     stayUntil = performance.now() + STAY_MS;
     nextIdle = performance.now() + 1500;
     const h = Math.max(0, to.y - pos.y);
@@ -431,7 +431,7 @@
       if (!reduced) { play('land'); dust(); }
       return;
     }
-    motion = { kind: 'fall', from: { ...pos }, to, start: performance.now(), ms: Math.sqrt((2 * h) / 0.0025), edge };
+    motion = { kind: 'fall', from: { ...pos }, to, start: performance.now(), ms: Math.sqrt((2 * h) / GRAVITY), edge };
   }
 
   // A click opens the chat; a double click is a flip, not two clicks. A
