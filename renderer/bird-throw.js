@@ -96,7 +96,35 @@
     return { t, point: { x: a.x + dx * s, y: a.y + dy * s } };
   }
 
-  const api = { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, RINGS, WINDOW_MS, THROW_MIN, MAX_SPEED, BOUNCE };
+  // The tip of its beak in a sprite frame (rows of palette keys, beak Y/Z),
+  // relative to its feet: the outer edge of the furthest beak pixel, in sprite
+  // px, facing right and upright.
+  function beakTip(frame, size, ground) {
+    let x = -1, ys = [];
+    frame.forEach((row, y) => row.forEach((k, i) => {
+      if (k !== 'Y' && k !== 'Z') return;
+      if (i > x) { x = i; ys = []; }
+      if (i === x) ys.push(y);
+    }));
+    const y = ys.reduce((a, b) => a + b, 0) / ys.length;
+    return { x: x + 1 - (size / 2 - 1), y: y + 0.5 - ground };
+  }
+
+  // Stuck in the board like a dart: its beak tip on the hit point, pointing
+  // the way it flew, tilted at most MAX_TILT so it never ends up upside down.
+  // tip is from beakTip(); scale is CSS px per sprite px. Returns its facing,
+  // the angle to rotate it by after the facing mirror (as ctx.rotate) and
+  // where its feet are then.
+  const MAX_TILT = 1.1;
+  function dartPose(hit, v, tip, scale, facing = 1) {
+    const f = Math.abs(v.vx) > 0.05 ? Math.sign(v.vx) : facing;
+    const angle = Math.max(-MAX_TILT, Math.min(MAX_TILT, Math.atan2(v.vy, Math.abs(v.vx))));
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const rx = c * tip.x - s * tip.y, ry = s * tip.x + c * tip.y;
+    return { facing: f, angle, feet: { x: hit.x - f * scale * rx, y: hit.y - scale * ry } };
+  }
+
+  const api = { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, beakTip, dartPose, MAX_TILT, RINGS, WINDOW_MS, THROW_MIN, MAX_SPEED, BOUNCE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.birdThrow = api;
 })(typeof window !== 'undefined' ? window : globalThis);

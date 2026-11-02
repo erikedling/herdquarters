@@ -3,7 +3,7 @@
 // falls through.
 const test = require('node:test');
 const assert = require('node:assert');
-const { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, MAX_SPEED } = require('../renderer/bird-throw');
+const { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, beakTip, dartPose, MAX_TILT, MAX_SPEED } = require('../renderer/bird-throw');
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 const walls = { left: 20, right: 1260, top: 56 };
@@ -129,4 +129,48 @@ test('a miss, a segment short of the board, or one starting on it does not hit',
   assert.strictEqual(hitBoard({ x: 1100, y: 300 }, { x: 1300, y: 300 }, board), null);
   assert.strictEqual(hitBoard({ x: 1000, y: 400 }, { x: 1100, y: 400 }, board), null);
   assert.strictEqual(hitBoard({ x: 1200, y: 400 }, { x: 1300, y: 400 }, board), null);
+});
+
+const { pipiFrame, SIZE, GROUND } = require('../renderer/pipi-sprite');
+
+test('the beak tip is the outer edge of the furthest beak pixel, from its feet', () => {
+  const tip = beakTip(pipiFrame({ wing: 'up', legs: 'tuck', beak: 'closed' }), SIZE, GROUND);
+  assert.deepStrictEqual(tip, { x: 14, y: -15.5 });
+  const frame = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+  frame[10][30] = 'Y'; frame[11][30] = 'Z'; frame[12][29] = 'Z';
+  assert.deepStrictEqual(beakTip(frame, SIZE, GROUND), { x: 12, y: -26 });
+});
+
+// Where a point of the sprite, relative to its feet, is drawn: translate to
+// the feet, mirror for facing, scale, rotate, as bird.js does.
+function drawn(pose, p, scale) {
+  const c = Math.cos(pose.angle), s = Math.sin(pose.angle);
+  return { x: pose.feet.x + pose.facing * scale * (c * p.x - s * p.y), y: pose.feet.y + scale * (s * p.x + c * p.y) };
+}
+
+test('stuck in the board, the beak tip sits on the hit point, whichever way it came from', () => {
+  const tip = { x: 14, y: -16.5 }, hit = { x: 1200, y: 420 };
+  for (const vx of [1.8, -1.8, 0.3, -0.3]) {
+    for (const vy of [-2, -0.6, 0, 0.6, 2]) {
+      const pose = dartPose(hit, { vx, vy }, tip, 2);
+      const at = drawn(pose, tip, 2);
+      close(at.x, hit.x);
+      close(at.y, hit.y);
+      assert.strictEqual(pose.facing, Math.sign(vx));
+      // Its body sticks out back the way it came.
+      const body = drawn(pose, { x: 0, y: -10 }, 2);
+      assert.ok((body.x - hit.x) * vx + (body.y - hit.y) * vy < 0, `body ahead of the beak for ${vx}, ${vy}`);
+    }
+  }
+});
+
+test('it points the way it flew, tilted no further than MAX_TILT', () => {
+  const tip = { x: 14, y: -16.5 }, hit = { x: 0, y: 0 };
+  const level = dartPose(hit, { vx: -2, vy: 1 }, tip, 2);
+  close(level.angle, Math.atan2(1, 2));
+  assert.strictEqual(dartPose(hit, { vx: 0.1, vy: 3 }, tip, 2).angle, MAX_TILT);
+  assert.strictEqual(dartPose(hit, { vx: -0.1, vy: -3 }, tip, 2).angle, -MAX_TILT);
+  assert.ok(MAX_TILT < Math.PI / 2);
+  // Straight down, it keeps the facing it had.
+  assert.strictEqual(dartPose(hit, { vx: 0, vy: 2 }, tip, 2, -1).facing, -1);
 });
