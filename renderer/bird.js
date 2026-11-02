@@ -148,7 +148,7 @@
   function step(t) {
     if (!motion) return;
     if (motion.kind === 'throw') return flight(t);
-    if (motion.kind === 'stuck') { if (t > motion.until) { motion = null; drop(); } return; }
+    if (motion.kind === 'stuck') { if (t > motion.until) { motion = null; fall(); } return; }
     const k = Math.max(0, Math.min(1, (t - motion.start) / motion.ms));
     if (motion.kind === 'walk') {
       pos = { x: motion.from.x + (motion.to.x - motion.from.x) * k, y: motion.from.y + (motion.to.y - motion.from.y) * k };
@@ -449,9 +449,14 @@
   // Let go: it falls to the nearest edge below, or the status bar's line,
   // and stays there.
   function drop() {
-    const { edge, point: to } = window.birdDrop.landing(perches(), pos, floorLine());
     stayUntil = performance.now() + STAY_MS;
     nextIdle = performance.now() + 1500;
+    fall();
+  }
+  // Only the fall, so a stay that a call or a celebration ended while it was
+  // in the air or on the dart board does not start again.
+  function fall() {
+    const { edge, point: to } = window.birdDrop.landing(perches(), pos, floorLine());
     const h = Math.max(0, to.y - pos.y);
     if (reduced || h < 3) {
       pos = to; surface = edge;
@@ -465,10 +470,17 @@
   // bounces off the window's sides and top and lands on the first edge it
   // falls onto. Then it stays there, like after a drop.
   const MAX_FLIGHT_MS = 12_000;
+  const WALL = 20;           // px from the window's sides to its feet at a bounce
+  const CEILING = 56;        // its feet at a bounce off the top, with its head at the window's edge
+  const HARD_LANDING = 1.1;  // px/ms down at touchdown that leaves it seeing stars
+  const SPIN = 0.012;        // radians of tumble per px flown
+  const faceAlong = (vx) => { if (Math.abs(vx) > 0.05) facing = vx > 0 ? 1 : -1; };
   function fling(v) {
     const { vx, vy } = window.birdThrow.capped(v);
-    if (Math.abs(vx) > 0.05) facing = vx > 0 ? 1 : -1;
+    faceAlong(vx);
     const t = performance.now();
+    stayUntil = t + STAY_MS;
+    nextIdle = t + 1500;
     motion = { kind: 'throw', body: { x: pos.x, y: pos.y, vx, vy }, start: t, last: t, spin: 0, perches: perches(), nextPerches: t + 250 };
   }
   function flight(t) {
@@ -476,27 +488,27 @@
     const dt = Math.min(50, t - m.last);
     if (dt <= 0) return;
     m.last = t;
-    const walls = { left: 20, right: window.innerWidth - 20, top: 56 };
+    const walls = { left: WALL, right: window.innerWidth - WALL, top: CEILING };
     const { body, hit } = window.birdThrow.advance(m.body, dt, GRAVITY, walls);
     if (hit.length) feathers(1);
+    if (hit.includes('left') || hit.includes('right')) faceAlong(body.vx);
     if (t > m.nextPerches) { m.perches = perches(); m.nextPerches = t + 250; }
     const b = board();
     const hitAt = b && window.birdThrow.hitBoard({ x: m.body.x, y: m.body.y - BODY }, { x: body.x, y: body.y - BODY }, b);
     if (hitAt) return stick(t, hitAt.point, b, body.vx);
     const land = window.birdThrow.landing(m.body, body, m.perches, floorLine());
-    m.spin += dt * Math.hypot(body.vx, body.vy) * 0.012 * (Math.sign(body.vx * facing) || 1);
+    m.spin += dt * Math.hypot(body.vx, body.vy) * SPIN * (Math.sign(body.vx * facing) || 1);
     m.body = body;
     pos = { x: body.x, y: body.y };
     if (land) return touchDown(t, land, body.vy);
-    if (t - m.start > MAX_FLIGHT_MS) { motion = null; drop(); }
+    if (t - m.start > MAX_FLIGHT_MS) { motion = null; fall(); }
   }
   function touchDown(t, { edge, point }, impact) {
     motion = null;
     pos = point; surface = edge;
     play('land'); dust();
-    const hard = impact > 1.1;
+    const hard = impact > HARD_LANDING;
     if (hard) dizzy();
-    stayUntil = t + STAY_MS;
     nextIdle = t + (hard ? 2500 : 1500);
   }
 
@@ -511,8 +523,12 @@
   const BEST_KEY = 'agent-office.dartboard-best';
   let dartBoard = false, lastScore = null, bestScore = 0;
   try { bestScore = Number(localStorage.getItem(BEST_KEY)) || 0; } catch { /* none yet */ }
+  // Hidden behind the full-window terminal, a dialog, settings, or the open
+  // chat, which sits over the office's right side. A split terminal leaves it up.
+  const boardCovered = () => document.body.classList.contains('term-full') && document.body.classList.contains('panel-open')
+    || !document.getElementById('modal')?.hidden || !document.getElementById('settings')?.hidden || !document.getElementById('assistant-chat')?.hidden;
   function board() {
-    if (!dartBoard || hidden || covered()) return null;
+    if (!dartBoard || hidden || boardCovered()) return null;
     const r = document.getElementById('building')?.getBoundingClientRect();
     if (!r || r.width < 200 || r.height < 160) return null;
     return { x: Math.round(r.right - 70), y: Math.round(r.top + r.height / 2), r: BOARD_R * SCALE };
@@ -559,7 +575,7 @@
     const s = window.birdThrow.score(point, b);
     lastScore = s;
     if (s > bestScore) { bestScore = s; try { localStorage.setItem(BEST_KEY, String(s)); } catch { /* ignore */ } }
-    if (Math.abs(vx) > 0.05) facing = vx > 0 ? 1 : -1;
+    faceAlong(vx);
     pos = { x: point.x, y: point.y + BODY };
     motion = { kind: 'stuck', start: t, until: t + STICK_MS };
     // Beside the board, not above PiPi, where its speech bubble would hide it.

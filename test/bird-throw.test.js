@@ -47,6 +47,20 @@ test('it falls under gravity', () => {
   assert.deepStrictEqual(hit, []);
 });
 
+test('the path does not depend on the frame rate', () => {
+  const open = { left: -1e9, right: 1e9, top: -1e9 };
+  const fly = (dt) => {
+    let b = { x: 100, y: 500, vx: 1.2, vy: -1.5 };
+    for (let n = 0; n < Math.round(1000 / dt); n++) b = advance(b, dt, 0.0025, open).body;
+    return b;
+  };
+  const ref = fly(50);
+  for (const dt of [1000 / 120, 1000 / 60]) {
+    const b = fly(dt);
+    for (const k of ['x', 'y', 'vx', 'vy']) assert.ok(Math.abs(b[k] - ref[k]) < 1e-6, `${k} at ${dt} ms: ${b[k]} vs ${ref[k]}`);
+  }
+});
+
 test('a bounce off a wall reverses and damps the speed into it', () => {
   const { body, hit } = advance({ x: 1250, y: 300, vx: 2, vy: -1 }, 10, 0, walls);
   assert.deepStrictEqual(hit, ['right']);

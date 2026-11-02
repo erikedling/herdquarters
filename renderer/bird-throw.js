@@ -4,13 +4,13 @@
 // are its feet in viewport px (its body for the board), velocities px/ms.
 // bird.js flies it; test/bird-throw.test.js runs it in node.
 (function (root) {
+  const { SLACK } = typeof module !== 'undefined' && module.exports ? require('./bird-drop') : root.birdDrop;
   const WINDOW_MS = 100;  // pointer samples that count for the release
   const MIN_SPAN_MS = 8;  // fewer ms of samples than this is noise, not a throw
   const THROW_MIN = 0.5;  // px/ms (500 px/s): slower than this is a drop
   const MAX_SPEED = 2.4;  // px/ms (2400 px/s)
   const BOUNCE = 0.6;     // share of the speed into a wall it keeps
   const SCRAPE = 0.85;    // share of the speed along a wall it keeps
-  const SLACK = 16;       // as in bird-drop.js
 
   // samples: [{ x, y, t }] oldest first, the last one at release.
   function releaseVelocity(samples, now = samples.at(-1)?.t) {
@@ -34,8 +34,10 @@
   // after dt ms and which walls it bounced off.
   function advance(body, dt, gravity, walls) {
     let { x, y, vx, vy } = body;
+    // Exact under constant gravity, so the path is the same at any frame rate.
+    x += vx * dt;
+    y += vy * dt + 0.5 * gravity * dt * dt;
     vy += gravity * dt;
-    x += vx * dt; y += vy * dt;
     const hit = [];
     if (x < walls.left && vx < 0) { x = walls.left + (walls.left - x) * BOUNCE; vx = -vx * BOUNCE; vy *= SCRAPE; hit.push('left'); }
     if (x > walls.right && vx > 0) { x = walls.right - (x - walls.right) * BOUNCE; vx = -vx * BOUNCE; vy *= SCRAPE; hit.push('right'); }
