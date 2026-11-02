@@ -92,7 +92,7 @@ function assistantSettings(orchestratorsDir) {
     permissions: {
       allow: [
         ...['read_thread', 'read_channel', 'read_user_profile', 'search_channels', 'search_users', 'search_public', 'search_public_and_private'].map(SLACK_TOOL),
-        'Read', 'Glob', 'Grep', 'Edit(./**)', 'Write(./**)', 'Bash(date:*)', 'Bash(ls:*)', 'Bash(gh pr view:*)', 'Bash(gh pr list:*)',
+        'Read', 'Glob', 'Grep', 'Edit(./**)', 'Bash(date:*)', 'Bash(ls:*)', 'Bash(gh pr view:*)', 'Bash(gh pr list:*)',
       ],
       deny: [
         ...['send_message', 'send_message_draft', 'schedule_message', 'add_reaction', 'create_canvas', 'update_canvas'].map(SLACK_TOOL),

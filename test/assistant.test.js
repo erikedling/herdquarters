@@ -85,10 +85,10 @@ test('prepare() rewrites the permissions: orchestrators are read only, even in a
   const { permissions } = JSON.parse(fs.readFileSync(path.join(dir, '.claude', 'settings.json'), 'utf8'));
   assert.deepStrictEqual(permissions, assistantSettings(orchestratorsDir).permissions);
   assert.ok(permissions.deny.includes(`Edit(/${orchestratorsDir}/**)`));
-  assert.ok(permissions.allow.includes('Write(./**)'));
+  assert.ok(permissions.allow.includes('Edit(./**)'));
 });
 
-test('the session may list and read the orchestrators folder', async () => {
+test('start() passes --add-dir for each addDirs entry', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
   const fake = path.join(dir, 'claude');
   fs.writeFileSync(fake, `#!/bin/sh\nprintf '%s\\n' "$@" > "${path.join(dir, 'args')}"\n`, { mode: 0o755 });
