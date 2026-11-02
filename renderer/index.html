@@ -101,6 +101,10 @@
               <label><input type="checkbox" name="assistantDays" value="0">Sun</label>
             </span>
           </div>
+          <label class="settings-row settings-check">
+            <span class="settings-check-text">Dart board<small>Target practice: a board on the office's right wall. Fling <span class="assistant-name">PiPi</span> at it; the bullseye is worth 50. With reduced motion on in your system settings a fling is a plain drop, so it can't reach the board.</small></span>
+            <input id="set-dartboard" type="checkbox">
+          </label>
         </section>
 
         <section class="settings-section" data-section="agents" hidden>
@@ -187,7 +191,7 @@
   </footer>
 
   <canvas id="bird-canvas" class="bird-canvas" aria-hidden="true"></canvas>
-  <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, drag to move, double-click for a flip" hidden></div>
+  <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, drag to move, fling to throw, double-click for a flip" hidden></div>
   <div id="bird-bubble" class="bird-bubble" hidden></div>
   <button id="chat-tab" class="chat-tab" title="Chat with your assistant" hidden></button>
   <aside id="assistant-chat" class="chat" hidden>
@@ -243,6 +247,7 @@
   <script src="pipi-sprite.js"></script>
   <script src="backflip.js"></script>
   <script src="bird-drop.js"></script>
+  <script src="bird-throw.js"></script>
   <script src="bird.js"></script>
   <script src="assistant.js"></script>
   <script src="app.js"></script>

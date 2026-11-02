@@ -13,7 +13,7 @@
     return { edge, point: { x: Math.max(edge.left, Math.min(edge.right, at.x)), y: edge.y } };
   }
 
-  const api = { landing };
+  const api = { landing, SLACK };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.birdDrop = api;
 })(typeof window !== 'undefined' ? window : globalThis);

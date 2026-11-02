@@ -4,13 +4,14 @@
 // mouse. It walks along the edges it perches on, flies between ticket cards,
 // room signs, desks and reception, pecks at a ticket that needs the user,
 // watches the cursor, startles at a fast one, loves being petted, celebrates
-// a finished ticket and sleeps in its nest at night.
+// a finished ticket and sleeps in its nest at night. The user can pick it up
+// and drop it, or fling it across the office, at a dart board if it is on.
 // assistant.js says what is going on (setMood, pin, celebrate); the rest it
 // decides itself. Its feathers are the theme's accent color.
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop || !window.birdThrow) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
   const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
@@ -60,7 +61,7 @@
   let pos = home();                 // where its feet are, in the viewport
   let facing = 1;                   // 1 right, -1 left
   let surface = null;               // the edge it stands on: { left, right, y }
-  let motion = null;                // { kind: 'fly' | 'walk', from, to, start, ms, peak }
+  let motion = null;                // { kind: 'fly' | 'walk' | 'fall', from, to, start, ms, peak } or a throw: { kind: 'throw', body, start, last, spin, perches }, or stuck in the dart board: { kind: 'stuck', start, until, hit, angle, ring }
   let once = null;                  // a one-off animation: { name, start, then }
   let mood = 'idle';                // from assistant.js: idle | talk | dream | call
   let pinned = null;                // { point: () => {x,y}, peck: () => element | null }
@@ -69,7 +70,7 @@
   let flip = null;                  // a backflip: { start, landed }
   let hover = false, petting = false;
   let alert = false;                // something unread: a "!" above its head
-  let drag = null;                  // the user is holding it: { pointerId, x, y, on }
+  let drag = null;                  // the user is holding it: { pointerId, x, y, on, samples }
   const mouse = { x: -999, y: -999, t: 0, speed: 0 };
   const parts = [];                 // particles
 
@@ -90,7 +91,7 @@
   // lets it walk along it. A new pin (a call, an unread message, the chat; not
   // a ticket visit), a celebration or the edge scrolling away ends the stay.
   const STAY_MS = 5 * 60_000;
-  const GRAVITY = 0.0025; // px/ms², for the fall after a drop
+  const GRAVITY = 0.0025; // px/ms², for the fall after a drop and a throw
   let stayUntil = 0;
   const staying = () => performance.now() < stayUntil;
 
@@ -146,6 +147,8 @@
 
   function step(t) {
     if (!motion) return;
+    if (motion.kind === 'throw') return flight(t);
+    if (motion.kind === 'stuck') { if (t > motion.until) { motion = null; fall(); } return; }
     const k = Math.max(0, Math.min(1, (t - motion.start) / motion.ms));
     if (motion.kind === 'walk') {
       pos = { x: motion.from.x + (motion.to.x - motion.from.x) * k, y: motion.from.y + (motion.to.y - motion.from.y) * k };
@@ -231,9 +234,10 @@
       if (i < a.frames.length) return a.frames[i];
       const then = once.then; once = null; then?.();
     }
+    if (motion?.kind === 'stuck') return STUCK_POSE;
     let name = 'idle';
     if (drag?.on) name = 'hover';
-    else if (motion?.kind === 'fly' || motion?.kind === 'fall') name = 'fly';
+    else if (motion && motion.kind !== 'walk') name = 'fly';
     else if (motion?.kind === 'walk') name = 'walk';
     else if (party) name = 'celebrate';
     else if (mood === 'dream' || (night() && !pinned && mood === 'idle')) name = 'sleep';
@@ -261,6 +265,8 @@
     const colors = ['#ff5d8f', '#ffd23f', '#3ec1ff', '#7dff7a', '#b48cff'];
     for (let i = 0; i < n; i++) add({ kind: 'confetti', x: pos.x + (Math.random() - 0.5) * 30, y: pos.y - 50, vx: (Math.random() - 0.5) * 0.25, vy: -0.15 - Math.random() * 0.15, g: 0.0006, life: 1600, color: colors[i % colors.length] });
   }
+  // Seeing stars after a hard landing: they circle its head, wherever it is.
+  function dizzy() { for (let i = 0; i < 3; i++) add({ kind: 'star', x: 0, y: 0, vx: 0, vy: 0, life: 1800, phase: (i * Math.PI * 2) / 3 }); }
   function zzz() { add({ kind: 'z', x: pos.x + 14 * facing, y: pos.y - 44, vx: 0.012 * facing, vy: -0.018, life: 2400 }); }
 
   // The "!" above its head: yellow with an outline, in a little bubble.
@@ -268,6 +274,7 @@
   const BANG_COLORS = { O: '#1a1420', W: '#fff7e0', Y: '#e8a10e' };
   const HEART = ['.PP.PP.', 'PPPPPPP', 'PPPPPPP', '.PPPPP.', '..PPP..', '...P...'];
   const Z = ['KKKK', '..K.', '.K..', 'KKKK'];
+  const STAR = ['..Y..', '.YYY.', 'YYYYY', '.YYY.', '..Y..'];
   const NEST = ['..XXXXXXXXXXXXXXXXXX..', '.XWwXwWXwWwXwXWwXwWXX.', 'XWwWwXwWwWXwWwXwWwXwWX', 'XXwXWwXwXWwXWwXwXWXwXX', '.XXXXXXXXXXXXXXXXXXXX.', '..XXXXXXXXXXXXXXXXXX..'];
   const NEST_COLORS = { X: '#5a3a22', W: '#a8743e', w: '#c99a5b' };
   function pixels(rows, x, y, colors, s = SCALE) {
@@ -291,6 +298,8 @@
       else if (p.kind === 'heart') pixels(HEART, p.x - 7, p.y, { P: '#ff6f91' });
       else if (p.kind === 'z') pixels(Z, p.x, p.y, { K: getComputedStyle(document.documentElement).getPropertyValue('--accent-text') || '#c9d2ff' }, 1 + age / 900);
       else if (p.kind === 'feather') { ctx.fillStyle = palette.H; const sx = p.x + Math.sin(age / 200 + p.sway) * 5; ctx.fillRect(sx, p.y, 2, 6); ctx.fillStyle = palette.B; ctx.fillRect(sx + 2, p.y + 1, 2, 4); }
+      else if (p.kind === 'star') { const a = age / 160 + p.phase; pixels(STAR, pos.x + Math.cos(a) * 14 - 5, pos.y - 56 + Math.sin(a) * 4, { Y: '#ffd23f' }, 2); }
+      else if (p.kind === 'score') { ctx.font = '700 16px ui-monospace, monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#1a1420'; ctx.strokeText(p.text, p.x, p.y); ctx.fillStyle = '#ffd23f'; ctx.fillText(p.text, p.x, p.y); }
       else if (p.kind === 'confetti') { ctx.fillStyle = p.color; const w = Math.abs(Math.sin(age / 90)) * 4 + 1; ctx.fillRect(p.x, p.y, w, 4); }
     }
     ctx.globalAlpha = 1;
@@ -314,12 +323,14 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, $cv.width, $cv.height);
     if (!hidden) {
+      const b = board();
+      if (b) drawBoard(b);
       const h = home();
       pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the status bar's line
       // A shadow on the ground: under its feet, or where it will land while flying.
       const ground = motion?.kind === 'fall' ? motion.to.y : motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
       const height = Math.max(0, ground - pos.y + lift);
-      if (!drag?.on) {
+      if (!drag?.on && motion?.kind !== 'throw' && motion?.kind !== 'stuck') {
         ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
         ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
       }
@@ -332,13 +343,29 @@
         if (f.phase === 'air') pose = { ...pose, legs: 'tuck', wing: 'up' };
       }
       ctx.save();
-      ctx.translate(Math.round(pos.x), Math.round(pos.y - lift));
-      ctx.scale(facing * SCALE, SCALE);
-      // Head back over its tail; the facing scale mirrors it, so a backflip both ways.
-      if (f?.angle) { ctx.translate(0, -12); ctx.rotate(-f.angle); ctx.translate(0, 12); }
+      if (motion?.kind === 'stuck') {
+        // Beak tip on the hit point, quivering on it like a dart that just went in.
+        const a = t - motion.start;
+        ctx.translate(Math.round(motion.hit.x), Math.round(motion.hit.y));
+        ctx.scale(facing * SCALE, SCALE);
+        ctx.rotate(motion.angle + Math.sin(a / 25) * 0.2 * Math.max(0, 1 - a / 400));
+        ctx.translate(-STUCK_TIP.x, -STUCK_TIP.y);
+      } else {
+        ctx.translate(Math.round(pos.x), Math.round(pos.y - lift));
+        ctx.scale(facing * SCALE, SCALE);
+        // Head back over its tail; the facing scale mirrors it, so a backflip both ways.
+        if (f?.angle) { ctx.translate(0, -12); ctx.rotate(-f.angle); ctx.translate(0, 12); }
+        else if (motion?.kind === 'throw') { ctx.translate(0, -12); ctx.rotate(motion.spin); ctx.translate(0, 12); }
+      }
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sprite(pose), -SIZE / 2 + 1, -GROUND);
       ctx.restore();
+      // The ring it hit, outlined over it, so its body does not hide what scored.
+      if (motion?.kind === 'stuck' && motion.ring >= 0 && b) {
+        ctx.globalAlpha = Math.min(1, (motion.until - t) / 300);
+        drawRingOutline(b, motion.ring);
+        ctx.globalAlpha = 1;
+      }
       drawParts(t, dt);
       if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - lift - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
     }
@@ -390,11 +417,14 @@
     if (e.button !== 0) return;
     held = false; dragged = false;
     holdTimer = setTimeout(() => { held = true; petting = true; }, 350);
-    drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, on: false };
+    drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, on: false, samples: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
     $hit.setPointerCapture(e.pointerId);
   });
   $hit.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
+    const t = performance.now();
+    drag.samples.push({ x: e.clientX, y: e.clientY, t });
+    while (drag.samples[0].t < t - 2 * window.birdThrow.WINDOW_MS) drag.samples.shift();
     if (!drag.on) {
       if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
       drag.on = true;
@@ -408,23 +438,38 @@
   });
   function release(e) {
     if (!drag || e.pointerId !== drag.pointerId) return;
-    const was = drag.on;
+    const { on, samples } = drag;
     drag = null;
     $hit.classList.remove('held');
-    if (was) { dragged = true; drop(); }
+    if (!on) return;
+    dragged = true;
+    // Only a real let-go throws: a cancel or a lost capture just drops it.
+    const t = performance.now();
+    const v = e.type === 'pointerup' ? window.birdThrow.releaseVelocity([...samples, { x: e.clientX, y: e.clientY, t }], t) : { vx: 0, vy: 0 };
+    if (reduced || !window.birdThrow.isThrow(v)) drop();
+    else fling(v);
   }
   $hit.addEventListener('pointerup', release);
   $hit.addEventListener('pointercancel', release);
   $hit.addEventListener('lostpointercapture', release);
 
+  // The status bar's line: where it lands when there is nothing else below.
+  function floorLine() {
+    const bar = document.getElementById('statusbar')?.getBoundingClientRect();
+    return { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
+  }
+
   // Let go: it falls to the nearest edge below, or the status bar's line,
   // and stays there.
   function drop() {
-    const bar = document.getElementById('statusbar')?.getBoundingClientRect();
-    const line = { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
-    const { edge, point: to } = window.birdDrop.landing(perches(), pos, line);
     stayUntil = performance.now() + STAY_MS;
     nextIdle = performance.now() + 1500;
+    fall();
+  }
+  // Only the fall, so a stay that a call or a celebration ended while it was
+  // in the air or on the dart board does not start again.
+  function fall() {
+    const { edge, point: to } = window.birdDrop.landing(perches(), pos, floorLine());
     const h = Math.max(0, to.y - pos.y);
     if (reduced || h < 3) {
       pos = to; surface = edge;
@@ -432,6 +477,153 @@
       return;
     }
     motion = { kind: 'fall', from: { ...pos }, to, start: performance.now(), ms: Math.sqrt((2 * h) / GRAVITY), edge };
+  }
+
+  // Let go while moving: it flies off with the pointer's speed, tumbling,
+  // bounces off the window's sides and top and lands on the first edge it
+  // falls onto. Then it stays there, like after a drop.
+  const MAX_FLIGHT_MS = 12_000;
+  const WALL = 20;           // px from the window's sides to its feet at a bounce
+  const CEILING = 56;        // its feet at a bounce off the top, with its head at the window's edge
+  const HARD_LANDING = 1.1;  // px/ms down at touchdown that leaves it seeing stars
+  const SPIN = 0.012;        // radians of tumble per px flown
+  const faceAlong = (vx) => { if (Math.abs(vx) > 0.05) facing = vx > 0 ? 1 : -1; };
+  function fling(v) {
+    const { vx, vy } = window.birdThrow.capped(v);
+    faceAlong(vx);
+    const t = performance.now();
+    stayUntil = t + STAY_MS;
+    nextIdle = t + 1500;
+    motion = { kind: 'throw', body: { x: pos.x, y: pos.y, vx, vy }, start: t, last: t, spin: 0, perches: perches(), nextPerches: t + 250 };
+  }
+  function flight(t) {
+    const m = motion;
+    const dt = Math.min(50, t - m.last);
+    if (dt <= 0) return;
+    m.last = t;
+    const walls = { left: WALL, right: window.innerWidth - WALL, top: CEILING };
+    const { body, hit } = window.birdThrow.advance(m.body, dt, GRAVITY, walls);
+    if (hit.length) feathers(1);
+    if (hit.includes('left') || hit.includes('right')) faceAlong(body.vx);
+    if (t > m.nextPerches) { m.perches = perches(); m.nextPerches = t + 250; }
+    const b = board();
+    const hitAt = b && window.birdThrow.hitBoard({ x: m.body.x, y: m.body.y - BODY }, { x: body.x, y: body.y - BODY }, b);
+    if (hitAt) return stick(t, hitAt.point, b, body);
+    const land = window.birdThrow.landing(m.body, body, m.perches, floorLine());
+    m.spin += dt * Math.hypot(body.vx, body.vy) * SPIN * (Math.sign(body.vx * facing) || 1);
+    m.body = body;
+    pos = { x: body.x, y: body.y };
+    if (land) return touchDown(t, land, body.vy);
+    if (t - m.start > MAX_FLIGHT_MS) { motion = null; fall(); }
+  }
+  function touchDown(t, { edge, point }, impact) {
+    motion = null;
+    pos = point; surface = edge;
+    play('land'); dust();
+    const hard = impact > HARD_LANDING;
+    if (hard) dizzy();
+    nextIdle = t + (hard ? 2500 : 1500);
+  }
+
+  // ---- the dart board ----
+
+  // Target practice, from settings: a board on the office's right wall, about
+  // halfway up. A thrown PiPi that flies into it sticks there for a moment,
+  // scores by ring and drops to the edge below.
+  const BODY = 24;          // CSS px from its feet up to the middle of its body
+  const BOARD_R = 22;       // sprite px of the scoring face; a wooden rim goes around it
+  const STICK_MS = 1300;
+  const STUCK_POSE = { wing: 'up', legs: 'tuck', eye: 'wide', beak: 'open' };
+  const STUCK_TIP = window.birdThrow.beakTip(pipiFrame(STUCK_POSE), SIZE, GROUND);
+  // Where the last hit went in, from the board's middle; stays after PiPi drops off.
+  let hitMark = null;
+  const MARK = ['OO.OO', 'OWOWO', '.OWO.', 'OWOWO', 'OO.OO'];
+  const MARK_COLORS = { O: '#1a1420', W: '#fff7e0' };
+  const BEST_KEY = 'agent-office.dartboard-best';
+  let dartBoard = false, lastScore = null, bestScore = 0;
+  try { bestScore = Number(localStorage.getItem(BEST_KEY)) || 0; } catch { /* none yet */ }
+  // Hidden behind the full-window terminal, a dialog, settings, or the open
+  // chat, which sits over the office's right side. A split terminal leaves it up.
+  const boardCovered = () => document.body.classList.contains('term-full') && document.body.classList.contains('panel-open')
+    || !document.getElementById('modal')?.hidden || !document.getElementById('settings')?.hidden || !document.getElementById('assistant-chat')?.hidden;
+  function board() {
+    if (!dartBoard || hidden || boardCovered()) return null;
+    const r = document.getElementById('building')?.getBoundingClientRect();
+    if (!r || r.width < 200 || r.height < 160) return null;
+    return { x: Math.round(r.right - 70), y: Math.round(r.top + r.height / 2), r: BOARD_R * SCALE };
+  }
+  // Painted once: rings from RINGS, wedges like a real board, a wooden rim.
+  let boardSprite = null;
+  function boardCanvas() {
+    if (boardSprite) return boardSprite;
+    const R = BOARD_R, RIM = 3, n = (R + RIM) * 2;
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    const g = c.getContext('2d');
+    const rings = window.birdThrow.RINGS;
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const dx = x + 0.5 - n / 2, dy = y + 0.5 - n / 2;
+      const d = Math.hypot(dx, dy) / R;
+      const wedge = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 20 + 0.5) % 2;
+      let color = null;
+      if (d <= rings[0].r) color = '#e23b3b';
+      else if (d <= rings[1].r) color = '#2f9e4f';
+      else if (d <= rings[2].r) color = wedge ? '#f3e2c0' : '#1f1a24';
+      else if (d <= rings[3].r) color = wedge ? '#e23b3b' : '#2f9e4f';
+      else if (d <= rings[4].r) color = wedge ? '#1f1a24' : '#f3e2c0';
+      else if (d <= 1 + (RIM - 1) / R) color = (x + y) % 3 ? '#8a5a32' : '#5a3a22';
+      else if (d <= 1 + RIM / R) color = '#1a1420';
+      if (color) { g.fillStyle = color; g.fillRect(x, y, 1, 1); }
+    }
+    return (boardSprite = c);
+  }
+  const outlines = new Map();
+  function drawRingOutline(b, i) {
+    let c = outlines.get(i);
+    if (!c) {
+      const R = BOARD_R, n = (R + 3) * 2, rings = window.birdThrow.RINGS;
+      const edges = [rings[i].r * R, ...(i ? [rings[i - 1].r * R] : [])];
+      c = document.createElement('canvas');
+      c.width = c.height = n;
+      const g = c.getContext('2d');
+      g.fillStyle = '#ffd23f';
+      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+        const d = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2);
+        if (edges.some((e) => Math.abs(d - e) < 0.5)) g.fillRect(x, y, 1, 1);
+      }
+      outlines.set(i, c);
+    }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, b.x - (c.width * SCALE) / 2, b.y - (c.height * SCALE) / 2, c.width * SCALE, c.height * SCALE);
+  }
+  function drawBoard(b) {
+    const c = boardCanvas();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(c, b.x - (c.width * SCALE) / 2, b.y - (c.height * SCALE) / 2, c.width * SCALE, c.height * SCALE);
+    if (hitMark) pixels(MARK, Math.round(b.x + hitMark.dx) - 5, Math.round(b.y + hitMark.dy) - 5, MARK_COLORS);
+    const text = `last ${lastScore ?? '–'} · best ${bestScore}`;
+    ctx.font = '600 11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    const w = ctx.measureText(text).width + 12, ty = b.y + b.r + 22;
+    ctx.fillStyle = 'rgba(20,16,34,.78)';
+    ctx.fillRect(Math.round(b.x - w / 2), ty - 12, Math.round(w), 17);
+    ctx.fillStyle = '#fff3dc';
+    ctx.fillText(text, b.x, ty);
+  }
+  function stick(t, point, b, v) {
+    const s = window.birdThrow.score(point, b);
+    lastScore = s;
+    if (s > bestScore) { bestScore = s; try { localStorage.setItem(BEST_KEY, String(s)); } catch { /* ignore */ } }
+    hitMark = { dx: point.x - b.x, dy: point.y - b.y };
+    const dart = window.birdThrow.dartPose(point, v, STUCK_TIP, SCALE, facing);
+    facing = dart.facing;
+    // Its feet, so the box for the mouse follows it and the drop starts from there.
+    pos = dart.feet;
+    const ring = window.birdThrow.RINGS.findIndex((r) => r.score === s);
+    motion = { kind: 'stuck', start: t, until: t + STICK_MS, hit: point, angle: dart.angle, ring };
+    // Beside the board, not above PiPi, where its speech bubble would hide it.
+    add({ kind: 'score', text: `+${s}`, x: b.x - b.r - 26, y: b.y, vx: 0, vy: -0.03, life: 1100 });
+    if (s === window.birdThrow.RINGS[0].score) confetti(12);
   }
 
   // A click opens the chat; a double click is a flip, not two clicks. A
@@ -465,6 +657,8 @@
     celebrate(point) { stayUntil = 0; party = { point, until: Date.now() + 3500 }; },
     // The office is behind something (the terminal): stop drawing.
     setHidden(h) { hidden = h; $hit.hidden = h; },
+    // Settings > PiPi > Dart board.
+    setDartBoard(on) { dartBoard = !!on; if (!dartBoard) hitMark = null; },
     position: () => ({ ...pos }),
   };
   resize();
