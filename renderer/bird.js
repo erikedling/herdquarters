@@ -213,7 +213,7 @@
   function currentPose(t) {
     if (once) {
       const a = ANIM[once.name];
-      const i = Math.floor((t - once.start) / a.ms);
+      const i = Math.max(0, Math.floor((t - once.start) / a.ms));
       if (i < a.frames.length) return a.frames[i];
       const then = once.then; once = null; then?.();
     }
@@ -291,6 +291,7 @@
     const f = flip && backflip(t - flip.start);
     if (flip && !f) flip = null;
     if (f?.phase === 'land' && !flip.landed) { flip.landed = true; dust(); }
+    const lift = f ? f.lift : 0;
     think(t);
     if (hover && t > nextHeart) { nextHeart = t + (petting ? 260 : 900); heart(); }
     if ((mood === 'dream' || (night() && mood === 'idle' && !motion && !pinned)) && Math.random() < dt / 900) zzz();
@@ -302,13 +303,11 @@
       pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the status bar's line
       // A shadow on the ground: under its feet, or where it will land while flying.
       const ground = motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
-      const lift = f ? f.lift : 0;
       const height = Math.max(0, ground - pos.y + lift);
       ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
       ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
 
-      // undefined for a frame when play() started after this frame's time.
-      let pose = currentPose(t) || {};
+      let pose = currentPose(t);
       if (f) {
         // Rounded so the sprite cache sees a few poses, not one per frame.
         const sy = Math.round(f.squash * 50) / 50;
@@ -327,7 +326,7 @@
       if (alert && !motion) pixels(BANG, pos.x + 6 * facing - 7, pos.y - lift - 84 + Math.round(Math.sin(t / 180) * 2), BANG_COLORS);
     }
     // The box for the mouse follows the body.
-    $hit.style.transform = `translate(${Math.round(pos.x - 26)}px, ${Math.round(pos.y - 52)}px)`;
+    $hit.style.transform = `translate(${Math.round(pos.x - 26)}px, ${Math.round(pos.y - lift - 52)}px)`;
     window.officeAssistant?.birdMoved(pos);
     requestAnimationFrame(frame);
   }
