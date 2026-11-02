@@ -93,16 +93,23 @@ const PROMPTS = {
 
 // Read Slack, never write it. Read anything on disk, write only in its folder.
 // Headless, so anything not allowed here is refused without a prompt.
+// orchestratorsDir is a working directory too (--add-dir, see
+// AssistantSession), so the deny keeps it read only.
 const SLACK_TOOL = (t) => `mcp__claude_ai_Slack__slack_${t}`;
-const SETTINGS = {
-  permissions: {
-    allow: [
-      ...['read_thread', 'read_channel', 'read_user_profile', 'search_channels', 'search_users', 'search_public', 'search_public_and_private'].map(SLACK_TOOL),
-      'Read', 'Glob', 'Grep', 'Edit(./**)', 'Write(./**)', 'Bash(date:*)', 'Bash(ls:*)', 'Bash(gh pr view:*)', 'Bash(gh pr list:*)',
-    ],
-    deny: ['send_message', 'send_message_draft', 'schedule_message', 'add_reaction', 'create_canvas', 'update_canvas'].map(SLACK_TOOL),
-  },
-};
+function assistantSettings(orchestratorsDir) {
+  return {
+    permissions: {
+      allow: [
+        ...['read_thread', 'read_channel', 'read_user_profile', 'search_channels', 'search_users', 'search_public', 'search_public_and_private'].map(SLACK_TOOL),
+        'Read', 'Glob', 'Grep', 'Edit(./**)', 'Bash(date:*)', 'Bash(ls:*)', 'Bash(gh pr view:*)', 'Bash(gh pr list:*)',
+      ],
+      deny: [
+        ...['send_message', 'send_message_draft', 'schedule_message', 'add_reaction', 'create_canvas', 'update_canvas'].map(SLACK_TOOL),
+        ...(orchestratorsDir ? [`Edit(/${path.resolve(orchestratorsDir)}/**)`] : []),
+      ],
+    },
+  };
+}
 
 class AssistantStore {
   // dir: <userData>/assistant; orchestratorsDir: where the bosses live (the
@@ -145,7 +152,7 @@ class AssistantStore {
       .replace(/\{\{name\}\}/g, () => name)
       .replace(/\{\{folder\}\}/g, this.dir)
       .replace(/\{\{orchestrators\}\}/g, this.orchestratorsDir));
-    fs.writeFileSync(this.file('.claude', 'settings.json'), JSON.stringify(SETTINGS, null, 2) + '\n');
+    fs.writeFileSync(this.file('.claude', 'settings.json'), JSON.stringify(assistantSettings(this.orchestratorsDir), null, 2) + '\n');
     try { trustFolder(this.dir, this.claudeConfig); } catch (err) { console.warn(`assistant: ${err.message}`); }
   }
 
@@ -237,4 +244,4 @@ function runAssistant({ store, session, now = Date.now() }) {
   return action;
 }
 
-module.exports = { AssistantStore, runAssistant, assistantDue, morningDue, workday, assistantDays, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS };
+module.exports = { AssistantStore, assistantSettings, runAssistant, assistantDue, morningDue, workday, assistantDays, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS };
