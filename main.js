@@ -98,8 +98,9 @@ function ensureAssistant() {
   });
   return assistant;
 }
+let fixtureConfig = {}; // fixture runs keep the settings here, so the days can be tried out
 function sendAssistant() {
-  if (process.env.OFFICE_FIXTURE) return toRenderer('assistant', require('./fixture').assistant());
+  if (process.env.OFFICE_FIXTURE) return toRenderer('assistant', require('./fixture').assistant(fixtureConfig));
   toRenderer('assistant', ensureAssistant().view(session));
 }
 function assistantClock() {
@@ -291,7 +292,7 @@ const assistantCall = (fn) => {
   if (process.env.OFFICE_FIXTURE) return { ok: true };
   try { const r = fn(ensureAssistant()); sendAssistant(); return { ok: true, ...(r || {}) }; } catch (err) { return { ok: false, error: String(err.message || err) }; }
 };
-ipcMain.handle('assistant-configure', (_e, patch) => assistantCall((a) => {
+ipcMain.handle('assistant-configure', (_e, patch) => (process.env.OFFICE_FIXTURE ? (fixtureConfig = { ...fixtureConfig, ...patch }, sendAssistant(), { ok: true }) : assistantCall((a) => {
   const before = a.config().name;
   const config = a.configure(patch);
   if (config.enabled === false) session.stop();
@@ -302,7 +303,7 @@ ipcMain.handle('assistant-configure', (_e, patch) => assistantCall((a) => {
     toRenderer('assistant-chat', { type: 'history', chat: a.chat() });
   }
   return { config };
-}));
+})));
 ipcMain.handle('assistant-dismiss', (_e, { file }) => assistantCall((a) => a.dismissReminder(file)));
 ipcMain.handle('assistant-seen', () => assistantCall((a) => a.markMorningSeen()));
 ipcMain.handle('assistant-history', () => (process.env.OFFICE_FIXTURE ? require('./fixture').assistantChat() : ensureAssistant().chat()));
