@@ -278,12 +278,14 @@ office keeps `OFFICE.md` in its folder up to date with every ticket and desk
 so it knows what to link. A **🐦 PiPi** tab bottom right opens the chat too,
 with a dot when PiPi has something for you.
 
-The first time, it gets to know you. On weekdays from the morning time
-(settings, 08:30 by default) it gives a brief: what waits on you across every
-orchestrator and in Slack, today's meetings (Microsoft 365, once connected and
-allowed) and reminders. Ask it to remind you of something and it writes a file
-to `reminders/`; the office fires it on time with a chime and a bubble, and ✓
-marks it done.
+The first time, it gets to know you. On its days (settings, Monday to Friday
+by default) from the morning time (08:30 by default) it gives a brief: what
+waits on you across every orchestrator and in Slack, today's meetings
+(Microsoft 365, once connected and allowed) and reminders. Ask it to remind you
+of something and it writes a file to `reminders/`; the office fires it on time
+with a chime and a bubble, and ✓ marks it done. On the other days it stays
+quiet: no brief, no calling you, no visits to tickets. Reminders still fire,
+and it answers when you open the chat.
 
 Its memory is plain markdown in `<app data>/assistant/memory/`: `ME.md` (you),
 `NOW.md` (current focus), `INDEX.md` and one card per project in `projects/`

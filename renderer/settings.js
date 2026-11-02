@@ -1,7 +1,7 @@
-// User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time). Stored per machine.
+// User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30' };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5] };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
 
@@ -33,10 +33,12 @@
 
   function set(patch) {
     Object.assign(settings, patch); save(); apply();
-    if ('assistant' in patch || 'morning' in patch || 'assistantName' in patch) pushAssistant();
+    if ('assistant' in patch || 'morning' in patch || 'assistantName' in patch || 'assistantDays' in patch) pushAssistant();
   }
+  // getDay() numbers, 0 is Sunday; main cleans them up again with assistantDays().
+  const days = () => (Array.isArray(settings.assistantDays) ? settings.assistantDays : DEFAULTS.assistantDays);
   // The assistant's clock runs in main; it keeps its own copy of these.
-  const pushAssistant = () => window.office.assistant?.configure({ enabled: settings.assistant, morning: settings.morning, name: settings.assistantName });
+  const pushAssistant = () => window.office.assistant?.configure({ enabled: settings.assistant, morning: settings.morning, name: settings.assistantName, days: days() });
   // Same rule as assistantName() in assistant.js: one line, 24 characters, PiPi when empty.
   const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24).trim() || DEFAULTS.assistantName;
   // Every label that says the assistant's name, plus the bird's tooltips.
@@ -69,6 +71,7 @@
     const $as = $pop.querySelector('#set-assistant'); if ($as) $as.checked = settings.assistant !== false;
     const $an = $pop.querySelector('#set-assistant-name'); if ($an && document.activeElement !== $an) $an.value = settings.assistantName;
     const $mo = $pop.querySelector('#set-morning'); if ($mo && document.activeElement !== $mo) $mo.value = settings.morning;
+    for (const $d of $pop.querySelectorAll('input[name=assistantDays]')) $d.checked = days().includes(Number($d.value));
     const $snd = $pop.querySelector('#set-alert-sound'); if ($snd) $snd.checked = settings.alertSound !== false;
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
@@ -114,6 +117,7 @@
     if (e.target.name === 'sidebar') set({ sidebar: e.target.value === 'on' });
     if (e.target.name === 'mode') set({ mode: e.target.value });
     if (e.target.id === 'set-assistant') set({ assistant: e.target.checked });
+    if (e.target.name === 'assistantDays') set({ assistantDays: [...$pop.querySelectorAll('input[name=assistantDays]:checked')].map((d) => Number(d.value)).sort((a, b) => a - b) });
     // QA review: new orchestrators get it from the wizard; running ones get the flag now.
     if (e.target.id === 'set-alert-sound') { set({ alertSound: e.target.checked }); if (e.target.checked) window.officeAlerts?.chime(); }
     // Ticking a species also brings the animals back if the paw had hidden them.

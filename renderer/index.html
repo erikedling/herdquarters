@@ -86,9 +86,21 @@
             <input id="set-assistant-name" type="text" maxlength="24" spellcheck="false" placeholder="PiPi">
           </label>
           <label class="settings-row settings-check">
-            <span class="settings-check-text">Morning brief<small>On weekdays from this time it greets you with what needs you today, your meetings and reminders.</small></span>
+            <span class="settings-check-text">Morning brief<small>On its days from this time it greets you with what needs you today, your meetings and reminders.</small></span>
             <input id="set-morning" type="time">
           </label>
+          <div class="settings-row settings-text settings-days">
+            <span class="settings-check-text">Days<small>The days it looks out for you. On the others it stays quiet: no brief, no calling you, no visits to tickets. Reminders you set still go off, and it answers when you open the chat.</small></span>
+            <span class="seg seg-days">
+              <label><input type="checkbox" name="assistantDays" value="1">Mon</label>
+              <label><input type="checkbox" name="assistantDays" value="2">Tue</label>
+              <label><input type="checkbox" name="assistantDays" value="3">Wed</label>
+              <label><input type="checkbox" name="assistantDays" value="4">Thu</label>
+              <label><input type="checkbox" name="assistantDays" value="5">Fri</label>
+              <label><input type="checkbox" name="assistantDays" value="6">Sat</label>
+              <label><input type="checkbox" name="assistantDays" value="0">Sun</label>
+            </span>
+          </div>
         </section>
 
         <section class="settings-section" data-section="agents" hidden>
