@@ -19,13 +19,13 @@ function settingsWindow() {
   };
 }
 
-function load(stored, office = {}) {
+function load(stored, office = {}, extra = {}) {
   const vars = {};
   const classes = new Set();
   const $pop = settingsWindow();
   const store = stored ? { 'agent-office.settings': JSON.stringify(stored) } : {};
   const window = {
-    office,
+    office, ...extra,
     matchMedia: () => ({ matches: true, addEventListener() {} }),
   };
   vm.runInNewContext(src, {
@@ -89,4 +89,16 @@ test('the assistant gets its days: Mon-Fri on a fresh install, the saved ones af
   assert.deepStrictEqual([...sent.at(-1).days], [0, 6]);
   settings.set({ assistantDays: [] });
   assert.deepStrictEqual([...sent.at(-1).days], []);
+});
+
+test('the dart board is off on a fresh install and follows the setting', () => {
+  let shown = null;
+  const officeBird = { setDartBoard: (on) => { shown = on; } };
+  const { settings } = load(undefined, {}, { officeBird });
+  assert.strictEqual(settings.get().dartBoard, false);
+  assert.strictEqual(shown, false);
+  settings.set({ dartBoard: true });
+  assert.strictEqual(shown, true);
+  load({ dartBoard: true }, {}, { officeBird });
+  assert.strictEqual(shown, true);
 });

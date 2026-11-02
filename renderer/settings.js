@@ -1,7 +1,7 @@
-// User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days). Stored per machine.
+// User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5] };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
 
@@ -16,6 +16,7 @@
     document.body.classList.add('layout-office');
     document.body.classList.toggle('term-full', settings.termLayout === 'full');
     window.officeSidebar?.setVisible(settings.sidebar);
+    window.officeBird?.setDartBoard?.(!!settings.dartBoard);
     window.officeTerminal?.layoutChanged?.();
     window.officeRerender?.();
     syncAssistantName();
@@ -72,6 +73,7 @@
     const $an = $pop.querySelector('#set-assistant-name'); if ($an && document.activeElement !== $an) $an.value = settings.assistantName;
     const $mo = $pop.querySelector('#set-morning'); if ($mo && document.activeElement !== $mo) $mo.value = settings.morning;
     for (const $d of $pop.querySelectorAll('input[name=assistantDays]')) $d.checked = days().includes(Number($d.value));
+    const $dart = $pop.querySelector('#set-dartboard'); if ($dart) $dart.checked = !!settings.dartBoard;
     const $snd = $pop.querySelector('#set-alert-sound'); if ($snd) $snd.checked = settings.alertSound !== false;
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
@@ -117,6 +119,7 @@
     if (e.target.name === 'sidebar') set({ sidebar: e.target.value === 'on' });
     if (e.target.name === 'mode') set({ mode: e.target.value });
     if (e.target.id === 'set-assistant') set({ assistant: e.target.checked });
+    if (e.target.id === 'set-dartboard') set({ dartBoard: e.target.checked });
     if (e.target.name === 'assistantDays') set({ assistantDays: [...$pop.querySelectorAll('input[name=assistantDays]:checked')].map((d) => Number(d.value)).sort((a, b) => a - b) });
     // QA review: new orchestrators get it from the wizard; running ones get the flag now.
     if (e.target.id === 'set-alert-sound') { set({ alertSound: e.target.checked }); if (e.target.checked) window.officeAlerts?.chime(); }

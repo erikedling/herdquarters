@@ -3,7 +3,7 @@
 // falls through.
 const test = require('node:test');
 const assert = require('node:assert');
-const { releaseVelocity, isThrow, capped, advance, landing, MAX_SPEED } = require('../renderer/bird-throw');
+const { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, MAX_SPEED } = require('../renderer/bird-throw');
 
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 const walls = { left: 20, right: 1260, top: 56 };
@@ -81,4 +81,38 @@ test('the floor catches it, inside its ends', () => {
   const r = landing({ x: 10, y: 790 }, { x: 5, y: 830 }, [], floor);
   assert.strictEqual(r.edge, floor);
   assert.deepStrictEqual(r.point, { x: 40, y: 812 });
+});
+
+const board = { x: 1200, y: 400, r: 44 };
+
+test('the board scores by ring: 50 bullseye, 25 outer bull, then 15, 10 and 5', () => {
+  const at = (d) => score({ x: board.x + d, y: board.y }, board);
+  assert.strictEqual(at(0), 50);
+  assert.strictEqual(at(5), 50);
+  assert.strictEqual(at(-8), 25);
+  assert.strictEqual(at(20), 15);
+  assert.strictEqual(at(30), 10);
+  assert.strictEqual(score({ x: board.x, y: board.y - 40 }, board), 5);
+  assert.strictEqual(at(45), 0);
+});
+
+test('a path through the board hits it where it runs closest to the bull', () => {
+  const r = hitBoard({ x: 1100, y: 410 }, { x: 1180, y: 410 }, board);
+  assert.ok(r);
+  close(r.point.x, 1200);
+  close(r.point.y, 410);
+  assert.strictEqual(score(r.point, board), 25);
+});
+
+test('a fast throw cannot tunnel through the board between two frames', () => {
+  const r = hitBoard({ x: 1100, y: 385 }, { x: 1300, y: 385 }, board);
+  assert.ok(r);
+  assert.ok(r.t > 0 && r.t < 1);
+  assert.strictEqual(score(r.point, board), 15);
+});
+
+test('a miss, a segment short of the board, or one starting on it does not hit', () => {
+  assert.strictEqual(hitBoard({ x: 1100, y: 300 }, { x: 1300, y: 300 }, board), null);
+  assert.strictEqual(hitBoard({ x: 1000, y: 400 }, { x: 1100, y: 400 }, board), null);
+  assert.strictEqual(hitBoard({ x: 1200, y: 400 }, { x: 1300, y: 400 }, board), null);
 });

@@ -1,8 +1,8 @@
 // Throwing PiPi: the release velocity from the last pointer samples, one
 // physics step of the flight with bounces off the window's walls and
-// ceiling, and where a falling PiPi lands. Positions are its feet in
-// viewport px, velocities px/ms. bird.js flies it; test/bird-throw.test.js
-// runs it in node.
+// ceiling, where a falling PiPi lands, and hitting the dart board. Positions
+// are its feet in viewport px (its body for the board), velocities px/ms.
+// bird.js flies it; test/bird-throw.test.js runs it in node.
 (function (root) {
   const WINDOW_MS = 100;  // pointer samples that count for the release
   const MIN_SPAN_MS = 8;  // fewer ms of samples than this is noise, not a throw
@@ -61,7 +61,40 @@
     return { edge, point: { x: Math.max(edge.left, Math.min(edge.right, x)), y: edge.y } };
   }
 
-  const api = { releaseVelocity, isThrow, capped, advance, landing, WINDOW_MS, THROW_MIN, MAX_SPEED, BOUNCE };
+  // The dart board's rings, inside out, as a share of its radius.
+  const RINGS = [
+    { r: 0.12, score: 50 }, // bullseye
+    { r: 0.25, score: 25 }, // outer bull
+    { r: 0.5, score: 15 },
+    { r: 0.75, score: 10 },
+    { r: 1, score: 5 },
+  ];
+  function score(point, board) {
+    const d = Math.hypot(point.x - board.x, point.y - board.y) / board.r;
+    return RINGS.find((ring) => d <= ring.r)?.score ?? 0;
+  }
+
+  // Moving from a to b, does it fly into the board { x, y, r }? Tested on the
+  // whole segment, so a fast throw cannot skip past it between two frames.
+  // It sticks where its line runs closest to the bull, the way a dart's tip
+  // goes in where it is aimed rather than where the rim is. Starting on the
+  // board does not count: it has to fly in.
+  function hitBoard(a, b, board) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const fx = a.x - board.x, fy = a.y - board.y;
+    const A = dx * dx + dy * dy;
+    const B = 2 * (fx * dx + fy * dy);
+    const C = fx * fx + fy * fy - board.r * board.r;
+    if (C <= 0 || A === 0) return null;
+    const disc = B * B - 4 * A * C;
+    if (disc < 0) return null;
+    const t = (-B - Math.sqrt(disc)) / (2 * A);
+    if (t < 0 || t > 1) return null;
+    const s = -B / (2 * A);
+    return { t, point: { x: a.x + dx * s, y: a.y + dy * s } };
+  }
+
+  const api = { releaseVelocity, isThrow, capped, advance, landing, score, hitBoard, RINGS, WINDOW_MS, THROW_MIN, MAX_SPEED, BOUNCE };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.birdThrow = api;
 })(typeof window !== 'undefined' ? window : globalThis);
