@@ -4,13 +4,14 @@
 // mouse. It walks along the edges it perches on, flies between ticket cards,
 // room signs, desks and reception, pecks at a ticket that needs the user,
 // watches the cursor, startles at a fast one, loves being petted, celebrates
-// a finished ticket and sleeps in its nest at night.
+// a finished ticket and sleeps in its nest at night. The user can pick it up
+// and drop it, or fling it across the office.
 // assistant.js says what is going on (setMood, pin, celebrate); the rest it
 // decides itself. Its feathers are the theme's accent color.
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop || !window.birdThrow) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
   const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
@@ -60,7 +61,7 @@
   let pos = home();                 // where its feet are, in the viewport
   let facing = 1;                   // 1 right, -1 left
   let surface = null;               // the edge it stands on: { left, right, y }
-  let motion = null;                // { kind: 'fly' | 'walk', from, to, start, ms, peak }
+  let motion = null;                // { kind: 'fly' | 'walk' | 'fall', from, to, start, ms, peak } or a throw: { kind: 'throw', body, start, last, spin, perches }
   let once = null;                  // a one-off animation: { name, start, then }
   let mood = 'idle';                // from assistant.js: idle | talk | dream | call
   let pinned = null;                // { point: () => {x,y}, peck: () => element | null }
@@ -69,7 +70,7 @@
   let flip = null;                  // a backflip: { start, landed }
   let hover = false, petting = false;
   let alert = false;                // something unread: a "!" above its head
-  let drag = null;                  // the user is holding it: { pointerId, x, y, on }
+  let drag = null;                  // the user is holding it: { pointerId, x, y, on, samples }
   const mouse = { x: -999, y: -999, t: 0, speed: 0 };
   const parts = [];                 // particles
 
@@ -90,7 +91,7 @@
   // lets it walk along it. A new pin (a call, an unread message, the chat; not
   // a ticket visit), a celebration or the edge scrolling away ends the stay.
   const STAY_MS = 5 * 60_000;
-  const GRAVITY = 0.0025; // px/ms², for the fall after a drop
+  const GRAVITY = 0.0025; // px/ms², for the fall after a drop and a throw
   let stayUntil = 0;
   const staying = () => performance.now() < stayUntil;
 
@@ -146,6 +147,7 @@
 
   function step(t) {
     if (!motion) return;
+    if (motion.kind === 'throw') return flight(t);
     const k = Math.max(0, Math.min(1, (t - motion.start) / motion.ms));
     if (motion.kind === 'walk') {
       pos = { x: motion.from.x + (motion.to.x - motion.from.x) * k, y: motion.from.y + (motion.to.y - motion.from.y) * k };
@@ -233,7 +235,7 @@
     }
     let name = 'idle';
     if (drag?.on) name = 'hover';
-    else if (motion?.kind === 'fly' || motion?.kind === 'fall') name = 'fly';
+    else if (motion && motion.kind !== 'walk') name = 'fly';
     else if (motion?.kind === 'walk') name = 'walk';
     else if (party) name = 'celebrate';
     else if (mood === 'dream' || (night() && !pinned && mood === 'idle')) name = 'sleep';
@@ -261,6 +263,8 @@
     const colors = ['#ff5d8f', '#ffd23f', '#3ec1ff', '#7dff7a', '#b48cff'];
     for (let i = 0; i < n; i++) add({ kind: 'confetti', x: pos.x + (Math.random() - 0.5) * 30, y: pos.y - 50, vx: (Math.random() - 0.5) * 0.25, vy: -0.15 - Math.random() * 0.15, g: 0.0006, life: 1600, color: colors[i % colors.length] });
   }
+  // Seeing stars after a hard landing: they circle its head, wherever it is.
+  function dizzy() { for (let i = 0; i < 3; i++) add({ kind: 'star', x: 0, y: 0, vx: 0, vy: 0, life: 1800, phase: (i * Math.PI * 2) / 3 }); }
   function zzz() { add({ kind: 'z', x: pos.x + 14 * facing, y: pos.y - 44, vx: 0.012 * facing, vy: -0.018, life: 2400 }); }
 
   // The "!" above its head: yellow with an outline, in a little bubble.
@@ -268,6 +272,7 @@
   const BANG_COLORS = { O: '#1a1420', W: '#fff7e0', Y: '#e8a10e' };
   const HEART = ['.PP.PP.', 'PPPPPPP', 'PPPPPPP', '.PPPPP.', '..PPP..', '...P...'];
   const Z = ['KKKK', '..K.', '.K..', 'KKKK'];
+  const STAR = ['..Y..', '.YYY.', 'YYYYY', '.YYY.', '..Y..'];
   const NEST = ['..XXXXXXXXXXXXXXXXXX..', '.XWwXwWXwWwXwXWwXwWXX.', 'XWwWwXwWwWXwWwXwWwXwWX', 'XXwXWwXwXWwXWwXwXWXwXX', '.XXXXXXXXXXXXXXXXXXXX.', '..XXXXXXXXXXXXXXXXXX..'];
   const NEST_COLORS = { X: '#5a3a22', W: '#a8743e', w: '#c99a5b' };
   function pixels(rows, x, y, colors, s = SCALE) {
@@ -291,6 +296,7 @@
       else if (p.kind === 'heart') pixels(HEART, p.x - 7, p.y, { P: '#ff6f91' });
       else if (p.kind === 'z') pixels(Z, p.x, p.y, { K: getComputedStyle(document.documentElement).getPropertyValue('--accent-text') || '#c9d2ff' }, 1 + age / 900);
       else if (p.kind === 'feather') { ctx.fillStyle = palette.H; const sx = p.x + Math.sin(age / 200 + p.sway) * 5; ctx.fillRect(sx, p.y, 2, 6); ctx.fillStyle = palette.B; ctx.fillRect(sx + 2, p.y + 1, 2, 4); }
+      else if (p.kind === 'star') { const a = age / 160 + p.phase; pixels(STAR, pos.x + Math.cos(a) * 14 - 5, pos.y - 56 + Math.sin(a) * 4, { Y: '#ffd23f' }, 2); }
       else if (p.kind === 'confetti') { ctx.fillStyle = p.color; const w = Math.abs(Math.sin(age / 90)) * 4 + 1; ctx.fillRect(p.x, p.y, w, 4); }
     }
     ctx.globalAlpha = 1;
@@ -319,7 +325,7 @@
       // A shadow on the ground: under its feet, or where it will land while flying.
       const ground = motion?.kind === 'fall' ? motion.to.y : motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
       const height = Math.max(0, ground - pos.y + lift);
-      if (!drag?.on) {
+      if (!drag?.on && motion?.kind !== 'throw') {
         ctx.fillStyle = `rgba(0,0,0,${0.28 * Math.max(0.25, 1 - height / 200)})`;
         ctx.beginPath(); ctx.ellipse(pos.x, ground, 14 * Math.max(0.5, 1 - height / 250), 3.5, 0, 0, Math.PI * 2); ctx.fill();
       }
@@ -336,6 +342,7 @@
       ctx.scale(facing * SCALE, SCALE);
       // Head back over its tail; the facing scale mirrors it, so a backflip both ways.
       if (f?.angle) { ctx.translate(0, -12); ctx.rotate(-f.angle); ctx.translate(0, 12); }
+      else if (motion?.kind === 'throw') { ctx.translate(0, -12); ctx.rotate(motion.spin); ctx.translate(0, 12); }
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(sprite(pose), -SIZE / 2 + 1, -GROUND);
       ctx.restore();
@@ -390,11 +397,14 @@
     if (e.button !== 0) return;
     held = false; dragged = false;
     holdTimer = setTimeout(() => { held = true; petting = true; }, 350);
-    drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, on: false };
+    drag = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, on: false, samples: [{ x: e.clientX, y: e.clientY, t: performance.now() }] };
     $hit.setPointerCapture(e.pointerId);
   });
   $hit.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
+    const t = performance.now();
+    drag.samples.push({ x: e.clientX, y: e.clientY, t });
+    while (drag.samples[0].t < t - 2 * window.birdThrow.WINDOW_MS) drag.samples.shift();
     if (!drag.on) {
       if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 5) return;
       drag.on = true;
@@ -408,21 +418,31 @@
   });
   function release(e) {
     if (!drag || e.pointerId !== drag.pointerId) return;
-    const was = drag.on;
+    const { on, samples } = drag;
     drag = null;
     $hit.classList.remove('held');
-    if (was) { dragged = true; drop(); }
+    if (!on) return;
+    dragged = true;
+    // Only a real let-go throws: a cancel or a lost capture just drops it.
+    const t = performance.now();
+    const v = e.type === 'pointerup' ? window.birdThrow.releaseVelocity([...samples, { x: e.clientX, y: e.clientY, t }], t) : { vx: 0, vy: 0 };
+    if (reduced || !window.birdThrow.isThrow(v)) drop();
+    else fling(v);
   }
   $hit.addEventListener('pointerup', release);
   $hit.addEventListener('pointercancel', release);
   $hit.addEventListener('lostpointercapture', release);
 
+  // The status bar's line: where it lands when there is nothing else below.
+  function floorLine() {
+    const bar = document.getElementById('statusbar')?.getBoundingClientRect();
+    return { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
+  }
+
   // Let go: it falls to the nearest edge below, or the status bar's line,
   // and stays there.
   function drop() {
-    const bar = document.getElementById('statusbar')?.getBoundingClientRect();
-    const line = { left: 40, right: window.innerWidth - 40, y: bar ? bar.top : window.innerHeight };
-    const { edge, point: to } = window.birdDrop.landing(perches(), pos, line);
+    const { edge, point: to } = window.birdDrop.landing(perches(), pos, floorLine());
     stayUntil = performance.now() + STAY_MS;
     nextIdle = performance.now() + 1500;
     const h = Math.max(0, to.y - pos.y);
@@ -432,6 +452,42 @@
       return;
     }
     motion = { kind: 'fall', from: { ...pos }, to, start: performance.now(), ms: Math.sqrt((2 * h) / GRAVITY), edge };
+  }
+
+  // Let go while moving: it flies off with the pointer's speed, tumbling,
+  // bounces off the window's sides and top and lands on the first edge it
+  // falls onto. Then it stays there, like after a drop.
+  const MAX_FLIGHT_MS = 12_000;
+  function fling(v) {
+    const { vx, vy } = window.birdThrow.capped(v);
+    if (Math.abs(vx) > 0.05) facing = vx > 0 ? 1 : -1;
+    const t = performance.now();
+    motion = { kind: 'throw', body: { x: pos.x, y: pos.y, vx, vy }, start: t, last: t, spin: 0, perches: perches(), nextPerches: t + 250 };
+  }
+  function flight(t) {
+    const m = motion;
+    const dt = Math.min(50, t - m.last);
+    if (dt <= 0) return;
+    m.last = t;
+    const walls = { left: 20, right: window.innerWidth - 20, top: 56 };
+    const { body, hit } = window.birdThrow.advance(m.body, dt, GRAVITY, walls);
+    if (hit.length) feathers(1);
+    if (t > m.nextPerches) { m.perches = perches(); m.nextPerches = t + 250; }
+    const land = window.birdThrow.landing(m.body, body, m.perches, floorLine());
+    m.spin += dt * Math.hypot(body.vx, body.vy) * 0.012 * (Math.sign(body.vx * facing) || 1);
+    m.body = body;
+    pos = { x: body.x, y: body.y };
+    if (land) return touchDown(t, land, body.vy);
+    if (t - m.start > MAX_FLIGHT_MS) { motion = null; drop(); }
+  }
+  function touchDown(t, { edge, point }, impact) {
+    motion = null;
+    pos = point; surface = edge;
+    play('land'); dust();
+    const hard = impact > 1.1;
+    if (hard) dizzy();
+    stayUntil = t + STAY_MS;
+    nextIdle = t + (hard ? 2500 : 1500);
   }
 
   // A click opens the chat; a double click is a flip, not two clicks. A
