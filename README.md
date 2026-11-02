@@ -68,8 +68,8 @@ whoever is waiting for you. 🐈
 A little bird lives in the office. **PiPi** keeps track of what every boss
 and Slack need from you, so you don't have to:
 
-- a **morning brief** on weekdays: what waits on you, your meetings and
-  reminders
+- a **morning brief** on the days you pick (Mon–Fri by default): what waits
+  on you, your meetings and reminders; on other days it stays quiet
 - **reminders**: "remind me at 3 to call Noor", and it chimes on time
 - a **memory** of your projects in plain markdown files, tidied up while it
   sleeps

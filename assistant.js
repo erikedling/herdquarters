@@ -14,7 +14,7 @@ const BOOT_MS = 60_000;           // a session that just started (or crashed) ge
 const QUIET_MS = 30 * 60_000;     // dream only after this long without work
 const DREAM_EVERY_MS = 20 * 3600_000;
 const CHAT_KEEP = 400;            // lines of chat.jsonl kept when it is trimmed
-const DEFAULTS = { enabled: true, morning: '08:30', name: 'PiPi' };
+const DEFAULTS = { enabled: true, morning: '08:30', name: 'PiPi', days: [1, 2, 3, 4, 5] };
 
 // What the user calls the assistant: one line, at most 24 characters, PiPi
 // when left empty.
@@ -22,6 +22,14 @@ function assistantName(raw) {
   const name = String(raw ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24).trim();
   return name || DEFAULTS.name;
 }
+
+// The days it works on, as getDay() numbers (0 is Sunday), sorted. Empty
+// means never; anything that is not a list gets the default Mon–Fri.
+function assistantDays(raw) {
+  if (!Array.isArray(raw)) return [...DEFAULTS.days];
+  return [...new Set(raw.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b);
+}
+const workday = (config, now) => assistantDays(config.days ?? DEFAULTS.days).includes(new Date(now).getDay());
 
 const MEMORY_FILES = {
   'ME.md': '# Me\n\nWho the user is: name, role, team, how they like to work and be talked to.\n',
@@ -35,11 +43,11 @@ function day(ms) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Whether today's morning brief is due: a weekday, past the morning time,
+// Whether today's morning brief is due: a work day, past the morning time,
 // and not given today. morning: 'HH:MM'.
 function morningDue(state, config, now) {
   const d = new Date(now);
-  if (d.getDay() === 0 || d.getDay() === 6) return false;
+  if (!workday(config, now)) return false;
   const [h, m] = String(config.morning || DEFAULTS.morning).split(':').map(Number);
   if (d.getHours() * 60 + d.getMinutes() < h * 60 + (m || 0)) return false;
   return state.last_morning !== day(now);
@@ -53,7 +61,8 @@ function assistantDue({ state = {}, config = DEFAULTS, session, met, now }) {
   if (!session.running) return state.started_at && now - state.started_at < BOOT_MS ? 'none' : 'start';
   if (session.busy) return 'none';
   if (state.phase === 'dreaming') return 'clear';
-  if (!met) return state.hello_at && now - state.hello_at < 12 * 3600_000 ? 'none' : 'hello';
+  // On a day off it only does its silent upkeep: no hello, no brief.
+  if (!met) return !workday(config, now) || (state.hello_at && now - state.hello_at < 12 * 3600_000) ? 'none' : 'hello';
   if (morningDue(state, config, now)) return 'morning';
   const quiet = now - (state.last_busy || 0) >= QUIET_MS;
   if (quiet && now - (state.last_dream || 0) >= DREAM_EVERY_MS) return 'dream';
@@ -120,6 +129,7 @@ class AssistantStore {
   configure(patch) {
     const next = { ...this.config(), ...patch };
     next.name = assistantName(next.name);
+    next.days = assistantDays(next.days);
     return this.tick({ config: next }).config;
   }
 
@@ -178,14 +188,18 @@ class AssistantStore {
   // What the office shows: what the assistant is doing and the reminders.
   view(session, now = Date.now()) {
     const state = this.readState();
+    const config = this.config();
     const reminders = this.reminders();
+    const work = workday(config, now);
     return {
-      enabled: this.config().enabled !== false,
+      enabled: config.enabled !== false,
+      // A day off: it does not call or visit cards; reminders still fire.
+      workday: work,
       running: session.running,
       busy: session.busy,
       dreaming: state.phase === 'dreaming',
       // The brief was given today and the user has not opened the chat since.
-      morning: state.last_morning === day(now) && state.morning_seen !== day(now),
+      morning: work && state.last_morning === day(now) && state.morning_seen !== day(now),
       due: dueReminders(reminders, now),
       upcoming: reminders.filter((r) => r.due > now).slice(0, 5),
     };
@@ -223,4 +237,4 @@ function runAssistant({ store, session, now = Date.now() }) {
   return action;
 }
 
-module.exports = { AssistantStore, runAssistant, assistantDue, morningDue, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS };
+module.exports = { AssistantStore, runAssistant, assistantDue, morningDue, workday, assistantDays, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS };
