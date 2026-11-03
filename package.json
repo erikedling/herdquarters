@@ -7,15 +7,18 @@
   "description": "Delegate tasks to a team of coding agents and keep track of all of them in one place",
   "main": "main.js",
   "scripts": {
-    "start": "node scripts/brand.js && electron .",
+    "start": "install-electron && node scripts/brand.js && electron .",
     "brand": "node scripts/brand.js",
-    "postinstall": "node scripts/brand.js",
+    "postinstall": "install-electron && node scripts/brand.js",
     "icon": "electron scripts/make-icon.js",
     "art": "electron scripts/make-art.js",
-    "test": "node --test 'test/**/*.test.js'"
+    "test": "install-electron && node --test 'test/**/*.test.js'"
+  },
+  "engines": {
+    "node": ">=22.12"
   },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^45.0.0"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
