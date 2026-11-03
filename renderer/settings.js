@@ -1,7 +1,7 @@
 // User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'modern', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
   // The paw that hid the animals is gone; Settings > Appearance turns them on
@@ -12,7 +12,7 @@
 
   function apply() {
     const root = document.documentElement;
-    window.officeThemes?.apply(settings.theme, settings.mode);
+    window.officeThemes?.apply(settings.theme, settings.mode, settings.style);
     root.style.setProperty('--ui-scale', String(settings.scale));
     root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`);
     root.style.setProperty('--panel-width', `${settings.panelWidth}%`);
@@ -97,6 +97,24 @@
       </button>`;
     }).join('');
     if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
+    renderStyles();
+  }
+  // A swatch per style: Modern in the current theme, the retro ones in their own colors.
+  function renderStyles() {
+    const $grid = $pop.querySelector('#set-styles'); if (!$grid || !window.officeThemes) return;
+    const { STYLES, styleById, resolve } = window.officeThemes;
+    const current = styleById(settings.style).id;
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const html = STYLES.map((s) => {
+      const c = resolve(settings.theme, settings.mode, s.id, dark).colors;
+      return `<button class="theme-card style-card ${s.id === current ? 'active' : ''}" data-style-id="${s.id}" title="${s.name}: ${s.note}">
+        <span class="theme-pv style-pv-${s.id}" style="background:${c.bg}"><i style="background:${c['bg-2']}"></i><span style="background:${c.panel}"><b style="background:${c.working}"></b><b style="background:${c.blocked}"></b><b style="background:${c.done}"></b></span></span>
+        <span class="theme-name">${s.name}<small>${s.note}</small></span>
+      </button>`;
+    }).join('');
+    if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
+    // The theme and dark/light only color Modern.
+    $pop.querySelector('#set-theme-row')?.classList.toggle('disabled', current !== 'modern');
   }
   function showSection(name) {
     for (const $t of $pop.querySelectorAll('.settings-tab')) $t.classList.toggle('active', $t.dataset.section === name);
@@ -109,6 +127,7 @@
   $pop?.addEventListener('mousedown', (e) => { if (e.target === $pop) close(); });
   $pop?.querySelector('#set-close')?.addEventListener('click', close);
   $pop?.querySelector('.settings-nav')?.addEventListener('click', (e) => { const $t = e.target.closest('.settings-tab'); if ($t) showSection($t.dataset.section); });
+  $pop?.querySelector('#set-styles')?.addEventListener('click', (e) => { const $t = e.target.closest('.style-card'); if ($t) set({ style: $t.dataset.styleId }); });
   $pop?.querySelector('#set-themes')?.addEventListener('click', (e) => { const $t = e.target.closest('.theme-card'); if ($t) set({ theme: $t.dataset.theme }); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$pop.hidden) close(); });
   // System mode follows the OS as it switches.

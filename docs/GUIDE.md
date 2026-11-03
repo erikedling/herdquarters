@@ -340,6 +340,13 @@ to do, both stroll along the floor. They trot over when their spot changes;
 click one to pet it. **Office cats** and **Office dogs** in settings switch
 each kind on or off.
 
+Each space has its own look (`renderer/decor.js`), picked from its name so it
+never changes: every repo's floor has its own wall color and wood, every room
+(checkout) its own rug color and pattern (plain, stripes, dots, a border or a
+checker), and every agent keeps their own mug and one personal thing on the
+desk, like a plant, a rubber duck, a photo or a trophy. The boss floor keeps
+the house look.
+
 Every agent pane is drawn as one of 21 characters (`renderer/figure.js`),
 assigned on first sight so no two agents in the office look alike while there
 are 21 or fewer.
@@ -370,7 +377,10 @@ board works with the assistant switched off.
 
 ## Settings
 
-The settings button on the menu bar in reception opens settings: the theme, office size (zooms
+**Style** sets the shape of the whole app. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
+
+
+The settings button on the menu bar in reception opens settings: the style, the theme, office size (zooms
 the office and reception, not the terminal), whether the terminal opens as a
 split panel beside the office (the default) or takes the full window, the
 split panel width, the workspace sidebar, the editor command for "Open in

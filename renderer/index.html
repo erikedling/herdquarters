@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="office.css" />
+  <link rel="stylesheet" href="retro.css" />
 </head>
 <body>
   <header id="topbar">
@@ -33,6 +34,10 @@
         <section class="settings-section" data-section="appearance">
           <h3>Appearance</h3>
           <div class="settings-row">
+            <span>Style<small class="settings-hint">The shape of the whole app. The retro styles bring their own colors.</small></span>
+            <div id="set-styles" class="theme-grid"></div>
+          </div>
+          <div id="set-theme-row" class="settings-row">
             <span>Theme
               <span class="seg seg-inline">
                 <label><input type="radio" name="mode" value="dark"> 🌙 Dark</label>
@@ -257,6 +262,7 @@
   <script src="summary.js"></script>
   <script src="figure.js"></script>
   <script src="figure-office.js"></script>
+  <script src="decor.js"></script>
   <script src="animals.js"></script>
   <script src="view.js"></script>
   <script src="chat-format.js"></script>

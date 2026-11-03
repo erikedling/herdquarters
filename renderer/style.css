@@ -584,6 +584,8 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .theme-pv b { width: 9px; height: 9px; border-radius: 50%; }
 .theme-name { display: block; padding: 5px 8px; font-size: 11px; }
 .theme-card.active .theme-name::after { content: " ✓"; color: var(--accent); }
+.style-card .theme-name small { display: block; margin-top: 2px; font: 10px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; color: var(--muted); }
+.settings-hint { font-size: 11px; }
 .settings-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); color: var(--text); }
 .settings-row > span { display: flex; justify-content: space-between; align-items: center; color: var(--muted); }
 .seg.seg-inline label { flex: none; padding: 3px 8px; }

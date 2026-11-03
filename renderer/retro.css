@@ -1,0 +1,159 @@
+/* Retro styles: pixel looks for the whole app, picked under Settings >
+   Appearance > Style (themes.js STYLES). themes.js puts the style on <html
+   data-style="...">, with the style's own base colors, so everything colored
+   from the tokens already follows. This file adds the shapes: hard edges,
+   solid outlines and offset shadows, pixel fonts for titles and labels, and
+   each style's own chrome. Modern has no data-style and never matches here.
+   The terminal keeps its own colors and font in every style. */
+
+/* Pixel fonts, bundled (SIL Open Font License, see fonts/OFL-*.txt). */
+@font-face { font-family: "Pixelify Sans"; src: url("fonts/pixelify-sans-700.woff2") format("woff2"); font-weight: 400 900; font-display: block; }
+@font-face { font-family: "Silkscreen"; src: url("fonts/silkscreen.woff2") format("woff2"); font-display: block; }
+@font-face { font-family: "Press Start 2P"; src: url("fonts/press-start-2p.woff2") format("woff2"); font-display: block; }
+@font-face { font-family: "VT323"; src: url("fonts/vt323.woff2") format("woff2"); font-display: block; }
+
+/* ================= every retro style ================= */
+:root[data-style] {
+  --r-head: "Pixelify Sans", system-ui, sans-serif;  /* titles and labels */
+  --r-line: var(--text);                             /* the outline of framed things */
+  --r-bw: 2px;                                       /* its width */
+  --r-shadow: rgba(0, 0, 0, .35);                    /* the solid offset shadow */
+  --r-off: 3px;
+}
+:root[data-style] *, :root[data-style] *::before, :root[data-style] *::after { border-radius: 0 !important; }
+
+:root[data-style] :is(.tab-name, .tab.office, .reception-title, .sidebar-title, .ticket-state, .chat-title, .settings-title,
+  .settings-section h3, .modal-title, .termpanel-title, .bigboard-label, .theme-name, .np-label, .tab-flag, .tab-pill) {
+  font-family: var(--r-head); letter-spacing: .03em;
+}
+
+/* things that float or can be clicked: a solid outline and a hard shadow */
+:root[data-style] :is(.tab, .btn, .chat, .settings-card, .modal-card, .tooltip, .bird-bubble, .ctxmenu, .notice, .note-pop, .msg.user, .msg.bot, .theme-card, .next-chip) {
+  border: var(--r-bw) solid var(--r-line); box-shadow: var(--r-off) var(--r-off) 0 var(--r-shadow);
+}
+:root[data-style] .ticket {
+  border-top: var(--r-bw) solid var(--r-line); border-right: var(--r-bw) solid var(--r-line); border-bottom: var(--r-bw) solid var(--r-line);
+  border-left-width: 7px; box-shadow: var(--r-off) var(--r-off) 0 var(--r-shadow);
+}
+:root[data-style] :is(.tab, .btn, .ticket):active,
+:root[data-style] .tab.active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--r-shadow); }
+:root[data-style] .tab.active { box-shadow: 1px 1px 0 var(--r-shadow), inset 0 -4px 0 var(--orch, var(--accent)); }
+:root[data-style] .tab.add { border-style: dashed; box-shadow: none; }
+:root[data-style] .theme-card.active { outline: 3px solid var(--accent); outline-offset: 1px; }
+:root[data-style] .tab-bar { height: 6px; border: 1px solid var(--r-line); }
+:root[data-style] .chat { background: var(--panel); }
+:root[data-style] .msg.bot { background: color-mix(in srgb, var(--panel), var(--text) 6%); }
+:root[data-style] :is(input[type=text], input[type=time], input[type=datetime-local], textarea, select) { border-width: var(--r-bw) !important; border-color: var(--r-line) !important; }
+:root[data-style] .alertbar { border-top: var(--r-bw) solid var(--r-line); border-bottom: var(--r-bw) solid var(--r-line); }
+
+/* ================= Workshop: wood, cork and paper ================= */
+:root[data-style="workshop"] {
+  --r-line: #4a2f17; --r-shadow: rgba(50, 25, 5, .55);
+  --plank-wood: #8a5a2b; --plank-hi: #b07a45; --plank-lo: #5c3a1c; --plank-ink: #fff3dc;
+}
+/* The top and the bottom are one board each: long, quiet grain, no seams.
+   Reception and the status bar under it share one board. */
+:root[data-style="workshop"] :is(#topbar, .reception, .statusbar, .termpanel-head) {
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22320%22%20height%3D%2248%22%20viewBox%3D%220%200%20320%2048%22%20shape-rendering%3D%22crispEdges%22%3E%3Crect%20width%3D%22320%22%20height%3D%2248%22%20fill%3D%22%238a5a2b%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%221%22%20width%3D%2221%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2281%22%20y%3D%221%22%20width%3D%2226%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22126%22%20y%3D%221%22%20width%3D%2255%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22258%22%20y%3D%221%22%20width%3D%2238%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22319%22%20y%3D%221%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%220%22%20width%3D%2265%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22176%22%20y%3D%220%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22181%22%20y%3D%222%22%20width%3D%2255%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%227%22%20width%3D%2217%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2247%22%20y%3D%227%22%20width%3D%2243%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22127%22%20y%3D%227%22%20width%3D%2250%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22207%22%20y%3D%227%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22230%22%20y%3D%227%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22287%22%20y%3D%227%22%20width%3D%2223%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2217%22%20y%3D%226%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22177%22%20y%3D%226%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22111%22%20y%3D%228%22%20width%3D%2216%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22257%22%20y%3D%228%22%20width%3D%2230%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2210%22%20width%3D%2231%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2256%22%20y%3D%2210%22%20width%3D%2238%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22309%22%20y%3D%2210%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22103%22%20y%3D%2211%22%20width%3D%2233%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22259%22%20y%3D%2211%22%20width%3D%2222%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22136%22%20y%3D%2212%22%20width%3D%2272%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22213%22%20y%3D%2212%22%20width%3D%2246%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2215%22%20width%3D%2252%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22159%22%20y%3D%2215%22%20width%3D%2244%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22319%22%20y%3D%2215%22%20width%3D%221%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2252%22%20y%3D%2216%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22132%22%20y%3D%2216%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22221%22%20y%3D%2216%22%20width%3D%2218%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22292%22%20y%3D%2216%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2279%22%20y%3D%2217%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22100%22%20y%3D%2217%22%20width%3D%2232%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22239%22%20y%3D%2217%22%20width%3D%2229%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22283%22%20y%3D%2217%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2221%22%20width%3D%2236%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22135%22%20y%3D%2221%22%20width%3D%2261%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22295%22%20y%3D%2221%22%20width%3D%2210%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2236%22%20y%3D%2220%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22123%22%20y%3D%2220%22%20width%3D%2212%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22196%22%20y%3D%2220%22%20width%3D%2210%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22276%22%20y%3D%2220%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2255%22%20y%3D%2219%22%20width%3D%2255%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22226%22%20y%3D%2219%22%20width%3D%2250%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2224%22%20width%3D%2233%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2245%22%20y%3D%2224%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22177%22%20y%3D%2224%22%20width%3D%2237%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2254%22%20y%3D%2225%22%20width%3D%2226%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22134%22%20y%3D%2225%22%20width%3D%2218%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22214%22%20y%3D%2225%22%20width%3D%2226%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22294%22%20y%3D%2225%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22305%22%20y%3D%2225%22%20width%3D%2215%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2280%22%20y%3D%2226%22%20width%3D%2254%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22240%22%20y%3D%2226%22%20width%3D%2254%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2227%22%20width%3D%2266%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2273%22%20y%3D%2227%22%20width%3D%2226%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22297%22%20y%3D%2227%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22316%22%20y%3D%2227%22%20width%3D%224%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2299%22%20y%3D%2228%22%20width%3D%2212%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22130%22%20y%3D%2228%22%20width%3D%227%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22260%22%20y%3D%2228%22%20width%3D%2237%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22137%22%20y%3D%2229%22%20width%3D%22104%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2233%22%20width%3D%2235%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22253%22%20y%3D%2233%22%20width%3D%2267%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2258%22%20y%3D%2232%22%20width%3D%2235%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22200%22%20y%3D%2232%22%20width%3D%2229%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22245%22%20y%3D%2232%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2293%22%20y%3D%2231%22%20width%3D%2273%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22194%22%20y%3D%2231%22%20width%3D%226%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2237%22%20width%3D%2228%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22134%22%20y%3D%2237%22%20width%3D%2218%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22173%22%20y%3D%2237%22%20width%3D%2215%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22294%22%20y%3D%2237%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22312%22%20y%3D%2237%22%20width%3D%228%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2228%22%20y%3D%2238%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2246%22%20y%3D%2238%22%20width%3D%2288%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22188%22%20y%3D%2236%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22217%22%20y%3D%2236%22%20width%3D%2277%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2241%22%20width%3D%2234%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22140%22%20y%3D%2241%22%20width%3D%2222%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22178%22%20y%3D%2241%22%20width%3D%2216%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22300%22%20y%3D%2241%22%20width%3D%2220%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2234%22%20y%3D%2242%22%20width%3D%2242%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2284%22%20y%3D%2242%22%20width%3D%2256%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22194%22%20y%3D%2240%22%20width%3D%2272%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22286%22%20y%3D%2240%22%20width%3D%2214%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2245%22%20width%3D%222%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22101%22%20y%3D%2245%22%20width%3D%2257%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22261%22%20y%3D%2245%22%20width%3D%225%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22279%22%20y%3D%2245%22%20width%3D%2241%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%222%22%20y%3D%2244%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2282%22%20y%3D%2244%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22170%22%20y%3D%2244%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22242%22%20y%3D%2244%22%20width%3D%2219%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2221%22%20y%3D%2243%22%20width%3D%2239%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%2273%22%20y%3D%2243%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%22181%22%20y%3D%2243%22%20width%3D%2261%22%20height%3D%221%22%20fill%3D%22%2394622f%22%2F%3E%3Crect%20x%3D%220%22%20y%3D%2247%22%20width%3D%2216%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%2269%22%20y%3D%2247%22%20width%3D%229%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22149%22%20y%3D%2247%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22230%22%20y%3D%2247%22%20width%3D%2226%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22309%22%20y%3D%2247%22%20width%3D%2211%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22101%22%20y%3D%2246%22%20width%3D%2248%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22256%22%20y%3D%2246%22%20width%3D%2221%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3Crect%20x%3D%22282%22%20y%3D%2246%22%20width%3D%2227%22%20height%3D%221%22%20fill%3D%22%237f5228%22%2F%3E%3C%2Fsvg%3E") 0 0 / 640px 96px, var(--plank-wood); image-rendering: pixelated;
+  color: var(--plank-ink); border-color: var(--r-line);
+  box-shadow: inset 0 3px 0 var(--plank-hi), inset 0 -3px 0 var(--plank-lo);
+}
+:root[data-style="workshop"] .reception { box-shadow: inset 0 3px 0 var(--plank-hi); border-bottom: 0; }
+:root[data-style="workshop"] .statusbar { border-top: 0; box-shadow: inset 0 -3px 0 var(--plank-lo); background-position: 0 -40px, 0 0; }
+:root[data-style="workshop"] :is(.reception-title, .statusbar, .statusbar .conn, .legend, .termpanel-sub, .termpanel-title) { color: var(--plank-ink); }
+:root[data-style="workshop"] .termpanel-btn { color: var(--plank-ink); border-color: var(--plank-ink); }
+:root[data-style="workshop"] .tab.add { color: var(--plank-ink); border-color: #d8c3a0; }
+:root[data-style="workshop"] .sidebar { background: #efe0bf; border-right: 4px solid var(--plank-wood); }
+:root[data-style="workshop"] body.layout-office .building, :root[data-style="workshop"] .corkboard-wall {
+  background-color: #5c4128; background-image: repeating-linear-gradient(180deg, transparent 0 22px, #4f3720 22px 25px);
+}
+:root[data-style="workshop"] body.layout-office { --office-tint: 0%; --frame: #8a5a2b; --wall: #f6ead2; --wall-stripe: #ecdcbc; }
+:root[data-style="workshop"] .settings-nav { background: #efe0bf; }
+
+/* ================= Quest: 16-bit RPG menus ================= */
+:root[data-style="quest"] {
+  --r-line: #f2f4ff; --r-shadow: #05071a; --r-bw: 3px; --r-off: 0px;
+  --r-head: "Press Start 2P", ui-monospace, monospace;
+  --wood: #1a237a; --wood-dark: #f2f4ff; --wood-hi: #2a38b0; --wood-lo: #0b0f2b; --wood-hover: #2a38b0; --wood-press: #0b0f2b; --nail: #ffd25a;
+  font-family: "VT323", ui-monospace, monospace; font-size-adjust: .58;
+}
+/* the arcade font is wide: titles and labels a size down */
+:root[data-style="quest"] :is(.tab-name, .tab.office, .reception-title, .sidebar-title, .ticket-state, .chat-title, .settings-title,
+  .settings-section h3, .modal-title, .termpanel-title, .bigboard-label, .theme-name, .np-label, .tab-flag, .tab-pill) { font-size: 9px; line-height: 1.6; letter-spacing: 0; font-size-adjust: none; }
+/* every panel is a dialog box: a white frame with a dark line inside it */
+:root[data-style="quest"] :is(.tab, .ticket, .chat, .settings-card, .modal-card, .tooltip, .bird-bubble, .ctxmenu, .note-pop, .menubar) {
+  outline: 2px solid #0b0f2b; outline-offset: -5px;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(0, 0, 0, .18));
+}
+:root[data-style="quest"] .ticket { border-left-width: 3px; }
+:root[data-style="quest"] .tab.active { transform: none; background-color: #2a38b0; }
+:root[data-style="quest"] .tab.active .tab-name::before, :root[data-style="quest"] .sb-row.focused::before { content: "▶"; color: #ffd25a; margin-right: 5px; }
+:root[data-style="quest"] .tab.add { border-color: #4a58b8; outline: 0; background-image: none; }
+:root[data-style="quest"] .alert-icon::before { content: "WARNING "; font: 9px "Press Start 2P", monospace; }
+:root[data-style="quest"] body.layout-office .building, :root[data-style="quest"] .corkboard-wall {
+  background-color: #0b0f2b; background-image: radial-gradient(#3a4aa8 1px, transparent 1.5px); background-size: 23px 23px;
+}
+:root[data-style="quest"] body.layout-office { --office-tint: 0%; --frame: #f2f4ff; --wall: #c9d0ff; --wall-stripe: #b8c0f0; --plank: #8a7ac0; --plank-line: #7a6ab0; --skirting: #6a72c0; }
+
+/* ================= Handheld: four shades of green ================= */
+:root[data-style="handheld"] {
+  --r-line: #0f380f; --r-shadow: #0f380f; --r-off: 2px;
+  --r-head: "Silkscreen", ui-monospace, monospace;
+  --wood: #8bac0f; --wood-dark: #0f380f; --wood-hi: #c4d88a; --wood-lo: #306230; --wood-hover: #c4d88a; --wood-press: #306230; --nail: #0f380f;
+  --px-ink: #0f380f; --px-paper: #c4d88a;
+}
+:root[data-style="handheld"] :is(.tab-name, .ticket-state, .reception-title, .sidebar-title) { font-size: 11px; }
+/* the office, its animals, the board and the bird in the screen's greens */
+:root[data-style="handheld"] :is(.building, .corkboard-wall, .bigboard-frame, #bird-canvas, .menubar svg, .note-pop, .brand-logo, .tab-office-icon) {
+  filter: grayscale(1) sepia(1) hue-rotate(38deg) saturate(1.4) brightness(.95);
+}
+:root[data-style="handheld"] body.layout-office .building, :root[data-style="handheld"] .corkboard-wall {
+  background-color: #c4d88a; background-image: radial-gradient(#b0c878 1px, transparent 1.2px); background-size: 6px 6px;
+}
+:root[data-style="handheld"] .ticket.blocked .ticket-state::before { content: "?! "; }
+:root[data-style="handheld"] .ticket.done .ticket-state::before { content: "✓ "; }
+:root[data-style="handheld"] { --alert-bg: #0f380f; --alert-bg-hi: #306230; --alert-text: #c4d88a; }
+:root[data-style="handheld"] .alert-icon { color: #c4d88a; }
+:root[data-style="handheld"] .pxbadge { background: #0f380f; color: #c4d88a; }
+
+/* ================= Toybox: the welcome screen, pastel ================= */
+:root[data-style="toybox"] {
+  --r-line: #2b2d42; --r-shadow: #2b2d42; --r-bw: 3px;
+  --wood: #ffffff; --wood-dark: #2b2d42; --wood-hi: #ffffff; --wood-lo: #e3e7f1; --wood-hover: #fff3a8; --wood-press: #ffe27a; --nail: #e8606b;
+  --px-ink: #2b2d42; --px-paper: #ffffff;
+}
+:root[data-style="toybox"] #topbar { background: #ffd9c2; border-bottom: 6px solid #e8606b; }
+:root[data-style="toybox"] .reception { background: #ffd9c2; border-top: 5px solid #5cc46a; }
+:root[data-style="toybox"] .statusbar { background: #9fdc8a; border-top: 2px solid #2b2d42; }
+:root[data-style="toybox"] .sidebar { background: #eef6ff; border-right: 3px solid #2b2d42; }
+:root[data-style="toybox"] .tab.active { background: #fff3a8; }
+:root[data-style="toybox"] body.layout-office .building, :root[data-style="toybox"] .corkboard-wall { background: linear-gradient(#bfe3ff, #d8efff); }
+:root[data-style="toybox"] body.layout-office { --office-tint: 0%; --frame: #e8606b; --wall: #ffd9c2; --wall-stripe: #ffcdb0; }
+:root[data-style="toybox"] .termpanel-head { background: #ffd9c2; border-bottom: 3px solid #2b2d42; }
+
+/* ================= Workstation: a beige desktop, early 90s ================= */
+:root[data-style="workstation"] {
+  --r-line: #1a1a1a; --r-shadow: #1a1a1a; --r-bw: 1px; --r-off: 0px;
+  --r-head: "Silkscreen", ui-monospace, monospace;
+  --bevel-hi: #ffffff; --bevel-lo: #8a8478;
+  --wood: #d8d0c0; --wood-dark: #1a1a1a; --wood-hi: #ffffff; --wood-lo: #8a8478; --wood-hover: #e8e2d4; --wood-press: #b8b0a0; --nail: #8a8478;
+  --px-ink: #1a1a1a; --px-paper: #ffffff;
+}
+:root[data-style="workstation"] :is(.tab-name, .ticket-state, .reception-title, .sidebar-title, .theme-name) { font-size: 11px; }
+/* raised buttons that sink when pressed */
+:root[data-style="workstation"] :is(.tab, .btn, .ticket, .pxbtn, .termpanel-btn, .theme-card) { box-shadow: inset 2px 2px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo); }
+:root[data-style="workstation"] :is(.tab, .btn, .ticket, .pxbtn, .termpanel-btn):active,
+:root[data-style="workstation"] :is(.tab.active, .pxbtn.on) { transform: none; box-shadow: inset 2px 2px 0 var(--bevel-lo), inset -2px -2px 0 var(--bevel-hi); }
+:root[data-style="workstation"] .ticket { border-left-width: 6px; }
+/* windows get a pinstriped title bar */
+:root[data-style="workstation"] :is(.chat, .settings-card, .modal-card, .note-pop) { box-shadow: 3px 3px 0 #1a1a1a; border-width: 2px; }
+:root[data-style="workstation"] .chat-head { background: repeating-linear-gradient(180deg, #1a1a1a 0 1px, var(--panel) 1px 3px); border-bottom: 2px solid #1a1a1a; }
+:root[data-style="workstation"] .chat-head > * { background: var(--panel); padding: 0 6px; }
+:root[data-style="workstation"] :is(#topbar, .reception) { border-color: #1a1a1a; }
+:root[data-style="workstation"] .sidebar { background: #ffffff; }
+:root[data-style="workstation"] .sb-row.focused { background: #2848b8; }
+:root[data-style="workstation"] .sb-row.focused :is(.sb-name, .sb-right, .sb-title) { color: #ffffff; }
+:root[data-style="workstation"] body.layout-office .building, :root[data-style="workstation"] .corkboard-wall {
+  background-color: #8a9aa8; background-image: radial-gradient(#7a8a98 1px, transparent 1px); background-size: 4px 4px;
+}
+:root[data-style="workstation"] body.layout-office { --office-tint: 0%; --frame: #5a5448; --wall: #ece6d8; --wall-stripe: #e0d9c9; --plank: #c8bfae; --plank-line: #b8af9e; }
