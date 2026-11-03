@@ -181,8 +181,10 @@
       const tilted = new Grid(); tilted.p(x + 12, y + 3, 1, 2, arm); tilted.p(x + 13, y + 1, 1, 2, arm); tilted.p(x + 13, y - 1, 2, 2, skin);
       moves = frames([straight, tilted]);
     } else { r.p(x + 10, y + 10, 1, 5, arm); r.set(x + 10, y + 15, skin); }
+    const armR = `<g class="arm arm-r ${hand === 'wave' ? 'wave' : hand === 'raise' ? 'raise' : ''}">${r.svg()}${moves}</g>`;
+    // A raised arm passes in front of hair, hats and earrings; a lowered one tucks behind them.
     return `${bubbleSVG}${b.svg()}<g class="arm arm-l">${l.svg()}</g>`
-      + `<g class="arm arm-r ${hand === 'wave' ? 'wave' : hand === 'raise' ? 'raise' : ''}">${r.svg()}${moves}</g>${head(ch, x, y, false)}`;
+      + (hand === 'raise' || hand === 'wave' ? head(ch, x, y, false) + armR : armR + head(ch, x, y, false));
   }
 
   // A little sign over someone's head: ? (needs you), ! (alert), ✓ (done),

@@ -16,6 +16,18 @@ function load() {
   return window;
 }
 
+// The <g> starting at `open`, up to its matching </g>.
+function group(svg, open) {
+  const start = svg.indexOf(open);
+  if (start < 0) return null;
+  const re = /<g\b|<\/g>/g;
+  re.lastIndex = start;
+  for (let depth = 0, m; (m = re.exec(svg));) if (!(depth += m[0] === '</g>' ? -1 : 1)) return svg.slice(start, m.index);
+}
+const pixels = (svg) => [...svg.matchAll(/<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" fill="([^"]+)"/g)]
+  .flatMap((r) => Array.from({ length: +r[3] * +r[4] }, (_, i) => ({ x: +r[1] + (i % +r[3]), y: +r[2] + Math.floor(i / +r[3]), fill: r[5] })));
+const near = (a, b) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
+
 test('idle and working seated poses differ in posture, not just screen colour', () => {
   const w = load();
   const working = w.figureOfficeSVG('working', 0);
@@ -77,16 +89,6 @@ test('moving arms swap whole frames around a still shoulder; only the first show
 
 test('every arm frame hangs off the still arm, and hands keep a gap from the head and stay off the bubble', () => {
   const w = load();
-  const group = (svg, open) => {
-    const start = svg.indexOf(open);
-    if (start < 0) return null;
-    const re = /<g\b|<\/g>/g;
-    re.lastIndex = start;
-    for (let depth = 0, m; (m = re.exec(svg));) if (!(depth += m[0] === '</g>' ? -1 : 1)) return svg.slice(start, m.index);
-  };
-  const pixels = (svg) => [...svg.matchAll(/<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" fill="([^"]+)"/g)]
-    .flatMap((r) => Array.from({ length: +r[3] * +r[4] }, (_, i) => ({ x: +r[1] + (i % +r[3]), y: +r[2] + Math.floor(i / +r[3]), fill: r[5] })));
-  const near = (a, b) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
   const stillPart = (arm) => pixels(arm.slice(0, arm.indexOf('<g class="frame')));
   for (let c = 0; c < w.CHARACTERS.length; c++) {
     const skin = w.CHARACTERS[c].skin;
@@ -100,9 +102,11 @@ test('every arm frame hangs off the still arm, and hands keep a gap from the hea
       const headRight = Math.max(...head.filter((p) => p.fill === skin).map((p) => p.x));
       const headOnly = head.filter((p) => p.x <= headRight);
       const bubble = pixels(group(svg, '<g class="bubble">') || '');
+      const headOnTop = svg.indexOf('<g class="head">') > svg.indexOf(`<g class="${cls}`);
+      const visible = (ps) => (headOnTop ? ps.filter((p) => !head.some((h) => h.x === p.x && h.y === p.y)) : ps);
       for (let f = 1; f <= shown && group(arm, `<g class="frame f${f}"`); f++) {
-        const frame = pixels(group(arm, `<g class="frame f${f}"`));
-        const reached = stillPart(arm);
+        const frame = visible(pixels(group(arm, `<g class="frame f${f}"`)));
+        const reached = visible(stillPart(arm));
         for (let grew = true; grew;) {
           grew = false;
           for (const p of frame) if (!reached.includes(p) && reached.some((q) => near(p, q))) { reached.push(p); grew = true; }
@@ -121,7 +125,7 @@ test('every arm frame hangs off the still arm, and hands keep a gap from the hea
 test('the waving arm swings from the shoulder, not just at the wrist', () => {
   const w = load();
   const svg = w.figureOfficeSVG('done', 0);
-  const arm = svg.slice(svg.indexOf('<g class="arm arm-r wave">'), svg.indexOf('<g class="head">'));
+  const arm = group(svg, '<g class="arm arm-r wave">');
   const cells = (s) => new Set([...s.matchAll(/<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="1"/g)]
     .flatMap((r) => Array.from({ length: +r[3] }, (_, i) => `${+r[1] + i},${r[2]}`)));
   assert.ok(cells(arm.slice(0, arm.indexOf('<g class="frame'))).size <= 2, 'only the shoulder stays still');
