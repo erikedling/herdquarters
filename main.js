@@ -14,6 +14,7 @@ const { findPullRequest } = require('./pr');
 const { createWorktreeLister } = require('./worktrees');
 const { coalesce } = require('./coalesce');
 const { isRealDataFolder } = require('./data-folder');
+const { createFolderPicker } = require('./folder-picker');
 app.setName(APP_NAME); // the menu bar and dock label come from the bundle: see scripts/brand.js
 // Electron derives the data directory from the product name; keep the one the
 // app has always used so settings and orchestrators stay where they are.
@@ -445,10 +446,8 @@ ipcMain.handle('scan-repos', (_e, { root }) => {
 // Open a repo (any directory) as a new workspace; herdr detects the git checkout.
 ipcMain.handle('workspace-create', (_e, { cwd, label }) =>
   wt(() => client.request('workspace.create', { cwd, label: label || null, focus: true })));
-ipcMain.handle('pick-folder', async (_e, { defaultPath } = {}) => {
-  const r = await dialog.showOpenDialog(win, { title: 'Open repo', properties: ['openDirectory', 'createDirectory'], defaultPath: defaultPath || undefined });
-  return r.canceled || !r.filePaths?.length ? null : r.filePaths[0];
-});
+const pickFolder = createFolderPicker((...args) => dialog.showOpenDialog(...args));
+ipcMain.handle('pick-folder', (_e, { defaultPath } = {}) => pickFolder(win, defaultPath));
 ipcMain.handle('worktree-open', (_e, { workspace_id, path }) =>
   wt(() => client.request('worktree.open', { workspace_id, path, focus: true })));
 ipcMain.handle('worktree-create', (_e, { workspace_id, branch, base }) =>
