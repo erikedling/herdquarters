@@ -1,6 +1,7 @@
 // Small pixel-art pictures for the chrome: the logo in the top bar and the
 // icons on the menu bar in reception. Each is a 12×12 map, one letter per
-// pixel ('.' is see-through), drawn as a crisp SVG at any whole scale.
+// pixel ('.' is see-through), drawn as a crisp SVG at any whole scale. A
+// color can be var(--px-ink, fallback), so a retro style can recolor it.
 (function (root) {
   const ART = {
     // The building from the welcome screen: roof, wall, windows, door, grass.
@@ -16,11 +17,11 @@
       '.....rr.....', '.kkkkrrkkkk.', '.kyyyyyyyyk.', '.kyllllllyk.', '.kyyyyyyyyk.', '.kyllllllyk.',
       '.kyyyyyyyyk.', '.kyllllyyyk.', '.kyyyyyyyyk.', '.kyyyyyyykk.', '.kkkkkkkkk..', '............'] },
     // A window with a side panel: the workspace sidebar.
-    side: { pal: { k: '#f3e6d2', b: '#3d2a17', a: '#8fc8ff' }, rows: [
+    side: { pal: { k: 'var(--px-ink, #f3e6d2)', b: 'var(--px-paper, #3d2a17)', a: '#8fc8ff' }, rows: [
       '............', 'kkkkkkkkkkkk', 'kaaakbbbbbbk', 'kaaakbbbbbbk', 'kaaakbbbbbbk', 'kaaakbbbbbbk',
       'kaaakbbbbbbk', 'kaaakbbbbbbk', 'kaaakbbbbbbk', 'kaaakbbbbbbk', 'kkkkkkkkkkkk', '............'] },
     // A cog: settings.
-    gear: { pal: { g: '#f3e6d2' }, rows: [
+    gear: { pal: { g: 'var(--px-ink, #f3e6d2)' }, rows: [
       '....gggg....', '.gg.gggg.gg.', '.gggggggggg.', '..ggg..ggg..', 'gggg....gggg', 'ggg......ggg',
       'ggg......ggg', 'gggg....gggg', '..ggg..ggg..', '.gggggggggg.', '.gg.gggg.gg.', '....gggg....'] },
   };
@@ -32,7 +33,9 @@
     const w = art.rows[0].length, h = art.rows.length;
     let rects = '';
     art.rows.forEach((row, y) => [...row].forEach((c, x) => {
-      if (art.pal[c]) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${art.pal[c]}"/>`;
+      // A var() color lets a style recolor the icon (retro.css); it needs style=, not fill=.
+      const col = art.pal[c];
+      if (col) rects += `<rect x="${x}" y="${y}" width="1" height="1" ${col.startsWith('var(') ? `style="fill:${col}"` : `fill="${col}"`}/>`;
     }));
     return `<svg viewBox="0 0 ${w} ${h}" width="${w * scale}" height="${h * scale}" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
   }

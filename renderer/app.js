@@ -337,6 +337,11 @@ function renderBuilding(floors) {
   for (const floor of ordered) {
     const $floor = upsert($building, floor.key, 'section', `floor ${floor.isBoss ? 'boss' : ''}`);
     if (floor.isBoss) $floor.style.setProperty('--orch', floor.orchestrator.color); else $floor.style.removeProperty('--orch');
+    // Each repo's floor has its own walls and wood (decor.js); the boss floor keeps the house look.
+    const fd = !floor.isBoss && window.officeDecor?.floorDecor(floor.name || floor.key);
+    for (const [k, v] of [['--wall', fd?.wall], ['--wall-stripe', fd?.stripe], ['--plank', fd?.plank], ['--plank-line', fd?.plankLine]]) {
+      if (v) $floor.style.setProperty(k, v); else $floor.style.removeProperty(k);
+    }
     let $label = $floor.querySelector('.floor-label');
     if (!$label) {
       $label = document.createElement('div');
@@ -370,6 +375,12 @@ function renderBuilding(floors) {
     for (const room of floor.rooms) {
       const $room = upsert($rooms, room.id, 'div', `room ${room.isLinked ? 'linked' : 'main'} ${room.focused ? 'focused' : ''} ${room.isBoss ? 'boss' : ''}`);
       $room._room = room; $room._floor = floor;
+      // Each room has its own rug: a color and a pattern (decor.js).
+      if (!room.isBoss && window.officeDecor) {
+        const rd = window.officeDecor.roomDecor(room.path || room.id);
+        $room.style.setProperty('--rug', rd.rug); $room.style.setProperty('--rug-edge', rd.edge);
+        $room.dataset.rug = rd.pattern;
+      }
       // office layout sizes a pod by how many desk columns it needs (1..3)
       $room.dataset.cols = String(Math.min(3, Math.max(1, room.desks.length)));
       let $door = $room.querySelector('.door');

@@ -42,6 +42,8 @@
     const rr = (x, y, w, h, c) => { p(x + 1, y, w - 2, h, c); p(x, y + 1, w, h - 2, c); };
     // The same, with a one-pixel outline.
     const box = (x, y, w, h, fill, line = INK) => { rr(x - 1, y - 1, w + 2, h + 2, line); rr(x, y, w, h, fill); };
+    // A UI panel in the app's Toybox style: an ink outline and a hard shadow down and right.
+    const card = (x, y, w, h, fill, line = INK) => { p(x + 1, y + 1, w + 1, h + 1, INK); box(x, y, w, h, fill, line); };
     // '#' cells of a little bitmap.
     const pat = (rows, x, y, c) => rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') p(x + i, y + j, 1, 1, c); });
     const font = (size, weight) => { ctx.font = `${weight} ${size * S}px ${FONT}`; };
@@ -51,7 +53,7 @@
       ctx.fillStyle = o.color || INK; ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(s, x * S, y * S);
     };
-    return { ctx, S, p, rr, box, pat, text, measure };
+    return { ctx, S, p, rr, box, card, pat, text, measure };
   }
 
   const blinks = (ch, t) => (Math.floor(t * 8) + ch.seed * 11) % 29 === 0;
@@ -170,15 +172,15 @@
 
   // A speech bubble whose tail points down at (cx, by).
   function bubble(d, cx, by, w, h, fill, line = INK) {
-    const { p, box } = d, x = Math.round(cx - w / 2), y = by - h - 2;
-    box(x, y, w, h, fill, line);
+    const { p, card } = d, x = Math.round(cx - w / 2), y = by - h - 2;
+    card(x, y, w, h, fill, line);
     p(cx - 2, by - 2, 4, 2, line); p(cx - 1, by - 2, 2, 1, fill); p(cx - 1, by, 2, 1, line);
   }
 
   // A rounded label with text in it.
   function pill(d, cx, cy, s, bg, fg, size = 4.4) {
     const w = Math.ceil(d.measure(s, size)) + 6;
-    d.rr(Math.round(cx - w / 2), cy - 4, w, 8, bg);
+    d.card(Math.round(cx - w / 2), cy - 4, w, 8, bg, INK);
     d.text(s, cx, cy + 0.3, { size, color: fg });
   }
 
@@ -236,7 +238,7 @@
     box(44, 24, 72, 50, '#ffd9c2', '#c98b6b');
     p(42, 21, 76, 3, '#e66f6f'); p(44, 24, 72, 1, '#c95a5a');
     const sw = Math.ceil(d.measure('HERDQUARTERS', 5.2, 800)) + 8;
-    box(80 - sw / 2, 8, sw, 10, '#fff6e8');
+    d.card(80 - sw / 2, 8, sw, 10, '#fff6e8');
     d.text('HERDQUARTERS', 80, 13.4, { size: 5.2, weight: 800, color: '#e65f6f' });
     p(60, 18, 1, 3, '#c98b6b'); p(99, 18, 1, 3, '#c98b6b');
     // windows: who is in, and how they are doing
@@ -301,7 +303,7 @@
     p(0, 40, W, 50, '#efe4d6');
     workstation(d, 74, 28, CAST.boss, t);
     // the board on the wall
-    box(116, 6, 32, 26, WHITE, '#9aa3bd');
+    d.card(116, 6, 32, 26, WHITE);
     d.text('BOARD', 132, 10.5, { size: 3.4, weight: 800, color: '#6b7290' });
     [[DONE, true], [DONE, true], ['#c9cfdc', false]].forEach(([c, done], i) => {
       const y = 15 + i * 5;
@@ -370,7 +372,7 @@
     }
     // QA: a magnifying glass sweeping over a diff
     person(d, 8, 38, CAST.olle, 'stand', t);
-    box(25, 18, 18, 30, WHITE, '#9aa3bd');
+    d.card(25, 18, 18, 30, WHITE);
     for (let i = 0; i < 7; i++) p(28, 22 + i * 3.6, 6 + ((i * 5) % 7), 1.4, i % 3 === 1 ? DONE : i === 4 ? BLOCKED : '#c9cfdc');
     const my = 22 + ((Math.sin(t * 1.6) + 1) / 2) * 16;
     d.pat(['.###.', '#...#', '#...#', '#...#', '.###.'], 31, my, INK);
@@ -407,11 +409,11 @@
     const ph = t % 7;
     person(d, 16, 52, CAST.you, ph < 0.8 ? 'wave' : 'stand', t);
     // the chat window
-    box(42, 6, 76, 62, WHITE, '#9aa3bd');
-    p(42, 6, 76, 9, '#eef1fb'); p(42, 15, 76, 1, '#dfe4f2');
+    d.card(42, 6, 76, 62, WHITE);
+    p(42, 6, 76, 9, '#8fc8ff'); p(42, 15, 76, 1, INK);
     d.text(name, 47, 10.8, { size: 4.4, weight: 800, align: 'left' });
     p(110, 10, 3, 3, '#38c172');
-    const msg = (x, y, w, s, bg, fg) => { rr(x, y, w, 9, bg); d.text(s, x + w / 2, y + 4.8, { size: 3.6, weight: 700, color: fg }); };
+    const msg = (x, y, w, s, bg, fg) => { box(x, y, w, 9, bg, INK); d.text(s, x + w / 2, y + 4.8, { size: 3.6, weight: 700, color: fg }); };
     msg(48, 19, 50, 'Good morning, Mia!', '#eef1fb', INK);
     msg(48, 30, 62, '2 bosses wait on you', '#eef1fb', INK);
     if (ph > 1) msg(72, 42, 42, 'Remind me at 3', '#dce8ff', '#2f55c9');
@@ -445,7 +447,7 @@
     p(56, 24, 6, 50, '#a8743f'); p(57, 26, 4, 46, '#8a5a3c'); p(60, 48, 1, 2, '#ffd66b');
     p(64, 74, 32, 3, '#fff2b3'); p(60, 77, 40, 3, '#ffe9a8');
     const sw = Math.ceil(d.measure('+  New orchestrator', 5, 800)) + 10;
-    box(80 - sw / 2, 9, sw, 10, '#6c63ff', '#4b44c9');
+    d.card(80 - sw / 2, 9, sw, 10, '#6c63ff');
     d.text('+  New orchestrator', 80, 14.4, { size: 5, weight: 800, color: WHITE });
     person(d, 74, 54, CAST.boss, 'wave', t);
     person(d, 36, 54, CAST.you, 'stand', t);

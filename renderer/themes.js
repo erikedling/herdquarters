@@ -41,20 +41,47 @@
       light: t('#f5f2ff', '#ebe6fb', '#ffffff', '#d8cff3', '#251d3d', '#6c6290', '#7b5ce0', '#4f72e0', '#e05a85', '#2fb08b', '#8b84a3', '#c98a2a') },
   ];
 
+  // Styles: the shape of the whole UI. Modern is the app as it was, colored by
+  // the theme. The retro styles are pixel looks (retro.css) that bring their own
+  // colors and mode, so the theme and dark/light only apply to Modern.
+  const STYLES = [
+    { id: 'modern', name: 'Modern', note: 'Smooth and rounded, in your theme' },
+    { id: 'workshop', name: 'Workshop', note: 'Wood, cork and paper', mode: 'light',
+      colors: t('#efe0bf', '#e6d3ac', '#fff8e6', '#8a6a45', '#2a2010', '#7a6545', '#3e7fc4', '#3e7fc4', '#c8423a', '#4f9a3a', '#8a7a60', '#e8a33a') },
+    { id: 'quest', name: 'Quest', note: '16-bit RPG menus', mode: 'dark',
+      colors: t('#0b0f2b', '#10164a', '#1a237a', '#4a58b8', '#f2f4ff', '#9aa8e8', '#ffd25a', '#7aa2ff', '#ff5a6e', '#5ce08a', '#8090d8', '#ffd25a') },
+    { id: 'handheld', name: 'Handheld', note: 'Four shades of green', mode: 'light',
+      colors: t('#c4d88a', '#8bac0f', '#c4d88a', '#0f380f', '#0f380f', '#306230', '#306230', '#306230', '#0f380f', '#306230', '#306230', '#0f380f') },
+    { id: 'toybox', name: 'Toybox', note: 'The welcome screen, pastel', mode: 'light',
+      colors: t('#bfe3ff', '#ffd9c2', '#ffffff', '#2b2d42', '#2b2d42', '#5f6585', '#4f7cff', '#4f7cff', '#e8606b', '#3fae4f', '#8a90a6', '#ffb02e') },
+    { id: 'workstation', name: 'Workstation', note: 'A beige desktop, early 90s', mode: 'light',
+      colors: t('#e0d9c9', '#d8d0c0', '#f4f0e6', '#8a8478', '#1a1a1a', '#5a5448', '#2848b8', '#2848b8', '#c0282e', '#1f7a3a', '#6a6458', '#b8860b') },
+  ];
+
   const byId = (id) => THEMES.find((x) => x.id === id) || THEMES[0];
+  const styleById = (id) => STYLES.find((x) => x.id === id) || STYLES[0];
   // mode: 'dark' | 'light' | 'system'; systemDark: what the OS prefers.
   const resolveMode = (mode, systemDark) => (mode === 'system' ? (systemDark ? 'dark' : 'light') : mode === 'light' ? 'light' : 'dark');
 
-  function apply(id, mode) {
-    const theme = byId(id);
-    const m = resolveMode(mode, window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-    const root = document.documentElement;
-    root.dataset.theme = theme.id;
-    root.dataset.mode = m;
-    for (const k of KEYS) root.style.setProperty(`--${k}`, theme[m][k]);
+  // The colors and mode on screen: a retro style's own, else the theme's.
+  function resolve(themeId, mode, styleId, systemDark) {
+    const style = styleById(styleId);
+    if (style.colors) return { style: style.id, theme: style.id, mode: style.mode, colors: style.colors };
+    const theme = byId(themeId);
+    const m = resolveMode(mode, systemDark);
+    return { style: 'modern', theme: theme.id, mode: m, colors: theme[m] };
   }
 
-  const api = { THEMES, KEYS, byId, resolveMode };
+  function apply(id, mode, styleId) {
+    const r = resolve(id, mode, styleId, window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+    const root = document.documentElement;
+    root.dataset.theme = r.theme;
+    root.dataset.mode = r.mode;
+    if (r.style === 'modern') delete root.dataset.style; else root.dataset.style = r.style;
+    for (const k of KEYS) root.style.setProperty(`--${k}`, r.colors[k]);
+  }
+
+  const api = { THEMES, STYLES, KEYS, byId, styleById, resolveMode, resolve };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   window.officeThemes = { ...api, apply };
 })();

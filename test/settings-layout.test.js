@@ -107,3 +107,8 @@ test('animals hidden with the old paw button come back: the button is gone', () 
   const { settings } = load({ petsHidden: true, cats: true });
   assert.strictEqual(settings.get().petsHidden, false);
 });
+
+test('a fresh install opens in the Toybox style', () => {
+  const { settings } = load();
+  assert.strictEqual(settings.get().style, 'toybox');
+});
