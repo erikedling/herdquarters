@@ -137,9 +137,10 @@ body.layout-office .figure-office .arm { animation: none; }
 @keyframes px-frame-1of2 { 0% { visibility: visible; } 50%, 100% { visibility: hidden; } }
 @keyframes px-frame-2of2 { 0% { visibility: hidden; } 50%, 100% { visibility: visible; } }
 
-body.layout-office .pose-working .arm .f1 { animation: px-frame-1of2 0.72s steps(1) infinite; }
-body.layout-office .pose-working .arm .f2 { animation: px-frame-2of2 0.72s steps(1) infinite; }
-body.layout-office .pose-working .arm-r .frame { animation-delay: -0.36s; }
+body.layout-office .pose-working .arm-l .f1 { animation: px-frame-1of2 0.72s steps(1) infinite; }
+body.layout-office .pose-working .arm-l .f2 { animation: px-frame-2of2 0.72s steps(1) infinite; }
+body.layout-office .pose-working .arm-r .f1 { animation: px-frame-1of2 0.72s steps(1) -0.36s infinite; }
+body.layout-office .pose-working .arm-r .f2 { animation: px-frame-2of2 0.72s steps(1) -0.36s infinite; }
 
 /* up, mid, out, mid: holding the end poses longer reads as a wave, not a jitter */
 body.layout-office .pose-done .wave .f1 { animation: px-wave-1 0.9s steps(1) infinite; }

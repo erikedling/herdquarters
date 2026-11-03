@@ -161,14 +161,14 @@
     let moves = '';
     if (hand === 'wave') {
       r.p(x + 10, y + 9, 1, 2, arm); r.p(x + 11, y + 7, 1, 3, arm);
-      const up = new Grid(); up.p(x + 11, y + 4, 1, 3, arm); up.p(x + 11, y + 2, 2, 2, skin);
-      const mid = new Grid(); mid.set(x + 11, y + 6, arm); mid.p(x + 12, y + 4, 1, 2, arm); mid.p(x + 12, y + 2, 2, 2, skin);
+      const up = new Grid(); up.p(x + 12, y + 4, 1, 3, arm); up.p(x + 12, y + 2, 2, 2, skin);
+      const mid = new Grid(); mid.p(x + 12, y + 5, 1, 2, arm); mid.p(x + 13, y + 3, 2, 2, skin);
       const out = new Grid(); out.set(x + 12, y + 6, arm); out.set(x + 13, y + 5, arm); out.p(x + 14, y + 3, 2, 2, skin);
       moves = frames([up, mid, out]);
     } else if (hand === 'raise') {
       r.set(x + 10, y + 9, arm); r.p(x + 11, y + 5, 1, 5, arm);
-      const straight = new Grid(); straight.p(x + 11, y + 1, 1, 4, arm); straight.p(x + 11, y - 1, 2, 2, skin);
-      const tilted = new Grid(); tilted.p(x + 12, y + 1, 1, 4, arm); tilted.p(x + 12, y - 1, 2, 2, skin);
+      const straight = new Grid(); straight.p(x + 12, y + 1, 1, 4, arm); straight.p(x + 12, y - 1, 2, 2, skin);
+      const tilted = new Grid(); tilted.p(x + 12, y + 3, 1, 2, arm); tilted.p(x + 13, y + 1, 1, 2, arm); tilted.p(x + 13, y - 1, 2, 2, skin);
       moves = frames([straight, tilted]);
     } else { r.p(x + 10, y + 10, 1, 5, arm); r.set(x + 10, y + 15, skin); }
     return `${bubbleSVG}${b.svg()}<g class="arm arm-l">${l.svg()}</g>`
@@ -277,7 +277,7 @@
     const n = chars.length || 1;
     const ch = chars[((character % n) + n) % n];
     if (!ch) return '';
-    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 16, 2, color))}</g></svg>`;
+    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 17, 2, color))}</g></svg>`;
   };
 
   window.CHARACTER_NAMES = NAMES;

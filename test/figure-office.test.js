@@ -74,3 +74,46 @@ test('moving arms swap whole frames around a still shoulder; only the first show
     assert.ok(group.indexOf('<rect') < group.indexOf('class="frame'), `${pose} ${cls} keeps its shoulder outside the frames`);
   }
 });
+
+test('every arm frame hangs off the still arm, and hands keep a gap from the head and stay off the bubble', () => {
+  const w = load();
+  const group = (svg, open) => {
+    const start = svg.indexOf(open);
+    if (start < 0) return null;
+    const re = /<g\b|<\/g>/g;
+    re.lastIndex = start;
+    for (let depth = 0, m; (m = re.exec(svg));) if (!(depth += m[0] === '</g>' ? -1 : 1)) return svg.slice(start, m.index);
+  };
+  const pixels = (svg) => [...svg.matchAll(/<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" fill="([^"]+)"/g)]
+    .flatMap((r) => Array.from({ length: +r[3] * +r[4] }, (_, i) => ({ x: +r[1] + (i % +r[3]), y: +r[2] + Math.floor(i / +r[3]), fill: r[5] })));
+  const near = (a, b) => Math.abs(a.x - b.x) <= 1 && Math.abs(a.y - b.y) <= 1;
+  const stillPart = (arm) => pixels(arm.slice(0, arm.indexOf('<g class="frame')));
+  for (let c = 0; c < w.CHARACTERS.length; c++) {
+    const skin = w.CHARACTERS[c].skin;
+    const figures = [['working', 'arm arm-l'], ['working', 'arm arm-r'], ['done', 'arm arm-r wave'], ['alert', 'arm arm-r raise'], ['blocked', 'arm arm-r raise']]
+      .map(([pose, cls]) => [`${pose} ${cls}`, w.figureOfficeSVG(pose, c), cls, 3]);
+    // Nothing animates the visitor, so only its first frame ever shows.
+    figures.push(['visitor', w.figureOfficeVisitorSVG(c), 'arm arm-r raise', 1]);
+    for (const [label, svg, cls, shown] of figures) {
+      const arm = group(svg, `<g class="${cls}`);
+      const head = pixels(group(svg, '<g class="head">'));
+      const headRight = Math.max(...head.filter((p) => p.fill === skin).map((p) => p.x));
+      const headOnly = head.filter((p) => p.x <= headRight);
+      const bubble = pixels(group(svg, '<g class="bubble">') || '');
+      for (let f = 1; f <= shown && group(arm, `<g class="frame f${f}"`); f++) {
+        const frame = pixels(group(arm, `<g class="frame f${f}"`));
+        const reached = stillPart(arm);
+        for (let grew = true; grew;) {
+          grew = false;
+          for (const p of frame) if (!reached.includes(p) && reached.some((q) => near(p, q))) { reached.push(p); grew = true; }
+        }
+        assert.ok(frame.every((p) => reached.includes(p)), `${label} f${f} of character ${c} has pixels off the arm`);
+        if (!label.startsWith('working')) {
+          const hand = frame.filter((p) => p.fill === skin);
+          assert.ok(!hand.some((h) => headOnly.some((p) => near(h, p))), `${label} f${f} of character ${c} has its hand on the head`);
+          assert.ok(!frame.some((h) => bubble.some((p) => p.x === h.x && p.y === h.y)), `${label} f${f} of character ${c} overlaps its bubble`);
+        }
+      }
+    }
+  }
+});
