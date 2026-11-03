@@ -53,6 +53,14 @@ contextBridge.exposeInMainWorld('office', {
     onState: (cb) => ipcRenderer.on('assistant', (_e, state) => cb(state)),
     onChat: (cb) => ipcRenderer.on('assistant-chat', (_e, ev) => cb(ev)),
   },
+  notes: {
+    list: () => ipcRenderer.invoke('notes-list'),
+    create: (spec) => ipcRenderer.invoke('notes-create', spec),
+    update: (file, patch) => ipcRenderer.invoke('notes-update', { file, patch }),
+    done: (file) => ipcRenderer.invoke('notes-done', { file }),
+    remove: (file) => ipcRenderer.invoke('notes-remove', { file }),
+    onChange: (cb) => { const h = (_e, list) => cb(list); ipcRenderer.on('notes', h); return () => ipcRenderer.removeListener('notes', h); },
+  },
   workspace: {
     create: (args) => ipcRenderer.invoke('workspace-create', args),
     pickFolder: (args) => ipcRenderer.invoke('pick-folder', args || {}),

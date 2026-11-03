@@ -1,15 +1,18 @@
 // User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
+  // The paw that hid the animals is gone; Settings > Appearance turns them on
+  // and off. Animals hidden with it come back, or there is no way to get them.
+  settings.petsHidden = false;
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ } }
 
   function apply() {
     const root = document.documentElement;
-    window.officeThemes?.apply(settings.theme, settings.mode);
+    window.officeThemes?.apply(settings.theme, settings.mode, settings.style);
     root.style.setProperty('--ui-scale', String(settings.scale));
     root.style.setProperty('--sidebar-width', `${settings.sidebarWidth}px`);
     root.style.setProperty('--panel-width', `${settings.panelWidth}%`);
@@ -54,7 +57,6 @@
   // ---- settings window ----
   const $pop = document.getElementById('settings');
   const $btn = document.getElementById('settings-btn');
-  const $pets = document.getElementById('pets-btn');
   function syncForm() {
     if (!$pop) return;
     $pop.querySelector('#set-scale').value = Math.round(settings.scale * 100);
@@ -77,7 +79,6 @@
     const $snd = $pop.querySelector('#set-alert-sound'); if ($snd) $snd.checked = settings.alertSound !== false;
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
-    $pets?.classList.toggle('off', settings.petsHidden || (!settings.cats && !settings.dogs));
     const $auto = $pop.querySelector('#set-herdr-autostart'); if ($auto) $auto.checked = settings.herdrAutostart !== false;
     const $ed = $pop.querySelector('#set-editor'); if ($ed && document.activeElement !== $ed) $ed.value = settings.editor || '';
     // Leave the box alone while it is being typed in; it is read on change.
@@ -96,6 +97,24 @@
       </button>`;
     }).join('');
     if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
+    renderStyles();
+  }
+  // A swatch per style: Modern in the current theme, the retro ones in their own colors.
+  function renderStyles() {
+    const $grid = $pop.querySelector('#set-styles'); if (!$grid || !window.officeThemes) return;
+    const { STYLES, styleById, resolve } = window.officeThemes;
+    const current = styleById(settings.style).id;
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const html = STYLES.map((s) => {
+      const c = resolve(settings.theme, settings.mode, s.id, dark).colors;
+      return `<button class="theme-card style-card ${s.id === current ? 'active' : ''}" data-style-id="${s.id}" title="${s.name}: ${s.note}">
+        <span class="theme-pv style-pv-${s.id}" style="background:${c.bg}"><i style="background:${c['bg-2']}"></i><span style="background:${c.panel}"><b style="background:${c.working}"></b><b style="background:${c.blocked}"></b><b style="background:${c.done}"></b></span></span>
+        <span class="theme-name">${s.name}<small>${s.note}</small></span>
+      </button>`;
+    }).join('');
+    if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
+    // The theme and dark/light only color Modern.
+    $pop.querySelector('#set-theme-row')?.classList.toggle('disabled', current !== 'modern');
   }
   function showSection(name) {
     for (const $t of $pop.querySelectorAll('.settings-tab')) $t.classList.toggle('active', $t.dataset.section === name);
@@ -108,6 +127,7 @@
   $pop?.addEventListener('mousedown', (e) => { if (e.target === $pop) close(); });
   $pop?.querySelector('#set-close')?.addEventListener('click', close);
   $pop?.querySelector('.settings-nav')?.addEventListener('click', (e) => { const $t = e.target.closest('.settings-tab'); if ($t) showSection($t.dataset.section); });
+  $pop?.querySelector('#set-styles')?.addEventListener('click', (e) => { const $t = e.target.closest('.style-card'); if ($t) set({ style: $t.dataset.styleId }); });
   $pop?.querySelector('#set-themes')?.addEventListener('click', (e) => { const $t = e.target.closest('.theme-card'); if ($t) set({ theme: $t.dataset.theme }); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$pop.hidden) close(); });
   // System mode follows the OS as it switches.
@@ -136,12 +156,6 @@
   $pop?.querySelector('#set-instructions')?.addEventListener('change', (e) => {
     set({ instructions: e.target.value.trim() });
     window.office.orchestrator?.setInstructions?.(settings.instructions);
-  });
-  // The paw in the top bar hides the animals and brings back the ones ticked
-  // in settings (both, when none are).
-  $pets?.addEventListener('click', () => {
-    if (!settings.cats && !settings.dogs) set({ cats: true, dogs: true, petsHidden: false });
-    else set({ petsHidden: !settings.petsHidden });
   });
   document.getElementById('sidebar-btn')?.addEventListener('click', () => set({ sidebar: !settings.sidebar }));
   $pop?.querySelector('#set-reset')?.addEventListener('click', () => set({ ...DEFAULTS }));

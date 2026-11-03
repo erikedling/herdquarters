@@ -72,7 +72,7 @@ bottom opens any folder as a new herdr workspace, which becomes a new repo
 in the office when the folder is a git checkout. The focused pane is highlighted and the one open in the
 terminal panel has a blue bar. Clicking a pane opens it, clicking a repo or
 checkout scrolls the scene to it. The sidebar stays put when the terminal
-takes the full window. Toggle it with **☰** in the top bar or in settings.
+takes the full window. Toggle it with the sidebar button on the menu bar in reception, or in settings.
 
 Settings (**⚙**) opens a window with four sections: Appearance,
 Assistant, Agents and General. Appearance has ten color themes, each with a dark and a
@@ -275,15 +275,17 @@ answers stream into the chat window as markdown, and its links open things in
 the office: a person opens that agent's terminal (`hq://desk/<pane>`), a
 ticket its room (`hq://tab/<slug>`), Slack findings the Slack dialog. The
 office keeps `OFFICE.md` in its folder up to date with every ticket and desk
-so it knows what to link. A **🐦 PiPi** tab bottom right opens the chat too,
-with a dot when PiPi has something for you.
+so it knows what to link. The bird button on reception's menu bar opens the chat
+too. Its badge shows how many answers you haven't read, or **!** when a
+reminder is due or the brief is ready.
 
 The first time, it gets to know you. On its days (settings, Monday to Friday
 by default) from the morning time (08:30 by default) it gives a brief: what
 waits on you across every orchestrator and in Slack, today's meetings
 (Microsoft 365, once connected and allowed) and reminders. Ask it to remind you
-of something and it writes a file to `reminders/`; the office fires it on time
-with a chime and a bubble, and ✓ marks it done. On the other days it stays
+of something, or to put something on your list, and it pins a note on the
+corkboard (see below); the office fires a reminder on time with a chime and a
+bubble, and ✓ marks it done. On the other days it stays
 quiet: no brief, no calling you, no visits to tickets. Reminders still fire,
 and it answers when you open the chat.
 
@@ -306,7 +308,7 @@ hold to pet it (hearts), double-click for a flip. When a ticket has something
 waiting on you it pecks at that card; when a ticket's tasks are all done it
 celebrates there with confetti. It talks while it answers, yawns and
 stretches when it wakes up, gets sleepy late in the afternoon, and sleeps in
-its nest by the chat tab at night and while it dreams. For a due reminder or
+its nest on top of the menu bar at night and while it dreams. For a due reminder or
 the morning brief it hovers under the top bar with a bubble.
 
 ## The office
@@ -336,16 +338,49 @@ The dog wags and hops at a desk that just finished, otherwise sits by one
 that needs you, otherwise lies at the feet of someone working. With nothing
 to do, both stroll along the floor. They trot over when their spot changes;
 click one to pet it. **Office cats** and **Office dogs** in settings switch
-each kind on or off; the 🐾 in the top bar hides them all and brings back
-the ones that are switched on.
+each kind on or off.
+
+Each space has its own look (`renderer/decor.js`), picked from its name so it
+never changes: every repo's floor has its own wall color and wood, every room
+(checkout) its own rug color and pattern (plain, stripes, dots, a border or a
+checker), and every agent keeps their own mug and one personal thing on the
+desk, like a plant, a rubber duck, a photo or a trophy. The boss floor keeps
+the house look.
 
 Every agent pane is drawn as one of 21 characters (`renderer/figure.js`),
 assigned on first sight so no two agents in the office look alike while there
 are 21 or fewer.
 
+## The corkboard
+
+Your todos and reminders are sticky notes on a corkboard on the wall to the
+right of the building (`renderer/corkboard.js`). Each note has a title, longer
+details that only show when you open it, an optional time and one of ten
+colors. A note with a time is a reminder: it fires on time like the ones the
+assistant sets, wiggles on the board while it is due, and shows "late" after
+its time. Click a note to open it and edit it, ✓ **Done** finishes it,
+**Remove** deletes it, and **＋** pins a new one. Changes save as you type.
+
+The wall fits eight places. When there are more notes, the last one becomes a
+"+N more" stack. The corkboard button on the menu bar (the wooden plaque at
+the right end of reception, which also holds the sidebar and settings
+buttons) opens the big board over the office, with every note in two rows:
+**Overdue · Today** (then notes without a time) and **Later**. Its red badge
+counts the open notes. While a terminal is open beside the office, the wall
+board steps aside; the button still opens the big board.
+
+Notes are markdown files in `<app data>/assistant/notes/` (`notes.js`), one
+per note, and the assistant edits the same files: when it pins a note, the
+bird flies to the board. Reminders from before the corkboard
+(`assistant/reminders/`) move in as notes the first time they are read. The
+board works with the assistant switched off.
+
 ## Settings
 
-The gear in the top bar opens settings: the theme, office size (zooms
+**Style** sets the shape of the whole app. **Toybox** is the default. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
+
+
+The settings button on the menu bar in reception opens settings: the style, the theme, office size (zooms
 the office and reception, not the terminal), whether the terminal opens as a
 split panel beside the office (the default) or takes the full window, the
 split panel width, the workspace sidebar, the editor command for "Open in
@@ -400,6 +435,7 @@ Turn this off with "Start herdr" in settings. The server's output goes to
 - `OFFICE_MODAL=<create|closed|remove|orchestrator|archived|slack:<slug>> npm start` opens that dialog on launch;
   `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings.
 - `OFFICE_OPEN=<pane_id> npm start` opens that desk's terminal on launch.
+- `OFFICE_CORKBOARD=big|note|both npm start` opens the big corkboard, the first note on the wall, or a note on the big board.
 - `OFFICE_USER_DATA=/tmp/agent-office-dev npm start` runs a second window beside the
   real app, for trying a branch. It keeps settings and orchestrators in that folder,
   skips the one-window lock and never starts herdr; it connects to the running herdr,

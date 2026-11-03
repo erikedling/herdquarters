@@ -74,13 +74,14 @@
   const mouse = { x: -999, y: -999, t: 0, speed: 0 };
   const parts = [];                 // particles
 
-  // Its nest: on the status bar's top border, just left of the PiPi tab. y is
-  // where its feet are, sitting in the nest.
+  // Its nest: on top of the menu bar's right end, in reception (on the status
+  // bar's top border if the bar isn't there). y is where its feet are, sitting
+  // in the nest; the nest's bottom is on the edge.
   function home() {
+    const bar = document.querySelector('#reception .menubar')?.getBoundingClientRect();
+    if (bar?.width) return { x: Math.round(bar.right - 30), y: Math.round(bar.top) - 7 };
     const line = document.getElementById('statusbar')?.getBoundingClientRect().top ?? window.innerHeight - 24;
-    const tab = document.getElementById('chat-tab');
-    const left = tab && !tab.hidden ? tab.getBoundingClientRect().left : window.innerWidth - 110;
-    return { x: Math.round(left - 40), y: line - 7 };
+    return { x: window.innerWidth - 150, y: line - 7 };
   }
   const hour = () => new Date().getHours();
   const night = () => hour() >= 22 || hour() < 7;
@@ -102,7 +103,7 @@
   // that edge is really on screen (not scrolled away or under the chat, the
   // terminal or a dialog), plus the long lines above reception and the
   // status bar. It never stands in the air.
-  const PERCH = '.tab, .floor-name, .whiteboard, .ticket, .slack-sign, .next-chip';
+  const PERCH = '.tab, .floor-name, .whiteboard, .ticket, .slack-sign, .next-chip, .corkboard-frame, .menubar';
   const LINES = ['#reception', '#statusbar'];
   function visible(el, x, y) {
     const at = document.elementsFromPoint(x, y).find((e) => e !== $hit);
@@ -326,7 +327,7 @@
       const b = board();
       if (b) drawBoard(b);
       const h = home();
-      pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the status bar's line
+      pixels(NEST, h.x - 22, h.y - 5, NEST_COLORS); // its bottom on the menu bar's top edge
       // A shadow on the ground: under its feet, or where it will land while flying.
       const ground = motion?.kind === 'fall' ? motion.to.y : motion?.kind === 'fly' ? motion.from.y + (motion.to.y - motion.from.y) * Math.min(1, (t - motion.start) / motion.ms) : pos.y;
       const height = Math.max(0, ground - pos.y + lift);
@@ -545,7 +546,8 @@
   // Hidden behind the full-window terminal, a dialog, settings, or the open
   // chat, which sits over the office's right side. A split terminal leaves it up.
   const boardCovered = () => document.body.classList.contains('term-full') && document.body.classList.contains('panel-open')
-    || !document.getElementById('modal')?.hidden || !document.getElementById('settings')?.hidden || !document.getElementById('assistant-chat')?.hidden;
+    || !document.getElementById('modal')?.hidden || !document.getElementById('settings')?.hidden || !document.getElementById('assistant-chat')?.hidden
+    || !document.getElementById('bigboard')?.hidden;
   function board() {
     if (!dartBoard || hidden || boardCovered()) return null;
     const r = document.getElementById('building')?.getBoundingClientRect();

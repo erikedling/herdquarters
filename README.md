@@ -16,6 +16,8 @@ It's a desktop app built on [herdr](https://herdr.dev), the agent multiplexer
 for your terminal, and works with [Claude Code](https://claude.com/claude-code)
 and [Pi](https://github.com/badlogic/pi-mono).
 
+<img src="docs/images/app.png" alt="The Herdquarters window in the Toybox style: tabs at the top, a deploy alert, and an office with a floor per repo, each with its own walls and rugs, the boss's team at their desks and a dart board on the wall" width="720">
+
 ## How it works
 
 ### 1. Tell the boss what you need
@@ -71,12 +73,32 @@ and Slack need from you, so you don't have to:
 - a **morning brief** on the days you pick (Mon–Fri by default): what waits
   on you, your meetings and reminders; on other days it stays quiet
 - **reminders**: "remind me at 3 to call Noor", and it chimes on time
+- a **corkboard** of your todos: sticky notes on the office wall that you
+  add, edit and tick off by hand, and that PiPi reads and writes too
 - a **memory** of your projects in plain markdown files, tidied up while it
   sleeps
 
 Click the bird to chat. It flies over to a ticket that needs you, celebrates
 when one is done, and naps at night. Don't like the name? Call it whatever
 you want in **Settings → PiPi**.
+
+### 6. Pin your todos on the corkboard
+
+<img src="docs/images/corkboard.png" alt="A corkboard on the office wall with colored sticky notes; one note is open with its title, details, reminder time and color" width="720">
+
+Todos and reminders are sticky notes on a corkboard beside the office. Each
+note has a title, longer details, an optional time and a color; a note with a
+time chimes when it's due. Add, edit and tick them off by hand, or just tell
+PiPi. When the wall fills up, the corkboard button opens a big board with
+every note.
+
+### 7. Make it yours
+
+Every repo gets its own walls and floor, every room its own rug, and every
+agent their own mug and something on the desk. Pick a style under
+**Settings → Appearance**: **Toybox** (the default, shown here), **Workshop**,
+**Quest**, **Handheld**, **Workstation**, or the smooth **Modern** look in one
+of ten themes.
 
 ## Get started
 
@@ -109,7 +131,8 @@ away: one floor per repo, one room per checkout, one desk per pane.
 ## Learn more
 
 The [guide](docs/GUIDE.md) covers everything else: terminals and worktrees,
-the board, boss instructions, themes, pets and dev flags.
+the board, the corkboard, boss instructions, styles and themes, pets and dev
+flags.
 
 ## Develop
 
@@ -122,7 +145,9 @@ npm run art                 # repaint the README animations
 Every animation in this README is painted frame by frame on a `<canvas>` by
 [`renderer/scenes.js`](renderer/scenes.js), the same scenes the welcome tour
 shows, and saved as a looping animated PNG. Change a scene and run
-`npm run art` to update them.
+`npm run art` to update them. The two screenshots (`app.png`,
+`corkboard.png`) are the fixture office in the Toybox style, taken with
+`OFFICE_SCREENSHOT` (see the guide's dev flags).
 
 ## License
 

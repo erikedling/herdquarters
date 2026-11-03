@@ -102,3 +102,13 @@ test('the dart board is off on a fresh install and follows the setting', () => {
   load({ dartBoard: true }, {}, { officeBird });
   assert.strictEqual(shown, true);
 });
+
+test('animals hidden with the old paw button come back: the button is gone', () => {
+  const { settings } = load({ petsHidden: true, cats: true });
+  assert.strictEqual(settings.get().petsHidden, false);
+});
+
+test('a fresh install opens in the Toybox style', () => {
+  const { settings } = load();
+  assert.strictEqual(settings.get().style, 'toybox');
+});

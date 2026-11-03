@@ -81,12 +81,18 @@ body.layout-office .room {
   position: relative; min-width: 0; max-width: none; padding: 0 0 8px;
   /* never narrower than 260px so the sign can show a branch name */
   width: max(260px, calc(var(--cols, 3) * 132px + (var(--cols, 3) - 1) * 8px + 34px));
-  background: #dce8ff; border: 3px solid #b9cbef; border-radius: 14px;
+  background-color: var(--rug, #dce8ff); border: 3px solid var(--rug-edge, #b9cbef); border-radius: 14px;
 }
+/* rug patterns (decor.js picks one per room) */
+body.layout-office .room[data-rug="stripes"] { background-image: repeating-linear-gradient(90deg, transparent 0 18px, color-mix(in srgb, var(--rug-edge) 45%, transparent) 18px 22px); }
+body.layout-office .room[data-rug="dots"] { background-image: radial-gradient(color-mix(in srgb, var(--rug-edge) 70%, transparent) 2px, transparent 2.5px); background-size: 16px 16px; }
+body.layout-office .room[data-rug="border"] { box-shadow: inset 0 0 0 6px var(--rug), inset 0 0 0 9px var(--rug-edge); }
+body.layout-office .room[data-rug="checker"] { background-image: conic-gradient(color-mix(in srgb, var(--rug-edge) 35%, transparent) 25%, transparent 0 50%, color-mix(in srgb, var(--rug-edge) 35%, transparent) 0 75%, transparent 0); background-size: 24px 24px; }
 body.layout-office .room[data-cols="1"] { --cols: 1; }
 body.layout-office .room[data-cols="2"] { --cols: 2; }
 body.layout-office .room[data-cols="3"] { --cols: 3; }
-body.layout-office .room.linked { background: #ffe1e8; border: 3px dashed #f0b3c3; }
+/* a linked worktree keeps its rug; the dashed edge says it is a worktree */
+body.layout-office .room.linked { border-style: dashed; }
 body.layout-office .room.focused { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 body.layout-office .room::before, body.layout-office .room::after {
   content: ""; position: absolute; bottom: -6px; width: 27px; height: 36px; pointer-events: none;
@@ -257,7 +263,3 @@ body.layout-office .floor { position: relative; }
 .pet.petted .pet-heart { display: inline; animation: pet-heart 1.2s steps(4) forwards; }
 @keyframes pet-heart { from { transform: translateY(2px); opacity: 1; } to { transform: translateY(-4px); opacity: 0; } }
 
-/* the paw in the top bar only matters in this layout; dim while the animals are off */
-#pets-btn { display: none; }
-body.layout-office #pets-btn { display: inline-block; }
-#pets-btn.off { opacity: .35; filter: grayscale(1); }

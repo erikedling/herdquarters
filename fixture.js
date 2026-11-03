@@ -137,14 +137,15 @@ exports.snapshot = function snapshot() {
 // the bird has something to say. OFFICE_ASSISTANT=talk|dream|idle|wave|unread
 // picks its mood (unread: an answer the user has not seen); OFFICE_CHAT=1
 // opens the chat window.
-// config: what Settings sent; a day off has no brief.
-exports.assistant = function assistant(config = {}) {
+// config: what Settings sent; a day off has no brief. due: the fixture
+// notes that are due (notes.js dueNotes).
+exports.assistant = function assistant(config = {}, due = []) {
   const now = Date.now();
   const mood = process.env.OFFICE_ASSISTANT || 'wave';
   const work = workday(config, now);
   return {
     enabled: true, workday: work, running: true, busy: mood === 'talk', dreaming: mood === 'dream', morning: mood === 'wave' && work, fixtureMood: mood,
-    due: mood === 'wave' ? [{ file: 'noor.md', due: now - 60_000, text: 'Talk to Noor about the dark palette (Dark mode).' }] : [],
+    due: mood === 'wave' ? due.map((n) => ({ file: n.file, due: n.due, text: n.title, color: n.color })) : [],
     upcoming: [{ file: 'demo.md', due: now + 3 * 3600_000, text: 'Prep the demo for Friday' }],
     fixtureUnread: mood === 'unread' ? { text: 'Klara is stuck on the coverage check: it needs the prod VPN.', count: 2 } : null,
   };
@@ -157,4 +158,24 @@ exports.assistantChat = function assistantChat() {
     { role: 'user', text: 'Remind me to prep the demo at 15', at: t + 60_000 },
     { role: 'assistant', text: 'Done. I will nudge you at **15:00** today.', at: t + 65_000 },
   ];
+};
+
+// The corkboard in fixture runs: every color, an overdue note, a due one, one
+// later today, a few later ones, and some with details. store: NotesStore.
+exports.seedNotes = function seedNotes(store) {
+  const now = Date.now();
+  const at = (days, h, m = 0) => { const d = new Date(now); d.setDate(d.getDate() + days); d.setHours(h, m, 0, 0); return d.getTime(); };
+  const notes = [
+    { title: 'Answer Jonas about the dark mode flag', due: now - 3 * 3600_000, color: 'orange', details: 'He asked in #web-team whether the flag should be on in stage.' },
+    { title: 'Talk to Noor about the dark palette', due: now - 60_000, color: 'pink', details: 'About the contrast on the muted text.\n\n- Does it pass AA on the panel color?\n- Ask about the warn yellow' },
+    { title: 'Merge the web PR', color: 'mint', details: 'After QA is green.' },
+    { title: 'Prep the demo for Friday', due: now + 3 * 3600_000, color: 'yellow' },
+    { title: 'Try zed again', color: 'lilac' },
+    { title: 'Book the dentist', due: at(2, 9), color: 'sky' },
+    { title: 'Write the retro notes', due: at(1, 16), color: 'teal' },
+    { title: 'Order a new keyboard', color: 'lime' },
+    { title: 'Read the herdr changelog', color: 'paper' },
+    { title: 'Renew the domain', due: at(5, 10), color: 'red' },
+  ];
+  notes.forEach((n, i) => store.create(n, now - (notes.length - i) * 60_000));
 };

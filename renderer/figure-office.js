@@ -219,11 +219,36 @@
     return g.svg() + label;
   }
 
-  // What sits on the desktop: mug, laptop, status light, the orchestrator's
-  // flag, the boss's lamp. lid: 'open' (facing us) | 'none'.
+  // Each character's own things: a mug in their color and one personal item
+  // between the mug and the laptop (4×5 pixels at x 13, sitting on the desk).
+  const MUGS = ['#ffffff', '#ff9eb5', '#9fd3ff', '#ffd166', '#a7e3b5', '#c9b3ff', '#ffb07a'];
+  const ITEMS = [
+    { name: 'plant', pal: { g: '#4fbf72', d: '#3a9e6a', p: '#e07a5f' }, rows: ['.gg.', 'gdgg', '.d..', 'pppp', '.pp.'] },
+    { name: 'cactus', pal: { g: '#5cb85c', f: '#ff7aa8', p: '#c8644a' }, rows: ['.f..', '.gg.', 'ggg.', '.g..', 'ppp.'] },
+    { name: 'duck', pal: { y: '#ffd23f', o: '#ff8c2e', k: '#2b2d42' }, rows: ['....', '.yk.', '.yyo', 'yyy.', 'yyy.'] },
+    { name: 'books', pal: { r: '#e8606b', b: '#4f7cff', g: '#5cc46a', w: '#fff6e8' }, rows: ['....', 'rrr.', 'bbbb', 'wwww', 'gggg'] },
+    { name: 'photo', pal: { k: '#8a5a3c', s: '#9fd3ff', h: '#5cc46a', u: '#ffd166' }, rows: ['kkkk', 'ksuk', 'khhk', 'kkkk', '.k..'] },
+    { name: 'trophy', pal: { y: '#ffd166', d: '#d9a62e', b: '#8a5a3c' }, rows: ['y..y', 'yyyy', '.yd.', '.y..', 'bbb.'] },
+    { name: 'cube', pal: { r: '#e8606b', g: '#5cc46a', b: '#4f7cff', y: '#ffd23f' }, rows: ['....', 'rgb.', 'ybr.', 'gry.', '....'] },
+    { name: 'lamp', pal: { y: '#ffe08a', k: '#5a5d6e' }, rows: ['yyy.', 'yyy.', '.k..', '.k..', 'kkk.'] },
+    { name: 'snowglobe', pal: { s: '#cdeeff', w: '#ffffff', t: '#3a9e6a', b: '#8a5a3c' }, rows: ['.ss.', 'swts', 'sttw', '.ss.', 'bbbb'] },
+    { name: 'headphones', pal: { k: '#2b2d42', r: '#e8606b' }, rows: ['.kk.', 'k..k', 'k..k', 'r..r', 'r..r'] },
+  ];
+  const own = (list, character) => list[((character % list.length) + list.length) % list.length];
+
+  // What sits on the desktop: mug, the person's own item, laptop, status
+  // light, the orchestrator's flag, the boss's lamp. lid: 'open' (facing us)
+  // | 'none'. opts.character: whose desk, for the mug and the item (none on
+  // an empty desk).
   function deskTop(pose, opts, lid) {
     const g = new Grid();
-    g.p(9, 30, 3, 3, WHITE); g.set(12, 31, WHITE); g.p(9, 30, 3, 1, '#c08a5a');
+    const mine = Number.isInteger(opts.character);
+    const mug = mine ? own(MUGS, opts.character) : WHITE;
+    g.p(9, 30, 3, 3, mug); g.set(12, 31, mug); g.p(9, 30, 3, 1, '#c08a5a');
+    if (mine && !opts.boss) {
+      const item = own(ITEMS, opts.character);
+      item.rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (item.pal[row[i]]) g.set(13 + i, 28 + j, item.pal[row[i]]); });
+    }
     if (opts.boss) { g.p(29, 24, 6, 2, GOLD); g.p(30, 23, 4, 1, GOLD); g.p(31, 26, 1, 6, '#5a5d6e'); g.p(30, 32, 4, 1, '#5a5d6e'); }
     else if (opts.tag) { g.p(29, 26, 1, 7, '#5a5d6e'); g.p(30, 26, 3, 2, opts.tag); }
     if (LED[pose]) g.p(34, 31, 2, 2, LED[pose]);
@@ -293,13 +318,16 @@
   };
 
   window.CHARACTER_NAMES = NAMES;
+  window.DESK_ITEMS = ITEMS.map((x) => x.name);
   window.figureOfficeSVG = function figureOfficeSVG(pose, character = 0, opts = {}) {
     const chars = window.CHARACTERS || [];
     const n = chars.length || 1;
     const ch = chars[((character % n) + n) % n];
     const name = pose === 'empty' || !ch ? '' : NAMES[((character % NAMES.length) + NAMES.length) % NAMES.length];
+    // A desk with someone at it (or out at the boss) has their own mug and item.
+    const deskOpts = ch && pose !== 'empty' ? { ...opts, character } : opts;
     return `<svg class="figure figure-office" viewBox="0 0 ${W} ${H}" width="${W * U}" height="${H * U}" shape-rendering="crispEdges" aria-hidden="true">
-      ${scene(pose, ch, name, opts)}
+      ${scene(pose, ch, name, deskOpts)}
     </svg>`;
   };
 })();
