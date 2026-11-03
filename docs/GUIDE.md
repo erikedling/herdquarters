@@ -377,7 +377,7 @@ board works with the assistant switched off.
 
 ## Settings
 
-**Style** sets the shape of the whole app. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
+**Style** sets the shape of the whole app. **Toybox** is the default. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
 
 
 The settings button on the menu bar in reception opens settings: the style, the theme, office size (zooms

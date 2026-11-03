@@ -1,7 +1,7 @@
 // User settings: theme, UI scale, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'modern', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
   // The paw that hid the animals is gone; Settings > Appearance turns them on
