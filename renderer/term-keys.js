@@ -15,6 +15,9 @@
     if (ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && CMD[ev.key]) return CMD[ev.key];
     // CSI-u shifted Return, which Claude Code takes as "newline" instead of "send".
     if (ev.key === 'Enter' && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey) return '\x1b[13;2u';
+    // CSI-u control Return, for "send now" on a queued message. xterm sends
+    // Ctrl+Enter as a bare \r, which the agent cannot tell apart from Enter.
+    if (ev.key === 'Enter' && ev.ctrlKey && !ev.metaKey && !ev.shiftKey && !ev.altKey) return '\x1b[13;5u';
     return null;
   }
   const api = { keyToBytes };

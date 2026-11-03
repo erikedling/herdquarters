@@ -86,8 +86,24 @@
             <input id="set-assistant-name" type="text" maxlength="24" spellcheck="false" placeholder="PiPi">
           </label>
           <label class="settings-row settings-check">
-            <span class="settings-check-text">Morning brief<small>On weekdays from this time it greets you with what needs you today, your meetings and reminders.</small></span>
+            <span class="settings-check-text">Morning brief<small>On its days from this time it greets you with what needs you today, your meetings and reminders.</small></span>
             <input id="set-morning" type="time">
+          </label>
+          <div class="settings-row settings-text settings-days">
+            <span class="settings-check-text">Days<small>The days it looks out for you. On the others it stays quiet: no brief, no calling you, no visits to tickets. Reminders you set still go off, and it answers when you open the chat.</small></span>
+            <span class="seg seg-days">
+              <label><input type="checkbox" name="assistantDays" value="1">Mon</label>
+              <label><input type="checkbox" name="assistantDays" value="2">Tue</label>
+              <label><input type="checkbox" name="assistantDays" value="3">Wed</label>
+              <label><input type="checkbox" name="assistantDays" value="4">Thu</label>
+              <label><input type="checkbox" name="assistantDays" value="5">Fri</label>
+              <label><input type="checkbox" name="assistantDays" value="6">Sat</label>
+              <label><input type="checkbox" name="assistantDays" value="0">Sun</label>
+            </span>
+          </div>
+          <label class="settings-row settings-check">
+            <span class="settings-check-text">Dart board<small>Target practice: a board on the office's right wall. Fling <span class="assistant-name">PiPi</span> at it; the bullseye is worth 50. With reduced motion on in your system settings a fling is a plain drop, so it can't reach the board.</small></span>
+            <input id="set-dartboard" type="checkbox">
           </label>
         </section>
 
@@ -175,7 +191,7 @@
   </footer>
 
   <canvas id="bird-canvas" class="bird-canvas" aria-hidden="true"></canvas>
-  <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, double-click for a flip" hidden></div>
+  <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, drag to move, fling to throw, double-click for a flip" hidden></div>
   <div id="bird-bubble" class="bird-bubble" hidden></div>
   <button id="chat-tab" class="chat-tab" title="Chat with your assistant" hidden></button>
   <aside id="assistant-chat" class="chat" hidden>
@@ -229,6 +245,9 @@
   <script src="alerts.js"></script>
   <script src="slack.js"></script>
   <script src="pipi-sprite.js"></script>
+  <script src="backflip.js"></script>
+  <script src="bird-drop.js"></script>
+  <script src="bird-throw.js"></script>
   <script src="bird.js"></script>
   <script src="assistant.js"></script>
   <script src="app.js"></script>

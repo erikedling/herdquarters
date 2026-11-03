@@ -2,6 +2,7 @@
 // with OFFICE_FIXTURE=1. Mirrors a plausible session (four repos, two of them
 // with linked worktrees, one closed worktree per repo that has any) but gives
 // the agents one of every state. Every path and name here is invented.
+const { workday } = require('./assistant');
 const HOME = '/Users/dev';
 const REPOS = `${HOME}/code`;
 const WT = `${HOME}/.herdr/worktrees`;
@@ -136,11 +137,13 @@ exports.snapshot = function snapshot() {
 // the bird has something to say. OFFICE_ASSISTANT=talk|dream|idle|wave|unread
 // picks its mood (unread: an answer the user has not seen); OFFICE_CHAT=1
 // opens the chat window.
-exports.assistant = function assistant() {
+// config: what Settings sent; a day off has no brief.
+exports.assistant = function assistant(config = {}) {
   const now = Date.now();
   const mood = process.env.OFFICE_ASSISTANT || 'wave';
+  const work = workday(config, now);
   return {
-    enabled: true, running: true, busy: mood === 'talk', dreaming: mood === 'dream', morning: mood === 'wave', fixtureMood: mood,
+    enabled: true, workday: work, running: true, busy: mood === 'talk', dreaming: mood === 'dream', morning: mood === 'wave' && work, fixtureMood: mood,
     due: mood === 'wave' ? [{ file: 'noor.md', due: now - 60_000, text: 'Talk to Noor about the dark palette (Dark mode).' }] : [],
     upcoming: [{ file: 'demo.md', due: now + 3 * 3600_000, text: 'Prep the demo for Friday' }],
     fixtureUnread: mood === 'unread' ? { text: 'Klara is stuck on the coverage check: it needs the prod VPN.', count: 2 } : null,

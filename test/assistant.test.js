@@ -5,8 +5,8 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { AssistantStore, runAssistant, assistantDue, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES } = require('../assistant');
-const { parseLine, userLine } = require('../assistant-session');
+const { AssistantStore, assistantSettings, runAssistant, assistantDue, knowsUser, reminderList, dueReminders, day, assistantName, assistantDays, MEMORY_FILES } = require('../assistant');
+const { AssistantSession, parseLine, userLine } = require('../assistant-session');
 
 // Local times, so the weekday and morning checks follow this machine's clock.
 const at = (y, mo, d, h, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
@@ -36,6 +36,28 @@ test('the morning brief: weekdays, after the morning time, once a day', () => {
   assert.strictEqual(assistantDue({ state: quiet(TUE_7), session: idle, met: true, config, now: TUE_7 }), 'none');
   assert.strictEqual(assistantDue({ state: quiet(SAT_9), session: idle, met: true, config, now: SAT_9 }), 'none');
   assert.strictEqual(assistantDue({ state: { ...quiet(TUE_9), last_morning: day(TUE_9) }, session: idle, met: true, config, now: TUE_9 }), 'none');
+});
+
+test('the days setting: no brief on a day off, a brief on a day on, never with none', () => {
+  const weekend = { ...config, days: [0, 6] };
+  assert.strictEqual(assistantDue({ state: quiet(TUE_9), session: idle, met: true, config: weekend, now: TUE_9 }), 'none');
+  assert.strictEqual(assistantDue({ state: quiet(SAT_9), session: idle, met: true, config: weekend, now: SAT_9 }), 'morning');
+  assert.strictEqual(assistantDue({ state: quiet(TUE_9), session: idle, met: true, config: { ...config, days: [] }, now: TUE_9 }), 'none');
+  // no hello on a day off either; it waits for a day on
+  assert.strictEqual(assistantDue({ session: idle, met: false, config: weekend, now: TUE_9 }), 'none');
+  assert.strictEqual(assistantDue({ session: idle, met: false, config: weekend, now: SAT_9 }), 'hello');
+});
+
+test('a day off still dreams: tidying the memory is silent', () => {
+  const after = { last_busy: SAT_9 - 31 * 60_000, last_dream: SAT_9 - 21 * 3600_000 };
+  assert.strictEqual(assistantDue({ state: after, session: idle, met: true, config, now: SAT_9 }), 'dream');
+});
+
+test('assistantDays(): getDay numbers 0-6, sorted, once each; Mon-Fri when not a list', () => {
+  assert.deepStrictEqual(assistantDays(undefined), [1, 2, 3, 4, 5]);
+  assert.deepStrictEqual(assistantDays('weekdays'), [1, 2, 3, 4, 5]);
+  assert.deepStrictEqual(assistantDays([]), []);
+  assert.deepStrictEqual(assistantDays([6, 0, 6, '3', 7, -1, 2.5, null, 'x']), [0, 3, 6]);
 });
 
 test('it dreams after a quiet half hour, once a day, and is cleared after', () => {
@@ -74,6 +96,31 @@ test('prepare() writes the brief and an empty memory, and keeps what the assista
   store.prepare();
   assert.strictEqual(store.met(), true);
   for (const sub of ['memory/projects', 'memory/journal', 'reminders']) assert.ok(fs.existsSync(path.join(dir, sub)), sub);
+});
+
+test('prepare() rewrites the permissions: orchestrators are read only, even in an old install', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const orchestratorsDir = '/Users/u/Library/Application Support/agent-office/orchestrators';
+  fs.mkdirSync(path.join(dir, '.claude'), { recursive: true });
+  fs.writeFileSync(path.join(dir, '.claude', 'settings.json'), '{"permissions":{"allow":["Read"]}}');
+  new AssistantStore({ dir, orchestratorsDir, template: '', claudeConfig: path.join(dir, 'claude.json') }).prepare();
+  const { permissions } = JSON.parse(fs.readFileSync(path.join(dir, '.claude', 'settings.json'), 'utf8'));
+  assert.deepStrictEqual(permissions, assistantSettings(orchestratorsDir).permissions);
+  assert.ok(permissions.deny.includes(`Edit(/${orchestratorsDir}/**)`));
+  assert.ok(permissions.allow.includes('Edit(./**)'));
+});
+
+test('start() passes --add-dir for each addDirs entry', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const fake = path.join(dir, 'claude');
+  fs.writeFileSync(fake, `#!/bin/sh\nprintf '%s\\n' "$@" > "${path.join(dir, 'args')}"\n`, { mode: 0o755 });
+  const session = new AssistantSession({ dir, addDirs: ['/a b/orchestrators'], claude: fake });
+  const exited = new Promise((resolve) => session.on('exit', resolve));
+  session.start('s1');
+  await exited;
+  const args = fs.readFileSync(path.join(dir, 'args'), 'utf8').trim().split('\n');
+  assert.strictEqual(args[args.indexOf('--add-dir') + 1], '/a b/orchestrators');
+  assert.strictEqual(args[args.indexOf('--resume') + 1], 's1');
 });
 
 test('the assistant can be renamed; its brief says the new name', () => {
@@ -136,4 +183,21 @@ test('runAssistant(): asks, notes it in the chat, and starts fresh after a dream
   assert.strictEqual(session.running, false);
   assert.strictEqual(store.readState().session_id, null);
   assert.deepStrictEqual(store.chat().map((c) => c.text), ['👋 First meeting', '💤 Dreaming', '🌅 Woke up with a tidy memory']);
+});
+
+test('view(): a day off has no brief to show, but due reminders still fire', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const store = new AssistantStore({ dir, orchestratorsDir: '/o', template: '', claudeConfig: path.join(dir, 'claude.json') });
+  store.prepare();
+  fs.writeFileSync(path.join(dir, 'reminders', 'noor.md'), `---\ndue: ${new Date(SAT_9 - 3600_000).toISOString()}\n---\nTalk to Noor\n`);
+  assert.deepStrictEqual(store.configure({ days: [1, 2, 3, 4, 5] }).days, [1, 2, 3, 4, 5]);
+  store.tick({ last_morning: day(SAT_9) });
+  const sat = store.view(idle, SAT_9);
+  assert.strictEqual(sat.workday, false);
+  assert.strictEqual(sat.morning, false);
+  assert.deepStrictEqual(sat.due.map((r) => r.text), ['Talk to Noor']);
+  store.configure({ days: [6] });
+  assert.strictEqual(store.view(idle, SAT_9).workday, true);
+  assert.strictEqual(store.view(idle, SAT_9).morning, true);
+  assert.deepStrictEqual(store.configure({ days: 'junk' }).days, [1, 2, 3, 4, 5]);
 });
