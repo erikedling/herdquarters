@@ -117,3 +117,15 @@ test('every arm frame hangs off the still arm, and hands keep a gap from the hea
     }
   }
 });
+
+test('the waving arm swings from the shoulder, not just at the wrist', () => {
+  const w = load();
+  const svg = w.figureOfficeSVG('done', 0);
+  const arm = svg.slice(svg.indexOf('<g class="arm arm-r wave">'), svg.indexOf('<g class="head">'));
+  const cells = (s) => new Set([...s.matchAll(/<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="1"/g)]
+    .flatMap((r) => Array.from({ length: +r[3] }, (_, i) => `${+r[1] + i},${r[2]}`)));
+  assert.ok(cells(arm.slice(0, arm.indexOf('<g class="frame'))).size <= 2, 'only the shoulder stays still');
+  const frames = arm.split('<g class="frame').slice(1).map(cells);
+  const shared = [...frames[0]].filter((p) => frames.every((f) => f.has(p)));
+  assert.ok(shared.length <= 1, `pixels in every frame: ${shared}`);
+});

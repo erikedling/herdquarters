@@ -149,6 +149,19 @@
 
   const armColor = (ch) => shade(ch.top.color, 0.86);
 
+  // The waving arm, one sprite per frame, drawn from just right of the shoulder
+  // (x + 11, y + 1): a = sleeve, h = hand. Only the shoulder itself stays still.
+  const WAVE = [
+    ['.......', '.hh....', '.hh....', '.a.....', '.a.....', '.a.....', '.a.....', '.a.....', 'a......'],
+    ['.......', '.......', '..hh...', '..hh...', '..a....', '..a....', '..a....', '.a.....', 'a......'],
+    ['.......', '.......', '.......', '....hh.', '....hh.', '....a..', '....a..', '..aa...', 'aa.....'],
+  ];
+  const sprite = (rows, x, y, colors) => {
+    const g = new Grid();
+    rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (colors[row[i]]) g.set(x + i, y + j, colors[row[i]]); });
+    return g;
+  };
+
   // Later frames start hidden so a figure office.css doesn't animate shows one still pose.
   const frames = (grids) => grids.map((g, i) => `<g class="frame f${i + 1}"${i ? ' visibility="hidden"' : ''}>${g.svg()}</g>`).join('');
 
@@ -160,11 +173,8 @@
     const r = new Grid();
     let moves = '';
     if (hand === 'wave') {
-      r.p(x + 10, y + 9, 1, 2, arm); r.p(x + 11, y + 7, 1, 3, arm);
-      const up = new Grid(); up.p(x + 12, y + 4, 1, 3, arm); up.p(x + 12, y + 2, 2, 2, skin);
-      const mid = new Grid(); mid.p(x + 12, y + 5, 1, 2, arm); mid.p(x + 13, y + 3, 2, 2, skin);
-      const out = new Grid(); out.set(x + 12, y + 6, arm); out.set(x + 13, y + 5, arm); out.p(x + 14, y + 3, 2, 2, skin);
-      moves = frames([up, mid, out]);
+      r.p(x + 10, y + 9, 1, 2, arm);
+      moves = frames(WAVE.map((rows) => sprite(rows, x + 11, y + 1, { a: arm, h: skin })));
     } else if (hand === 'raise') {
       r.set(x + 10, y + 9, arm); r.p(x + 11, y + 5, 1, 5, arm);
       const straight = new Grid(); straight.p(x + 12, y + 1, 1, 4, arm); straight.p(x + 12, y - 1, 2, 2, skin);
