@@ -58,3 +58,19 @@ test('Aida is the 21st character and wears the same shirt as Emma', () => {
   assert.strictEqual(w.CHARACTER_NAMES.length, w.CHARACTERS.length);
   assert.deepStrictEqual(w.CHARACTERS[aida].top, w.CHARACTERS[w.CHARACTER_NAMES.indexOf('EMMA')].top);
 });
+
+test('moving arms swap whole frames around a still shoulder; only the first shows without animation', () => {
+  const w = load();
+  const armGroup = (svg, cls) => {
+    const start = svg.indexOf(`class="${cls}"`);
+    const end = svg.slice(start + 1).search(/class="(arm |head)/);
+    return svg.slice(start, end < 0 ? svg.length : start + 1 + end);
+  };
+  const frames = (group) => [...group.matchAll(/<g class="frame f\d"( visibility="hidden")?>/g)].map((m) => (m[1] ? 'hidden' : 'shown'));
+  const cases = [['done', 'arm arm-r wave', 3], ['alert', 'arm arm-r raise', 2], ['blocked', 'arm arm-r raise', 2], ['working', 'arm arm-l', 2], ['working', 'arm arm-r', 2]];
+  for (const [pose, cls, n] of cases) {
+    const group = armGroup(w.figureOfficeSVG(pose, 0), cls);
+    assert.deepStrictEqual(frames(group), ['shown', ...Array(n - 1).fill('hidden')], `${pose} ${cls}`);
+    assert.ok(group.indexOf('<rect') < group.indexOf('class="frame'), `${pose} ${cls} keeps its shoulder outside the frames`);
+  }
+});
