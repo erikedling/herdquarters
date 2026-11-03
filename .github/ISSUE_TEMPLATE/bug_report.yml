@@ -21,7 +21,7 @@ body:
     attributes:
       label: Versions
       description: macOS, Node.js, herdr, and Claude Code or Pi.
-      placeholder: macOS 15.1, Node 22.11, herdr 0.4, Claude Code 2.1
+      placeholder: macOS 15.1, Node 22.12, herdr 0.4, Claude Code 2.1
     validations:
       required: true
   - type: textarea

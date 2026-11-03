@@ -83,7 +83,7 @@ you want in **Settings → PiPi**.
 You need:
 
 - macOS (Linux and Windows are untested)
-- [Node.js](https://nodejs.org) 22 or newer
+- [Node.js](https://nodejs.org) 22.12 or newer
 - [herdr](https://herdr.dev)
 - [Claude Code](https://claude.com/claude-code) or [Pi](https://github.com/badlogic/pi-mono),
   signed in (the assistant runs on Claude Code)
@@ -95,6 +95,9 @@ cd herdquarters
 npm install
 npm start
 ```
+
+`npm install` downloads the Electron binary, cached in `~/Library/Caches/electron`.
+Behind a proxy, set `ELECTRON_GET_USE_PROXY=true` and `HTTPS_PROXY`.
 
 A short welcome tour opens on first launch. At the end, press
 **Create my first orchestrator** and tell your new boss what you need. If

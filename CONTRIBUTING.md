@@ -10,7 +10,7 @@ the approach before you spend time on it.
 
 ## Set up
 
-You need macOS, Node.js 22 or newer and [herdr](https://herdr.dev).
+You need macOS, Node.js 22.12 or newer and [herdr](https://herdr.dev).
 
 ```sh
 git clone https://github.com/erikedling/herdquarters.git
