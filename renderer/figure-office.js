@@ -4,8 +4,8 @@
 // (window.CHARACTERS), drawn on a 44x54 unit grid at 3 screen px per unit.
 // Working, idle and unknown sit behind the desk; blocked and alert stand up
 // with a hand raised; done climbs onto the desk to wave.
-// Groups carry class names (.person, .head, .arm-l, .arm-r, .bubble, .glow,
-// .steam) so office.css can animate them.
+// Groups carry class names (.person, .head, .arm-l, .arm-r, .frame, .bubble,
+// .glow, .steam) so office.css can animate them.
 (function () {
   const U = 3, W = 44, H = 54;
   const FONT = "'SF Pro Rounded', ui-rounded, Nunito, system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -149,17 +149,42 @@
 
   const armColor = (ch) => shade(ch.top.color, 0.86);
 
+  // The waving arm, one sprite per frame, drawn from just right of the shoulder
+  // (x + 11, y + 1): a = sleeve, h = hand. Only the shoulder itself stays still.
+  const WAVE = [
+    ['.......', '.hh....', '.hh....', '.a.....', '.a.....', '.a.....', '.a.....', '.a.....', 'a......'],
+    ['.......', '.......', '..hh...', '..hh...', '..a....', '..a....', '..a....', '.a.....', 'a......'],
+    ['.......', '.......', '.......', '....hh.', '....hh.', '....a..', '....a..', '..aa...', 'aa.....'],
+  ];
+  const sprite = (rows, x, y, colors) => {
+    const g = new Grid();
+    rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (colors[row[i]]) g.set(x + i, y + j, colors[row[i]]); });
+    return g;
+  };
+
+  // Later frames start hidden so a figure office.css doesn't animate shows one still pose.
+  const frames = (grids) => grids.map((g, i) => `<g class="frame f${i + 1}"${i ? ' visibility="hidden"' : ''}>${g.svg()}</g>`).join('');
+
   // A standing person. hand: 'down' | 'raise' | 'wave'.
   function standing(ch, x, y, hand, bubbleSVG = '') {
     const b = new Grid(); hairBack(b, ch, x, y); legs(b, ch, x, y); torso(b, ch, x, y);
-    const arm = armColor(ch);
-    const l = new Grid(); l.p(x + 1, y + 10, 1, 5, arm); l.set(x + 1, y + 15, ch.skin);
+    const arm = armColor(ch), skin = ch.skin;
+    const l = new Grid(); l.p(x + 1, y + 10, 1, 5, arm); l.set(x + 1, y + 15, skin);
     const r = new Grid();
-    if (hand === 'wave') { r.p(x + 10, y + 9, 1, 2, arm); r.p(x + 11, y + 4, 1, 6, arm); r.p(x + 11, y + 2, 2, 2, ch.skin); }
-    else if (hand === 'raise') { r.set(x + 10, y + 9, arm); r.p(x + 11, y + 1, 1, 9, arm); r.p(x + 11, y - 1, 2, 2, ch.skin); }
-    else { r.p(x + 10, y + 10, 1, 5, arm); r.set(x + 10, y + 15, ch.skin); }
+    let moves = '';
+    if (hand === 'wave') {
+      r.p(x + 10, y + 9, 1, 2, arm);
+      moves = frames(WAVE.map((rows) => sprite(rows, x + 11, y + 1, { a: arm, h: skin })));
+    } else if (hand === 'raise') {
+      r.set(x + 10, y + 9, arm); r.p(x + 11, y + 5, 1, 5, arm);
+      const straight = new Grid(); straight.p(x + 12, y + 1, 1, 4, arm); straight.p(x + 12, y - 1, 2, 2, skin);
+      const tilted = new Grid(); tilted.p(x + 12, y + 3, 1, 2, arm); tilted.p(x + 13, y + 1, 1, 2, arm); tilted.p(x + 13, y - 1, 2, 2, skin);
+      moves = frames([straight, tilted]);
+    } else { r.p(x + 10, y + 10, 1, 5, arm); r.set(x + 10, y + 15, skin); }
+    const armR = `<g class="arm arm-r ${hand === 'wave' ? 'wave' : hand === 'raise' ? 'raise' : ''}">${r.svg()}${moves}</g>`;
+    // A raised arm passes in front of hair, hats and earrings; a lowered one tucks behind them.
     return `${bubbleSVG}${b.svg()}<g class="arm arm-l">${l.svg()}</g>`
-      + `<g class="arm arm-r ${hand === 'wave' ? 'wave' : hand === 'raise' ? 'raise' : ''}">${r.svg()}</g>${head(ch, x, y, false)}`;
+      + (hand === 'raise' || hand === 'wave' ? head(ch, x, y, false) + armR : armR + head(ch, x, y, false));
   }
 
   // A little sign over someone's head: ? (needs you), ! (alert), ✓ (done),
@@ -253,9 +278,13 @@
       const r = new Grid(); r.p(x + 11, y + 3, 1, 8, arm); r.p(x + 11, y + 2, 2, 2, arm);
       return { person: `${person}<g class="arm arm-l">${l.svg()}</g><g class="arm arm-r">${r.svg()}</g></g>`, hands: '' };
     }
-    const l = new Grid(); l.p(x + 1, y + 10, 1, 3, arm); l.p(x + 1, y + 13, 2, 2, ch.skin);
-    const r = new Grid(); r.p(x + 10, y + 10, 1, 3, arm); r.p(x + 9, y + 13, 2, 2, ch.skin);
-    return { person: `${person}</g>`, hands: `<g class="hands"><g class="arm arm-l">${l.svg()}</g><g class="arm arm-r">${r.svg()}</g></g>` };
+    const hand = (ax, hx) => {
+      const still = new Grid(); still.p(ax, y + 10, 1, 2, arm);
+      const down = new Grid(); down.set(ax, y + 12, arm); down.p(hx, y + 13, 2, 2, ch.skin);
+      const up = new Grid(); up.p(hx, y + 12, 2, 2, ch.skin);
+      return still.svg() + frames([down, up]);
+    };
+    return { person: `${person}</g>`, hands: `<g class="hands"><g class="arm arm-l">${hand(x + 1, x + 1)}</g><g class="arm arm-r">${hand(x + 10, x + 9)}</g></g>` };
   }
 
   function scene(pose, ch, name, opts) {
@@ -285,7 +314,7 @@
     const n = chars.length || 1;
     const ch = chars[((character % n) + n) % n];
     if (!ch) return '';
-    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 16, 2, color))}</g></svg>`;
+    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 17, 2, color))}</g></svg>`;
   };
 
   window.CHARACTER_NAMES = NAMES;

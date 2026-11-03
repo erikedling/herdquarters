@@ -137,21 +137,34 @@ body.layout-office .desk-actions .icon-btn { background: rgba(43, 45, 66, .8); c
 body.layout-office .figure-office { display: block; }
 
 /* pixel figure animations: whole-unit steps so nothing blurs */
-body.layout-office .pose-working .arm-l { transform-origin: 16px 38px; animation: px-type 0.36s steps(1) infinite alternate; }
-body.layout-office .pose-working .arm-r { transform-origin: 28px 38px; animation: px-type 0.36s steps(1) infinite alternate-reverse; }
-@keyframes px-type { from { transform: translateY(0); } to { transform: translateY(-1px); } }
+/* arms swap whole sprite frames while the shoulder stays put; style.css's
+   transforms on these groups are for the other layout */
+body.layout-office .figure-office .arm { animation: none; }
+@keyframes px-frame-1of2 { 0% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes px-frame-2of2 { 0% { visibility: hidden; } 50%, 100% { visibility: visible; } }
 
-body.layout-office .pose-done .arm-r.wave { transform-origin: 43px 42px; animation: px-wave 0.5s steps(1) infinite alternate; }
-@keyframes px-wave { from { transform: translateX(0); } to { transform: translateX(-2px) translateY(1px); } }
+body.layout-office .pose-working .arm-l .f1 { animation: px-frame-1of2 0.72s steps(1) infinite; }
+body.layout-office .pose-working .arm-l .f2 { animation: px-frame-2of2 0.72s steps(1) infinite; }
+body.layout-office .pose-working .arm-r .f1 { animation: px-frame-1of2 0.72s steps(1) -0.36s infinite; }
+body.layout-office .pose-working .arm-r .f2 { animation: px-frame-2of2 0.72s steps(1) -0.36s infinite; }
+
+/* up, mid, out, mid: holding the end poses longer reads as a wave, not a jitter */
+body.layout-office .pose-done .wave .f1 { animation: px-wave-1 0.9s steps(1) infinite; }
+body.layout-office .pose-done .wave .f2 { animation: px-wave-2 0.9s steps(1) infinite; }
+body.layout-office .pose-done .wave .f3 { animation: px-wave-3 0.9s steps(1) infinite; }
+@keyframes px-wave-1 { 0% { visibility: visible; } 33.33%, 100% { visibility: hidden; } }
+@keyframes px-wave-2 { 0% { visibility: hidden; } 33.33% { visibility: visible; } 50% { visibility: hidden; } 83.33%, 100% { visibility: visible; } }
+@keyframes px-wave-3 { 0% { visibility: hidden; } 50% { visibility: visible; } 83.33%, 100% { visibility: hidden; } }
 body.layout-office .pose-done .bubble { animation: px-pop 1.2s steps(1) infinite; }
 @keyframes px-pop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
 
 body.layout-office .pose-blocked .person { animation: px-hop 0.8s steps(1) infinite; }
 body.layout-office .pose-alert .person { animation: px-hop 0.5s steps(1) infinite; }
-body.layout-office .pose-alert .arm-r.raise { transform-origin: 43px 42px; animation: px-shake 0.25s steps(1) infinite alternate; }
 @keyframes px-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
-body.layout-office .pose-blocked .arm-r.raise { transform-origin: 43px 42px; animation: px-shake 0.4s steps(1) infinite alternate; }
-@keyframes px-shake { from { transform: translateX(0); } to { transform: translateX(-1px); } }
+body.layout-office .pose-alert .raise .f1 { animation: px-frame-1of2 0.5s steps(1) infinite; }
+body.layout-office .pose-alert .raise .f2 { animation: px-frame-2of2 0.5s steps(1) infinite; }
+body.layout-office .pose-blocked .raise .f1 { animation: px-frame-1of2 0.8s steps(1) infinite; }
+body.layout-office .pose-blocked .raise .f2 { animation: px-frame-2of2 0.8s steps(1) infinite; }
 
 body.layout-office .pose-idle .head, body.layout-office .pose-unknown .head { transform-origin: 22px 38px; animation: px-nod 3s steps(1) infinite; }
 @keyframes px-nod { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(1px); } }
