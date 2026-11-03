@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node scripts/brand.js && electron .",
     "brand": "node scripts/brand.js",
-    "postinstall": "node scripts/brand.js",
+    "postinstall": "install-electron && node scripts/brand.js",
     "icon": "electron scripts/make-icon.js",
     "art": "electron scripts/make-art.js",
     "test": "node --test 'test/**/*.test.js'"
