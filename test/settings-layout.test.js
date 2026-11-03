@@ -19,13 +19,13 @@ function settingsWindow() {
   };
 }
 
-function load(stored) {
+function load(stored, office = {}, extra = {}) {
   const vars = {};
   const classes = new Set();
   const $pop = settingsWindow();
   const store = stored ? { 'agent-office.settings': JSON.stringify(stored) } : {};
   const window = {
-    office: {},
+    office, ...extra,
     matchMedia: () => ({ matches: true, addEventListener() {} }),
   };
   vm.runInNewContext(src, {
@@ -78,4 +78,27 @@ test('the width slider is disabled in full mode, not only greyed out', () => {
   assert.strictEqual($width.disabled, true);
   settings.set({ termLayout: 'split' });
   assert.strictEqual($width.disabled, false);
+});
+
+test('the assistant gets its days: Mon-Fri on a fresh install, the saved ones after', () => {
+  const sent = [];
+  const office = { assistant: { configure: (c) => sent.push(c) } };
+  load(undefined, office);
+  assert.deepStrictEqual([...sent.at(-1).days], [1, 2, 3, 4, 5]);
+  const { settings } = load({ assistantDays: [0, 6] }, office);
+  assert.deepStrictEqual([...sent.at(-1).days], [0, 6]);
+  settings.set({ assistantDays: [] });
+  assert.deepStrictEqual([...sent.at(-1).days], []);
+});
+
+test('the dart board is off on a fresh install and follows the setting', () => {
+  let shown = null;
+  const officeBird = { setDartBoard: (on) => { shown = on; } };
+  const { settings } = load(undefined, {}, { officeBird });
+  assert.strictEqual(settings.get().dartBoard, false);
+  assert.strictEqual(shown, false);
+  settings.set({ dartBoard: true });
+  assert.strictEqual(shown, true);
+  load({ dartBoard: true }, {}, { officeBird });
+  assert.strictEqual(shown, true);
 });

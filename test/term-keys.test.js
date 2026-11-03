@@ -21,7 +21,15 @@ test('Shift+Enter is the CSI-u shifted Return that Claude Code takes as newline'
   assert.strictEqual(keyToBytes(ev('Enter', { shiftKey: true })), '\x1b[13;2u');
 });
 
+// xterm sends Ctrl+Enter as a bare \r, the same as Enter, so "send now" on a
+// queued message never reached the agent (issue #6).
+test('Ctrl+Enter is the CSI-u control Return, distinct from plain Enter', () => {
+  assert.strictEqual(keyToBytes(ev('Enter', { ctrlKey: true })), '\x1b[13;5u');
+});
+
 test('everything else is left to xterm', () => {
+  assert.strictEqual(keyToBytes(ev('Enter')), null);
+  assert.strictEqual(keyToBytes(ev('Enter', { ctrlKey: true, shiftKey: true })), null);
   assert.strictEqual(keyToBytes(ev('a')), null);
   assert.strictEqual(keyToBytes(ev('ArrowLeft')), null);
   assert.strictEqual(keyToBytes(ev('ArrowLeft', { altKey: true })), null);

@@ -44,9 +44,11 @@ function parseLine(line) {
 const userLine = (text) => JSON.stringify({ type: 'user', message: { role: 'user', content: text } }) + '\n';
 
 class AssistantSession extends EventEmitter {
-  constructor({ dir, claude = findClaude() }) {
+  // addDirs: folders outside dir it may list and read (the orchestrators).
+  constructor({ dir, addDirs = [], claude = findClaude() }) {
     super();
     this.dir = dir;
+    this.addDirs = addDirs;
     this.claude = claude;
     this.proc = null;
     this.busy = false;
@@ -58,6 +60,7 @@ class AssistantSession extends EventEmitter {
   start(resume = null) {
     if (this.proc) return;
     const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-prompts', 'none'];
+    for (const d of this.addDirs) args.push('--add-dir', d);
     if (resume) args.push('--resume', resume);
     const proc = spawn(this.claude, args, { cwd: this.dir, env: { ...process.env, CLAUDE_CODE_ENTRYPOINT: 'herdquarters-assistant' }, stdio: ['pipe', 'pipe', 'pipe'] });
     this.proc = proc;

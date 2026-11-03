@@ -12,7 +12,7 @@
   const $input = $chat.querySelector('textarea');
   const $tab = document.getElementById('chat-tab');
 
-  let state = null;          // from main: { enabled, running, busy, dreaming, morning, due, upcoming }
+  let state = null;          // from main: { enabled, workday, running, busy, dreaming, morning, due, upcoming }
   let desks = [], orchestrators = [];
   let live = null;           // the answer being streamed: { el, text }
   let $typing = null;        // the dots while it thinks or uses a tool
@@ -41,6 +41,9 @@
     if (!on) { $bubble.hidden = true; return; }
     const bird = window.officeBird;
     const calling = state.due.length || state.morning;
+    // A day off: only reminders the user set call for them (main sends no brief), and no card visits.
+    const offDay = state.workday === false;
+    if (offDay) visit = null;
     bird.setMood(state.dreaming ? 'dream' : state.busy ? 'talk' : calling ? 'call' : 'idle');
 
     // Being read: the bird does not fly off with its bubble.
@@ -48,7 +51,7 @@
     if (!$chat.hidden) { visit = null; bird.pin(chatPerch); }
     else if (calling) { visit = null; bird.pin(callSpot); }
     else if (unread) { visit = null; bird.pin(tabPerch); }
-    else if (!state.dreaming && (visit = visit && visit.until > Date.now() ? visit : nextVisit())) { const slug = visit.slug; bird.pin(() => cardPerch(slug), { peck: () => cardEl(slug) }); }
+    else if (!state.dreaming && !offDay && (visit = visit && visit.until > Date.now() ? visit : nextVisit())) { const slug = visit.slug; bird.pin(() => cardPerch(slug), { peck: () => cardEl(slug) }); }
     else bird.pin(null);
     renderBubble();
   }
@@ -206,7 +209,8 @@
       if (stick) toBottom();
     } else if (ev.type === 'message') {
       if (live) { live.el.innerHTML = md(ev.text); live.el.classList.remove('live'); live = null; } else if (history) append({ role: 'assistant', text: ev.text });
-      if ($chat.hidden) {
+      // A dream's last words on a day off are upkeep, not news: no "!" for them.
+      if ($chat.hidden && !(state?.dreaming && state.workday === false)) {
         const text = ev.text.replace(/[*_`#[\]]|\(hq:\/\/[^)]*\)|\(https?:[^)]*\)/g, '').split('\n').find((l) => l.trim())?.trim().slice(0, 90);
         if (text) setUnread({ text, count: (unread?.count || 0) + 1 });
         if (state) update();
