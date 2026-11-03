@@ -11,7 +11,7 @@ const $building = document.getElementById('building');
 const $reception = document.getElementById('reception-list');
 const $conn = document.getElementById('conn');
 // The app's name lives in package.json (productName); scripts/brand.js puts it on the bundle.
-if (window.office?.appName) { document.title = window.office.appName; const $b = document.getElementById('brand-name'); if ($b) $b.textContent = window.office.appName; }
+if (window.office?.appName) { document.title = window.office.appName; const $b = document.getElementById('brand-name'); if ($b) $b.title = window.office.appName; }
 const $tooltip = document.getElementById('tooltip');
 
 const memory = {
@@ -1011,6 +1011,8 @@ function runDevTriggers() {
     if (!t) return;
     if (t.settingsOpen) setTimeout(() => window.officeSettings?.openPopover(), 300);
     if (t.chatOpen) setTimeout(() => window.officeAssistant?.openChat(), 300);
+    // big: the big board; note: the first note on the wall, opened; both: the big board with a note open.
+    if (t.corkboard) setTimeout(() => window.officeCorkboard?.dev(t.corkboard), 800);
     if (t.tooltip) setTimeout(() => {
       const $desk = [...document.querySelectorAll('.desk')].find((el) => el._desk?.id === t.tooltip);
       if (!$desk) return;

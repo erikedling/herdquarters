@@ -71,6 +71,8 @@ and Slack need from you, so you don't have to:
 - a **morning brief** on the days you pick (Mon–Fri by default): what waits
   on you, your meetings and reminders; on other days it stays quiet
 - **reminders**: "remind me at 3 to call Noor", and it chimes on time
+- a **corkboard** of your todos: sticky notes on the office wall that you
+  add, edit and tick off by hand, and that PiPi reads and writes too
 - a **memory** of your projects in plain markdown files, tidied up while it
   sleeps
 

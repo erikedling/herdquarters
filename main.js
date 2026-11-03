@@ -7,6 +7,7 @@ const { OrchestratorStore, AGENT_KINDS } = require('./orchestrators');
 const { runSlack } = require('./slack');
 const { AssistantStore, runAssistant } = require('./assistant');
 const { AssistantSession } = require('./assistant-session');
+const { NotesStore, dueNotes } = require('./notes');
 const { productName: APP_NAME } = require('./package.json');
 const { openInEditor } = require('./editor');
 const { findPullRequest } = require('./pr');
@@ -100,10 +101,36 @@ function ensureAssistant() {
 }
 let fixtureConfig = {}; // fixture runs keep the settings here, so the days can be tried out
 function sendAssistant() {
-  if (process.env.OFFICE_FIXTURE) return toRenderer('assistant', require('./fixture').assistant(fixtureConfig));
+  if (process.env.OFFICE_FIXTURE) return toRenderer('assistant', require('./fixture').assistant(fixtureConfig, dueNotes(ensureNotes().list(), Date.now())));
   toRenderer('assistant', ensureAssistant().view(session));
 }
+// Notes on the corkboard (notes.js). They live in the assistant's folder, so it
+// reads and writes the same files, but they work with the assistant off.
+// Fixture runs get example notes in a temporary folder. Whoever changes a file
+// (the board or the assistant), the watcher sends the new list.
+let notes = null;
+let notesTimer = null;
+function ensureNotes() {
+  if (notes) return notes;
+  const fs = require('node:fs');
+  if (process.env.OFFICE_FIXTURE) {
+    notes = new NotesStore({ dir: fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'hq-notes-')) });
+    require('./fixture').seedNotes(notes);
+  } else {
+    notes = ensureAssistant().notes;
+  }
+  notes.prepare();
+  try {
+    fs.watch(notes.dir, () => { clearTimeout(notesTimer); notesTimer = setTimeout(() => { sendNotes(); sendAssistant(); }, 200); });
+  } catch (err) { console.warn(`notes: ${err.message}`); }
+  return notes;
+}
+function sendNotes() {
+  try { toRenderer('notes', ensureNotes().list()); } catch (err) { console.warn(`notes: ${err.message}`); }
+}
+
 function assistantClock() {
+  sendNotes();
   if (process.env.OFFICE_FIXTURE) return sendAssistant();
   if (process.env.OFFICE_SCREENSHOT) return; // a screenshot never starts a real session
   const store = ensureAssistant();
@@ -311,7 +338,17 @@ ipcMain.handle('assistant-configure', (_e, patch) => {
     return { config };
   });
 });
-ipcMain.handle('assistant-dismiss', (_e, { file }) => assistantCall((a) => a.dismissReminder(file)));
+// A reminder seen in the bubble: its note is done.
+ipcMain.handle('assistant-dismiss', (_e, { file }) => notesCall((n) => { n.done(file); }));
+// The corkboard: every change answers with the note and pushes the new list.
+const notesCall = (fn) => {
+  try { const r = fn(ensureNotes()); sendNotes(); sendAssistant(); return { ok: true, ...(r || {}) }; } catch (err) { return { ok: false, error: String(err.message || err) }; }
+};
+ipcMain.handle('notes-list', () => ensureNotes().list());
+ipcMain.handle('notes-create', (_e, spec) => notesCall((n) => ({ note: n.create(spec || {}) })));
+ipcMain.handle('notes-update', (_e, { file, patch }) => notesCall((n) => ({ note: n.update(file, patch || {}) })));
+ipcMain.handle('notes-done', (_e, { file }) => notesCall((n) => ({ note: n.done(file) })));
+ipcMain.handle('notes-remove', (_e, { file }) => notesCall((n) => { n.remove(file); }));
 ipcMain.handle('assistant-seen', () => assistantCall((a) => a.markMorningSeen()));
 ipcMain.handle('assistant-history', () => (process.env.OFFICE_FIXTURE ? require('./fixture').assistantChat() : ensureAssistant().chat()));
 ipcMain.handle('assistant-office', (_e, markdown) => assistantCall((a) => a.writeOffice(markdown)));
@@ -340,6 +377,7 @@ ipcMain.handle('dev-triggers-get', () => ({
   modal: process.env.OFFICE_MODAL || null, open: process.env.OFFICE_OPEN || null,
   tooltip: process.env.OFFICE_TOOLTIP || null, settingsOpen: !!process.env.OFFICE_SETTINGS_OPEN, chatOpen: !!process.env.OFFICE_CHAT,
   welcome: process.env.OFFICE_WELCOME || null, screenshot: !!process.env.OFFICE_SCREENSHOT,
+  corkboard: process.env.OFFICE_CORKBOARD || null,
 }));
 ipcMain.handle('focus-pane', (_e, paneId) => client.request('pane.focus', { pane_id: paneId }));
 ipcMain.handle('read-pane', async (_e, paneId, lines = 8) => {
