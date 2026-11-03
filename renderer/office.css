@@ -244,7 +244,3 @@ body.layout-office .floor { position: relative; }
 .pet.petted .pet-heart { display: inline; animation: pet-heart 1.2s steps(4) forwards; }
 @keyframes pet-heart { from { transform: translateY(2px); opacity: 1; } to { transform: translateY(-4px); opacity: 0; } }
 
-/* the paw in the top bar only matters in this layout; dim while the animals are off */
-#pets-btn { display: none; }
-body.layout-office #pets-btn { display: inline-block; }
-#pets-btn.off { opacity: .35; filter: grayscale(1); }

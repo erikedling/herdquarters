@@ -75,14 +75,15 @@ test('ME.md with only its heading means the user has not been met', () => {
   assert.strictEqual(knowsUser(''), false);
 });
 
-test('reminders: open ones with a date, due ones past it', () => {
+test('reminders: open notes with a time, due ones past it', () => {
   const list = reminderList([
-    { file: 'a.md', due: '2026-10-28T09:00:00+01:00', text: 'Talk to Noor' },
-    { file: 'b.md', due: '2026-10-27T09:00:00+01:00', text: 'Review the PR' },
-    { file: 'c.md', due: '2026-10-27T08:00:00+01:00', text: 'done', status: 'done' },
-    { file: 'd.md', due: 'tomorrow', text: 'no date' },
+    { file: 'a.md', due: Date.parse('2026-10-28T09:00:00+01:00'), title: 'Talk to Noor', status: 'open' },
+    { file: 'b.md', due: Date.parse('2026-10-27T09:00:00+01:00'), title: 'Review the PR', status: 'open' },
+    { file: 'c.md', due: Date.parse('2026-10-27T08:00:00+01:00'), title: 'done', status: 'done' },
+    { file: 'd.md', due: null, title: 'a plain todo', status: 'open' },
   ]);
   assert.deepStrictEqual(list.map((r) => r.file), ['b.md', 'a.md']);
+  assert.deepStrictEqual(list.map((r) => r.text), ['Review the PR', 'Talk to Noor']);
   assert.deepStrictEqual(dueReminders(list, Date.parse('2026-10-27T10:00:00+01:00')).map((r) => r.file), ['b.md']);
 });
 
@@ -95,7 +96,7 @@ test('prepare() writes the brief and an empty memory, and keeps what the assista
   fs.writeFileSync(path.join(dir, 'memory', 'ME.md'), '# Me\n\nMia.\n');
   store.prepare();
   assert.strictEqual(store.met(), true);
-  for (const sub of ['memory/projects', 'memory/journal', 'reminders']) assert.ok(fs.existsSync(path.join(dir, sub)), sub);
+  for (const sub of ['memory/projects', 'memory/journal', 'notes']) assert.ok(fs.existsSync(path.join(dir, sub)), sub);
 });
 
 test('prepare() rewrites the permissions: orchestrators are read only, even in an old install', () => {
@@ -143,10 +144,12 @@ test('assistantName(): one line, at most 24 characters, PiPi when empty', () => 
   assert.strictEqual(assistantName('Sir Chirps-a-Lot the Third of Herd'), 'Sir Chirps-a-Lot the Thi');
 });
 
-test('a dismissed reminder never fires again', () => {
+test('a dismissed reminder never fires again, also one written before notes existed', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
   const store = new AssistantStore({ dir, orchestratorsDir: '/o', template: '', claudeConfig: path.join(dir, 'claude.json') });
   store.prepare();
+  // An assistant still on the old brief writes to reminders/.
+  fs.mkdirSync(path.join(dir, 'reminders'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'reminders', 'noor.md'), '---\ndue: 2026-10-27T09:00:00+01:00\n---\nTalk to Noor\n');
   assert.deepStrictEqual(store.reminders().map((r) => r.text), ['Talk to Noor']);
   store.dismissReminder('noor.md');
@@ -189,7 +192,7 @@ test('view(): a day off has no brief to show, but due reminders still fire', () 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
   const store = new AssistantStore({ dir, orchestratorsDir: '/o', template: '', claudeConfig: path.join(dir, 'claude.json') });
   store.prepare();
-  fs.writeFileSync(path.join(dir, 'reminders', 'noor.md'), `---\ndue: ${new Date(SAT_9 - 3600_000).toISOString()}\n---\nTalk to Noor\n`);
+  fs.writeFileSync(path.join(dir, 'notes', 'noor.md'), `---\ntitle: Talk to Noor\ndue: ${new Date(SAT_9 - 3600_000).toISOString()}\nstatus: open\n---\n`);
   assert.deepStrictEqual(store.configure({ days: [1, 2, 3, 4, 5] }).days, [1, 2, 3, 4, 5]);
   store.tick({ last_morning: day(SAT_9) });
   const sat = store.view(idle, SAT_9);

@@ -10,16 +10,10 @@
 </head>
 <body>
   <header id="topbar">
-    <div class="brand">
-      <span class="brand-mark"></span>
-      <span id="brand-name">Herdquarters</span>
-    </div>
+    <div class="brand" id="brand-name" title="Herdquarters"><span class="brand-logo" data-pixel="logo" data-scale="2.5"></span></div>
     <nav id="tabs" class="tabs"></nav>
     <div class="topbar-end">
       <div id="notice" class="notice" hidden></div>
-      <button id="pets-btn" class="icon-btn topbar-btn" title="Hide or show the office animals">🐾</button>
-      <button id="sidebar-btn" class="icon-btn topbar-btn" title="Toggle workspace sidebar">☰</button>
-      <button id="settings-btn" class="icon-btn topbar-btn" title="Settings">⚙</button>
     </div>
   </header>
 
@@ -158,6 +152,18 @@
       <div id="sidebar-resizer" class="sidebar-resizer" title="Drag to resize, double-click to reset"></div>
     </nav>
     <main id="building" class="building"></main>
+    <aside id="corkboard" class="corkboard-wall" aria-label="Corkboard">
+      <div class="corkboard-frame"><div id="cork-wall" class="cork-grid"></div></div>
+    </aside>
+    <div id="bigboard" class="bigboard" hidden>
+      <div class="bigboard-frame" role="dialog" aria-label="Corkboard">
+        <button id="bigboard-close" class="bigboard-close" title="Close (Esc)">✕</button>
+        <div class="bigboard-label">Overdue · Today</div>
+        <div id="big-now" class="cork-grid wide"></div>
+        <div class="bigboard-label">Later</div>
+        <div id="big-later" class="cork-grid wide"></div>
+      </div>
+    </div>
     <aside id="termpanel" class="termpanel" hidden>
       <div id="termpanel-resizer" class="termpanel-resizer" title="Drag to resize, double-click to reset"></div>
       <div class="termpanel-head">
@@ -177,6 +183,12 @@
   <footer id="reception" class="reception">
     <div class="reception-title">Reception</div>
     <div id="reception-list" class="reception-list"></div>
+    <div class="menubar" role="toolbar" aria-label="Menu">
+      <button id="chat-tab" class="pxbtn" title="Chat with your assistant" aria-pressed="false" hidden><span data-pixel="bird" data-scale="2"></span><span class="pxbadge" hidden></span></button>
+      <button id="corkboard-btn" class="pxbtn" title="Corkboard" aria-pressed="false"><span data-pixel="note" data-scale="2"></span><span id="corkboard-count" class="pxbadge" hidden></span></button>
+      <button id="sidebar-btn" class="pxbtn" title="Toggle workspace sidebar"><span data-pixel="side" data-scale="2"></span></button>
+      <button id="settings-btn" class="pxbtn" title="Settings"><span data-pixel="gear" data-scale="2"></span></button>
+    </div>
   </footer>
 
   <footer id="statusbar" class="statusbar">
@@ -193,7 +205,6 @@
   <canvas id="bird-canvas" class="bird-canvas" aria-hidden="true"></canvas>
   <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, drag to move, fling to throw, double-click for a flip" hidden></div>
   <div id="bird-bubble" class="bird-bubble" hidden></div>
-  <button id="chat-tab" class="chat-tab" title="Chat with your assistant" hidden></button>
   <aside id="assistant-chat" class="chat" hidden>
     <header class="chat-head">
       <span class="chat-title assistant-name">PiPi</span>
@@ -206,6 +217,23 @@
       <button class="btn primary" type="submit">Send</button>
     </form>
   </aside>
+  <div id="note-pop" class="note-pop" role="dialog" aria-label="Note" hidden>
+    <button class="np-close icon-btn" title="Close (Esc)">✕</button>
+    <label class="np-label" for="note-title">Title</label>
+    <textarea id="note-title" class="np-title" rows="2" maxlength="200" placeholder="What needs doing?"></textarea>
+    <label class="np-label" for="note-details">Details</label>
+    <textarea id="note-details" class="np-details" rows="6" placeholder="Notes, links, a checklist…"></textarea>
+    <label class="np-label" for="note-due">Remind me</label>
+    <div class="np-due-row">
+      <input id="note-due" class="np-due" type="datetime-local" />
+      <button id="note-due-clear" class="icon-btn" type="button" title="No time: a plain todo">✕</button>
+    </div>
+    <div id="note-colors" class="np-colors" role="radiogroup" aria-label="Color"></div>
+    <div class="np-actions">
+      <button class="btn small np-remove" type="button">Remove</button>
+      <button class="btn small primary np-done" type="button">✓ Done</button>
+    </div>
+  </div>
   <div id="tooltip" class="tooltip" tabindex="-1" hidden></div>
   <div id="ctxmenu" class="ctxmenu" hidden></div>
 
@@ -250,6 +278,9 @@
   <script src="bird-throw.js"></script>
   <script src="bird.js"></script>
   <script src="assistant.js"></script>
+  <script src="pixel-art.js"></script>
+  <script src="note-rows.js"></script>
+  <script src="corkboard.js"></script>
   <script src="app.js"></script>
   <script src="tabs.js"></script>
   <script src="settings.js"></script>

@@ -34,8 +34,10 @@
     const on = !!state?.enabled;
     $bird.hidden = !on;
     window.officeBird.setHidden(!on);
-    // The tab bottom right is always there while the chat is closed; a dot when PiPi has something.
-    $tab.hidden = !on || !$chat.hidden;
+    // The bird button on the menu bar: pressed while the chat is open, a badge when PiPi has something.
+    $tab.hidden = !on;
+    $tab.setAttribute('aria-pressed', String(!$chat.hidden));
+    $tab.classList.toggle('on', !$chat.hidden);
     renderTab();
     window.officeBird.setAlert(!!unread && $chat.hidden);
     if (!on) { $bubble.hidden = true; return; }
@@ -56,8 +58,11 @@
     renderBubble();
   }
 
-  // Something unread: it stands on the PiPi tab, with a "!" over its head.
-  const tabPerch = () => { const r = $tab.getBoundingClientRect(); return r.width ? { x: r.left + 34, y: r.top } : null; };
+  // Something unread: it stands on the menu bar over its button, with a "!" over its head.
+  const tabPerch = () => {
+    const r = $tab.getBoundingClientRect();
+    return r.width ? { x: r.left + r.width / 2, y: $tab.closest('.menubar').getBoundingClientRect().top } : null;
+  };
   // The chat is open: it sits on the window's top edge, near the title.
   const chatPerch = () => { const r = $chat.getBoundingClientRect(); return { x: r.left + 40, y: r.top }; };
   // A reminder or the brief: it stands on the top bar's bottom line, in plain sight, flapping.
@@ -87,17 +92,18 @@
     return null;
   }
 
-  // ---- the PiPi tab, bottom right ----
+  // ---- the PiPi button on the menu bar ----
 
-  // Unread answers: how many and the start of the newest; else a dot for a
-  // due reminder or the morning brief.
-  const name = () => esc(window.officeSettings?.assistantName?.() || 'PiPi');
+  // Unread answers: how many on the badge, the start of the newest in the
+  // tooltip; else "!" for a due reminder or the morning brief.
+  const name = () => window.officeSettings?.assistantName?.() || 'PiPi';
+  const $badge = $tab.querySelector('.pxbadge');
   function renderTab() {
-    const html = unread
-      ? `<span class="chat-tab-head">🐦 ${name()}<b class="chat-tab-count">${unread.count}</b></span><span class="chat-tab-preview">${esc(unread.text)}</span>`
-      : `<span class="chat-tab-head">🐦 ${name()}${state?.due.length || state?.morning ? '<i class="chat-tab-dot"></i>' : ''}</span>`;
-    if ($tab._html !== html) { $tab._html = html; $tab.innerHTML = html; }
-    $tab.classList.toggle('unread', !!unread);
+    const badge = unread ? String(unread.count) : state?.due.length || state?.morning ? '!' : '';
+    if ($badge.textContent !== badge) $badge.textContent = badge;
+    $badge.hidden = !badge;
+    $tab.title = unread ? `${name()}: ${unread.text}` : `Chat with ${name()}`;
+    $tab.classList.toggle('ringing', !!unread);
   }
 
   // ---- the speech bubble ----
@@ -178,7 +184,17 @@
     toBottom();
   }
 
+  // The chat stands on reception, so the menu bar (its button and the bird's
+  // nest) stays in sight and is never drawn over the chat.
+  const $reception = document.getElementById('reception');
+  function fitChat() {
+    const top = $reception?.getBoundingClientRect().top;
+    if (top) $chat.style.bottom = `${Math.max(8, Math.round(window.innerHeight - top + 8))}px`;
+  }
+  window.addEventListener('resize', () => { if (!$chat.hidden) fitChat(); });
+  if ($reception && window.ResizeObserver) new ResizeObserver(() => { if (!$chat.hidden) fitChat(); }).observe($reception);
   function openChat() {
+    fitChat();
     $chat.hidden = false;
     document.body.classList.add('chat-open');
     setUnread(null);
@@ -252,7 +268,7 @@
   $chat.querySelector('.chat-form').addEventListener('submit', (e) => { e.preventDefault(); send(); });
   $input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
   $chat.querySelector('.chat-close').addEventListener('click', closeChat);
-  $tab.addEventListener('click', openChat);
+  $tab.addEventListener('click', () => ($chat.hidden ? openChat() : closeChat()));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$chat.hidden && document.getElementById('modal').hidden) closeChat(); });
 
   // Links in answers open things in the office.

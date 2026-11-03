@@ -4,6 +4,9 @@
   const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
+  // The paw that hid the animals is gone; Settings > Appearance turns them on
+  // and off. Animals hidden with it come back, or there is no way to get them.
+  settings.petsHidden = false;
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ } }
 
@@ -54,7 +57,6 @@
   // ---- settings window ----
   const $pop = document.getElementById('settings');
   const $btn = document.getElementById('settings-btn');
-  const $pets = document.getElementById('pets-btn');
   function syncForm() {
     if (!$pop) return;
     $pop.querySelector('#set-scale').value = Math.round(settings.scale * 100);
@@ -77,7 +79,6 @@
     const $snd = $pop.querySelector('#set-alert-sound'); if ($snd) $snd.checked = settings.alertSound !== false;
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
-    $pets?.classList.toggle('off', settings.petsHidden || (!settings.cats && !settings.dogs));
     const $auto = $pop.querySelector('#set-herdr-autostart'); if ($auto) $auto.checked = settings.herdrAutostart !== false;
     const $ed = $pop.querySelector('#set-editor'); if ($ed && document.activeElement !== $ed) $ed.value = settings.editor || '';
     // Leave the box alone while it is being typed in; it is read on change.
@@ -136,12 +137,6 @@
   $pop?.querySelector('#set-instructions')?.addEventListener('change', (e) => {
     set({ instructions: e.target.value.trim() });
     window.office.orchestrator?.setInstructions?.(settings.instructions);
-  });
-  // The paw in the top bar hides the animals and brings back the ones ticked
-  // in settings (both, when none are).
-  $pets?.addEventListener('click', () => {
-    if (!settings.cats && !settings.dogs) set({ cats: true, dogs: true, petsHidden: false });
-    else set({ petsHidden: !settings.petsHidden });
   });
   document.getElementById('sidebar-btn')?.addEventListener('click', () => set({ sidebar: !settings.sidebar }));
   $pop?.querySelector('#set-reset')?.addEventListener('click', () => set({ ...DEFAULTS }));

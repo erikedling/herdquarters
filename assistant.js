@@ -3,12 +3,14 @@
 // under <userData>/assistant/memory, so a fresh session loses nothing. The
 // office runs its clock: runAssistant() decides whether to start the session,
 // say hello, give the morning brief, dream (tidy the memory) or start a fresh
-// session after a dream. Reminders are files it writes to reminders/; the
+// session after a dream. Reminders are notes (notes.js) with a time, which
+// the user pins on the corkboard or the assistant writes to notes/; the
 // office fires them on time. The chat is kept in chat.jsonl for the window.
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { readInbox, setFrontmatter, trustFolder } = require('./orchestrators');
+const { trustFolder } = require('./orchestrators');
+const { NotesStore } = require('./notes');
 
 const BOOT_MS = 60_000;           // a session that just started (or crashed) gets this long before another start
 const QUIET_MS = 30 * 60_000;     // dream only after this long without work
@@ -75,11 +77,11 @@ function knowsUser(raw) {
   return body.length > 0;
 }
 
-// Reminders from reminders/*.md: { file, due (ms), text, status }. Due ones
-// are open and past their time, oldest first; a bad date never fires.
-function reminderList(messages) {
-  return messages.map((m) => ({ file: m.file, due: Date.parse(m.due || ''), text: m.text, status: String(m.status || 'open').toLowerCase() }))
-    .filter((r) => r.status === 'open' && Number.isFinite(r.due))
+// Reminders: open notes with a time, as { file, due (ms), text, color },
+// oldest first; a note without a valid time never fires.
+function reminderList(notes) {
+  return notes.filter((n) => n.status === 'open' && Number.isFinite(n.due))
+    .map((n) => ({ file: n.file, due: n.due, text: n.title, color: n.color }))
     .sort((a, b) => a.due - b.due);
 }
 const dueReminders = (list, now) => list.filter((r) => r.due <= now);
@@ -119,6 +121,7 @@ class AssistantStore {
     this.orchestratorsDir = orchestratorsDir;
     this.template = template || '';
     this.claudeConfig = claudeConfig;
+    this.notes = new NotesStore({ dir: this.file('notes'), legacy: this.file('reminders') });
   }
 
   file(...p) { return path.join(this.dir, ...p); }
@@ -143,11 +146,12 @@ class AssistantStore {
   // Brief, permissions and an empty memory. Memory files are the assistant's:
   // only missing ones are written.
   prepare() {
-    for (const sub of ['memory/projects', 'memory/journal', 'reminders', '.claude']) fs.mkdirSync(this.file(sub), { recursive: true });
+    for (const sub of ['memory/projects', 'memory/journal', 'notes', '.claude']) fs.mkdirSync(this.file(sub), { recursive: true });
     for (const [name, text] of Object.entries(MEMORY_FILES)) {
       if (!fs.existsSync(this.file('memory', name))) fs.writeFileSync(this.file('memory', name), text);
     }
     const name = assistantName(this.config().name);
+    this.notes.prepare();
     fs.writeFileSync(this.file('CLAUDE.md'), this.template
       .replace(/\{\{name\}\}/g, () => name)
       .replace(/\{\{folder\}\}/g, this.dir)
@@ -160,14 +164,10 @@ class AssistantStore {
     try { return knowsUser(fs.readFileSync(this.file('memory', 'ME.md'), 'utf8')); } catch { return false; }
   }
 
-  reminders() { return reminderList(readInbox(this.file('reminders'))); }
+  reminders() { return reminderList(this.notes.all()); }
 
-  // The user saw a reminder: it is done and never fires again.
-  dismissReminder(file) {
-    if (path.basename(file) !== file) throw new Error('Not a reminder');
-    const p = this.file('reminders', file);
-    fs.writeFileSync(p, setFrontmatter(fs.readFileSync(p, 'utf8'), 'status', 'done'));
-  }
+  // The user saw a reminder: its note is done and never fires again.
+  dismissReminder(file) { this.notes.done(file); }
 
   // ---- the chat window ----
 
