@@ -16,10 +16,12 @@
   let resizeTimer = null;
 
   // Keystrokes and paste bytes for the attached pane. Typing means the user
-  // is done with any selection, so output resumes (see onFrame).
+  // is done with any selection, so output resumes (see onFrame), and with a
+  // paste error.
   function sendInput(data) {
     if (!current) return;
     if (term.hasSelection()) term.clearSelection();
+    hidePasteFailed();
     window.office.term.input(current.id, data);
   }
 
@@ -127,6 +129,10 @@
   }
 
   const PASTE_FAILED = 'Paste failed: ';
+  function hidePasteFailed() {
+    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
+  }
+
   async function pasteFromClipboard() {
     if (!current) return;
     let clip;
@@ -138,7 +144,7 @@
       return;
     }
     if (!current) return;
-    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
+    hidePasteFailed();
     if (clip.hasImage) {
       // Ctrl+V byte: Claude Code reads the image straight from the clipboard.
       // Image wins even when text rides along (Slack and browsers add a link

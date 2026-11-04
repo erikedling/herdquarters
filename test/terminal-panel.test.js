@@ -36,6 +36,10 @@ test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'elect
   assert.strictEqual(pasteFailed.shown, true);
   assert.deepStrictEqual(pasteFailed.after, ['again']);
   assert.strictEqual(pasteFailed.hiddenAfter, true);
+  assert.strictEqual(pasteFailed.shownAgain, true);
+  assert.strictEqual(pasteFailed.hiddenByKey, true);
+  assert.strictEqual(pasteFailed.otherKept, true);
+  assert.deepStrictEqual(pasteFailed.typed, ['x', 'y']);
   // one logical line that herdr drew over two rows copies without a line break
   assert.strictEqual(copyWrapped.text, copyWrapped.expected);
   // two separate lines keep their line break

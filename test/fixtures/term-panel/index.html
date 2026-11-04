@@ -87,6 +87,19 @@ window.scenario = async function scenario() {
   await tick(100);
   pasteFailed.after = [...window.__inputs];
   pasteFailed.hiddenAfter = $status.hidden;
+  // ...and so does the next keystroke, which leaves any other status alone
+  window.__clip = new Error('clipboard busy');
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  pasteFailed.shownAgain = !$status.hidden;
+  term.input('x', true);
+  pasteFailed.hiddenByKey = $status.hidden;
+  $status.textContent = 'something else';
+  $status.hidden = false;
+  term.input('y', true);
+  pasteFailed.otherKept = !$status.hidden;
+  $status.hidden = true;
+  pasteFailed.typed = window.__inputs.slice(-2);
 
   // copy: a line herdr wrapped over two rows, drawn the way its frames do it
   const cols = term.cols;

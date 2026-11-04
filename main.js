@@ -443,7 +443,7 @@ ipcMain.handle('scan-repos', (_e, { root }) => {
 // Open a repo (any directory) as a new workspace; herdr detects the git checkout.
 ipcMain.handle('workspace-create', (_e, { cwd, label }) =>
   wt(() => client.request('workspace.create', { cwd, label: label || null, focus: true })));
-const pickFolder = createFolderPicker((...args) => dialog.showOpenDialog(...args));
+const pickFolder = createFolderPicker((...args) => dialog.showOpenDialog(...args), app.getPath('home'));
 ipcMain.handle('pick-folder', (_e, { defaultPath } = {}) => pickFolder(win, defaultPath));
 ipcMain.handle('worktree-open', (_e, { workspace_id, path }) =>
   wt(() => client.request('worktree.open', { workspace_id, path, focus: true })));
