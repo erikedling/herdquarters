@@ -966,13 +966,13 @@ test('a Codex orchestrator persists its kind and writes native briefs and skills
   assert.strictEqual(s.list()[0].agent, 'codex');
   const start = client.calls.find((c) => c.method === 'agent.start').params;
   assert.strictEqual(start.kind, 'codex');
-  assert.deepStrictEqual(start.args, ['--add-dir', root], 'fresh Codex gets the configured root as one argv element');
+  assert.deepStrictEqual(start.args, ['--sandbox', 'workspace-write', '--add-dir', root], 'fresh Codex selects a writable sandbox and gets the configured root as one argv element');
   const boss = fs.readFileSync(path.join(s.folder(json.slug), 'AGENTS.md'), 'utf8');
   assert.strictEqual(boss.match(/--kind codex --pane/g).length, 3, 'workers, QA and ops all use Codex');
-  const extra = ` -- --add-dir '${root.replace(/'/g, `'"'"'`)}'`;
+  const extra = ` -- --sandbox workspace-write --add-dir '${root.replace(/'/g, `'"'"'`)}'`;
   assert.strictEqual(boss.split(extra).length - 1, 3, 'workers, QA and ops all receive the writable root');
   const argv = require('node:child_process').execFileSync('/bin/sh', ['-c', `set --${extra}; printf '%s\\0' "$@"`], { encoding: 'utf8' }).split('\0');
-  assert.deepStrictEqual(argv, ['--', '--add-dir', root, ''], 'generated command preserves spaces, quotes and shell metacharacters');
+  assert.deepStrictEqual(argv, ['--', '--sandbox', 'workspace-write', '--add-dir', root, ''], 'generated command preserves spaces, quotes and shell metacharacters');
   assert.ok(!/--kind claude|--kind pi|Claude Code|CLAUDE\.md|\{\{/.test(boss));
   for (const folder of [s.folder(json.slug), s.qaFolder(json.slug), s.opsFolder(json.slug)]) {
     assert.ok(fs.existsSync(path.join(folder, 'AGENTS.md')));
@@ -1009,7 +1009,7 @@ test('Codex restore uses native resume by recorded session, or cwd-filtered --la
   let restored = await s.restore(s.listArchived()[0].id);
   let start = client.calls.find((c) => c.method === 'agent.start').params;
   assert.strictEqual(start.kind, 'codex');
-  assert.deepStrictEqual(start.args, ['resume', session, '--add-dir', root]);
+  assert.deepStrictEqual(start.args, ['resume', session, '--sandbox', 'workspace-write', '--add-dir', root]);
   assert.strictEqual(restored.boss.session_id, session);
   assert.strictEqual(restored.boss.resumed, true);
   assert.ok(fs.existsSync(path.join(s.folder(json.slug), 'AGENTS.md')));
@@ -1021,7 +1021,7 @@ test('Codex restore uses native resume by recorded session, or cwd-filtered --la
   restored = await s.restore(s.listArchived()[0].id);
   start = client.calls.find((c) => c.method === 'agent.start').params;
   assert.strictEqual(start.kind, 'codex');
-  assert.deepStrictEqual(start.args, ['resume', '--last', '--add-dir', root]);
+  assert.deepStrictEqual(start.args, ['resume', '--last', '--sandbox', 'workspace-write', '--add-dir', root]);
   assert.strictEqual(restored.boss.resumed, null, 'native --last can also start fresh');
   s.dispose();
 });

@@ -132,10 +132,13 @@ headless protocol. Install and sign in to Codex before starting it. Accept any
 first-run, folder trust or permission prompts in its embedded terminal (including
 worker, QA and ops terminals). If startup times out while a prompt is open,
 complete that prompt in the existing terminal rather than launch another agent.
-Codex boss startup and restore include `--add-dir <configured repository root>`
+Codex boss startup and restore include
+`--sandbox workspace-write --add-dir <configured repository root>`
 (the `root` in `orchestrator.json`), so a boss in its data folder can clone and
 create worktrees under that root. Generated worker, QA and ops launch commands
-carry the same extra writable root; paths with spaces are kept as one argument.
+carry the same sandbox and extra writable root; paths with spaces are kept as one
+argument. The explicit sandbox is required because read-only permissions reject
+`--add-dir`, which can otherwise prevent startup in a new data folder.
 Standalone shell-desk starts have no configured repository root and do not add
 one. This does not grant access to inbox/helper folders or worktrees outside
 that root: those may still need separate native permission approval.

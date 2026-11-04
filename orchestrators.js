@@ -568,7 +568,7 @@ class OrchestratorStore {
     const kind = agentKind(json);
     return template
       .replace(/\{\{agent_kind\}\}/g, kind)
-      .replace(/\{\{agent_args\}\}/g, () => kind === 'codex' && json.root ? ` -- --add-dir ${shellQuote(json.root)}` : '')
+      .replace(/\{\{agent_args\}\}/g, () => kind === 'codex' && json.root ? ` -- --sandbox workspace-write --add-dir ${shellQuote(json.root)}` : '')
       .replace(/\{\{agent_label\}\}/g, AGENT_LABELS[kind])
       .replace(/\{\{context_file\}\}/g, contextFile(kind))
       .replace(/\{\{name\}\}/g, json.name)
@@ -851,7 +851,9 @@ ${text}
   async startBoss(json, args = []) {
     // Keep resume's subcommand/ID first and the root as one argv element.
     // The boss's cwd is its data folder, not the repository root it manages.
-    const launchArgs = agentKind(json) === 'codex' && json.root ? [...args, '--add-dir', json.root] : args;
+    // --add-dir is rejected under read-only permissions, including Codex's
+    // default in an untrusted data folder. Select the required sandbox explicitly.
+    const launchArgs = agentKind(json) === 'codex' && json.root ? [...args, '--sandbox', 'workspace-write', '--add-dir', json.root] : args;
     let bossErr = null;
     for (let attempt = 1; attempt <= 3 && json.boss.status !== 'started'; attempt++) {
       try {
