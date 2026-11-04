@@ -725,11 +725,20 @@ test('refreshBriefs() brings old briefs up to date, keeps the watch list and wri
     assert.match(fs.readFileSync(p, 'utf8'), /^## Times$/m, p);
   }
   assert.strictEqual(fs.readFileSync(watches, 'utf8'), '# Slack watches\n\n- channel #design — mine\n');
-  const write = fs.writeFileSync;
-  const written = [];
-  fs.writeFileSync = (file, ...rest) => { written.push(file); return write(file, ...rest); };
-  try { fresh.refreshBriefs(); } finally { fs.writeFileSync = write; }
-  assert.deepStrictEqual(written, [], 'nothing changed, so nothing is written');
+  const { writeFileSync, renameSync } = fs;
+  const refresh = () => {
+    const written = [];
+    fs.writeFileSync = (file, ...rest) => { written.push(file); return writeFileSync(file, ...rest); };
+    fs.renameSync = (from, to) => { written.push(to); return renameSync(from, to); };
+    try { fresh.refreshBriefs(); } finally { Object.assign(fs, { writeFileSync, renameSync }); }
+    return written;
+  };
+  assert.deepStrictEqual(refresh(), [], 'nothing changed, so nothing is written or renamed');
+  fresh.qaTemplate += '\nOne more line.\n';
+  const qa = path.join(s.qaFolder('old-timer'), 'CLAUDE.md');
+  assert.deepStrictEqual(refresh(), [`${qa}.tmp`, qa], 'only the changed brief is written, through a temp file');
+  const leftovers = [s.folder('old-timer'), s.qaFolder('old-timer'), s.opsFolder('old-timer'), s.slackFolder('old-timer')].flatMap((d) => fs.readdirSync(d).filter((f) => f.endsWith('.tmp')));
+  assert.deepStrictEqual(leftovers, [], 'no temp files left behind');
 });
 
 test('the zone defaults to this machine\'s', async () => {

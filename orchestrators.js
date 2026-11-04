@@ -21,11 +21,14 @@ function git(cwd, args) {
   });
 }
 
-// fs.watch on the boss folder fires onChange for every write, even an identical one.
+// Skips identical content because fs.watch fires onChange on every write; the
+// rename means an agent starting meanwhile reads the old brief or the new, never half.
 function writeIfChanged(file, text) {
   let old = null;
   try { old = fs.readFileSync(file, 'utf8'); } catch { /* new file */ }
-  if (old !== text) fs.writeFileSync(file, text);
+  if (old === text) return;
+  fs.writeFileSync(`${file}.tmp`, text);
+  fs.renameSync(`${file}.tmp`, file);
 }
 
 // Only the zone name: briefs outlive a DST switch, so agents get the offset from `date`.
@@ -744,7 +747,7 @@ ${text}
         const json = this.read(o.slug);
         this.writeBrief(json);
         this.writeHelperBriefs(json);
-      } catch { /* read-only fixture or a half-written folder */ }
+      } catch (err) { console.warn(`could not refresh briefs for ${o.slug}: ${err.message}`); }
     }
   }
 
