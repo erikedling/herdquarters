@@ -15,6 +15,7 @@ const { createWorktreeLister } = require('./worktrees');
 const { coalesce } = require('./coalesce');
 const { isRealDataFolder } = require('./data-folder');
 const { createFolderPicker } = require('./folder-picker');
+const { peekClipboard } = require('./clipboard-peek');
 app.setName(APP_NAME); // the menu bar and dock label come from the bundle: see scripts/brand.js
 // Electron derives the data directory from the product name; keep the one the
 // app has always used so settings and orchestrators stay where they are.
@@ -294,12 +295,8 @@ function createWindow() {
       }, process.env.OFFICE_OPEN || process.env.OFFICE_TOOLTIP ? 4000 : (process.env.OFFICE_MODAL || process.env.OFFICE_DEBUG) ? 2500 : 1500);
     }
   });
-  win.webContents.on('console-message', (event, legacyLevel, legacyMessage, legacyLine, legacySource) => {
-    // Electron >= 32 passes a single details object; older versions pass positional args.
-    const level = typeof event.level === 'string' ? event.level : ({ 0: 'verbose', 1: 'info', 2: 'warning', 3: 'error' }[legacyLevel] || 'info');
-    const message = event.message ?? legacyMessage;
-    const where = `${event.sourceId ?? legacySource}:${event.lineNumber ?? legacyLine}`;
-    if (level === 'warning' || level === 'error') console.error(`[renderer:${level}] ${message} (${where})`);
+  win.webContents.on('console-message', ({ level, message, sourceId, lineNumber }) => {
+    if (level === 'warning' || level === 'error') console.error(`[renderer:${level}] ${message} (${sourceId}:${lineNumber})`);
   });
   if (process.env.OFFICE_DEBUG) {
     setTimeout(async () => {
@@ -465,9 +462,6 @@ ipcMain.handle('worktree-remove-path', (_e, { source_workspace_id, path, force }
     return client.request('worktree.remove', { workspace_id: id, force: !!force });
   }));
 
-// What is on the clipboard right now. The terminal panel uses this to decide
-// whether a paste is text (send the text) or an image (send Ctrl+V so the
-// agent reads the image from the clipboard itself, like it does in a terminal).
 // Links clicked in the terminal panel open in the browser. Only web URLs:
 // anything else the renderer could be tricked into sending stays closed.
 ipcMain.handle('open-external', (_e, url) => {
@@ -486,11 +480,10 @@ ipcMain.handle('pr-find', async (_e, { folder }) => {
   catch (err) { return { ok: false, error: String(err.message || err) }; }
 });
 
-ipcMain.handle('clipboard-peek', () => {
-  const text = clipboard.readText();
-  const hasImage = !clipboard.readImage().isEmpty();
-  return { hasText: text.length > 0, hasImage, text };
-});
+// What is on the clipboard right now. The terminal panel uses this to decide
+// whether a paste is text (send the text) or an image (send Ctrl+V so the
+// agent reads the image from the clipboard itself, like it does in a terminal).
+ipcMain.handle('clipboard-peek', () => peekClipboard(clipboard));
 
 // Pane management: new shell desk, close a desk, start an agent at a desk.
 ipcMain.handle('pane-create', (_e, { workspace_id }) => wt(() => client.request('tab.create', { workspace_id, focus: false })));
