@@ -20,7 +20,7 @@ function run() {
 }
 
 test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'electron not installed' }, () => {
-  const { fit, image, text, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors } = run();
+  const { fit, image, text, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors } = run();
   assert.deepStrictEqual(errors, [], 'renderer errors');
   // the last column is fully visible with a gutter on the right, and the pane was resized to match
   assert.ok(fit.textWidth <= fit.contentWidth, `text ${fit.textWidth}px is wider than the host's ${fit.contentWidth}px`);
@@ -30,6 +30,12 @@ test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'elect
   assert.deepStrictEqual(image, ['\x16']);
   // text only is pasted as text
   assert.deepStrictEqual(text, ['hello']);
+  // a failed clipboard read shows in the status instead of doing nothing, and the next paste clears it
+  assert.deepStrictEqual(pasteFailed.inputs, []);
+  assert.strictEqual(pasteFailed.status, 'Paste failed: clipboard busy');
+  assert.strictEqual(pasteFailed.shown, true);
+  assert.deepStrictEqual(pasteFailed.after, ['again']);
+  assert.strictEqual(pasteFailed.hiddenAfter, true);
   // one logical line that herdr drew over two rows copies without a line break
   assert.strictEqual(copyWrapped.text, copyWrapped.expected);
   // two separate lines keep their line break

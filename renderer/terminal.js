@@ -126,10 +126,19 @@
     write(data);
   }
 
+  const PASTE_FAILED = 'Paste failed: ';
   async function pasteFromClipboard() {
     if (!current) return;
-    const clip = await window.office.clipboardPeek();
+    let clip;
+    try {
+      clip = await window.office.clipboardPeek();
+    } catch (err) {
+      // invoke() prefixes the main-process error with this; the reason is enough.
+      showStatus(PASTE_FAILED + String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+      return;
+    }
     if (!current) return;
+    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
     if (clip.hasImage) {
       // Ctrl+V byte: Claude Code reads the image straight from the clipboard.
       // Image wins even when text rides along (Slack and browsers add a link

@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const log = (s) => { if (process.env.TERM_SELECT_DEBUG) fs.writeSync(2, `[fixture] ${s}\n`); };
 app.whenReady().then(async () => {
   const win = new BrowserWindow({ show: false, width: 900, height: 500, webPreferences: { backgroundThrottling: false } });
-  win.webContents.on('console-message', (_e, level, msg, line, src) => log(`console(${level}) ${src}:${line} ${msg}`));
+  win.webContents.on('console-message', ({ level, message, sourceId, lineNumber }) => log(`console(${level}) ${sourceId}:${lineNumber} ${message}`));
   win.webContents.on('did-fail-load', (_e, code, desc) => log(`did-fail-load ${code} ${desc}`));
   log('loading');
   await win.loadFile(path.join(__dirname, 'index.html'));
