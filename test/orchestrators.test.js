@@ -154,7 +154,7 @@ test('the worker preamble carries the PR body format and the boss brief checks i
     assert.match(boss, /## Pull requests\n/);
     assert.match(boss, /gh pr view <PR url> --json body`/);
     assert.match(boss, /gh pr edit <PR url> --body-file\s+\.pr-media\/body\.md/);
-    assert.match(boss, /gh pr view <PR url> --json body -q \.body >\s+\.pr-media\/body\.md/);
+    assert.match(boss, /tell the worker to\s+refresh the file first with `gh pr view <PR url> --json body -q \.body >\s+\.pr-media\/body\.md/);
     assert.match(boss, /before you close this orchestrator/);
     assert.match(boss, /gh pr ready <PR url>/);
   }

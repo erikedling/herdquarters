@@ -241,8 +241,8 @@ not a git repo, and the worktree is the worker's.
    on top, the rest folded under Full details, and a Before | After table
    whose files exist in the worktree's `.pr-media/`. Send fixes back to the
    worker, who updates the PR with `gh pr edit <PR url> --body-file
-   .pr-media/body.md`. Once the user has dragged media in, the worker first
-   refreshes the file with `gh pr view <PR url> --json body -q .body >
+   .pr-media/body.md`. Once the user has dragged media in, tell the worker to
+   refresh the file first with `gh pr view <PR url> --json body -q .body >
    .pr-media/body.md`, so the image links are kept.
 2. Put a line under `## Blockers` asking the user to drag the files in, e.g.
    `Drag before.png and after.png from <worktree>/.pr-media/ into web #412
