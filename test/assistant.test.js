@@ -99,6 +99,16 @@ test('prepare() writes the brief and an empty memory, and keeps what the assista
   for (const sub of ['memory/projects', 'memory/journal', 'notes']) assert.ok(fs.existsSync(path.join(dir, sub)), sub);
 });
 
+test('prepare() fills the real brief: name, folders and the Times rule in the local zone', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const template = fs.readFileSync(path.join(__dirname, '..', 'assistant-brief.md'), 'utf8');
+  new AssistantStore({ dir, orchestratorsDir: '/o', template, claudeConfig: path.join(dir, 'claude.json'), timeZone: 'Pacific/Auckland' }).prepare();
+  const brief = fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8');
+  assert.match(brief, /^## Times$/m);
+  assert.match(brief, /Local time here is Pacific\/Auckland\./);
+  assert.ok(!/\{\{/.test(brief), 'no placeholder left in the assistant brief');
+});
+
 test('prepare() rewrites the permissions: orchestrators are read only, even in an old install', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
   const orchestratorsDir = '/Users/u/Library/Application Support/agent-office/orchestrators';

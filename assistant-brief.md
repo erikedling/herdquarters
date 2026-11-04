@@ -32,6 +32,21 @@ agent at a desk, and their links. Read it whenever you talk about the work.
 
 Only use links from OFFICE.md or ones you read; never make one up.
 
+## Times
+
+Local time here is {{timezone}}. Say every time in local time, with the zone
+when it could be unclear (`14:02 CET`). Run `date` for the time; never guess
+it. Many files and tools give UTC (`…Z`): alerts' `opened:`, Slack waiting
+files' `asked:` and `found:`, `gh` times. Convert before you say them:
+
+```sh
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC ISO time → unix seconds
+date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
+```
+
+`gh pr view` can do it too: `--jq '.mergedAt | fromdate | strflocaltime("%H:%M %Z")'`.
+Notes keep `due` and `created` as ISO with the local offset (below).
+
 ## Your memory
 
 All of it is markdown in `{{folder}}/memory/`. It stays small on purpose:

@@ -74,7 +74,7 @@ function fakeClient(overrides = {}) {
 const opened = [];
 test.after(() => { for (const s of opened) s.dispose(); });
 
-function storeWith(client) {
+function storeWith(client, extra = {}) {
   const dir = tmp();
   const claudeConfig = path.join(dir, '.claude.json');
   const claudeProjects = tmp();
@@ -85,7 +85,7 @@ function storeWith(client) {
   const slackTemplate = fs.readFileSync(path.join(__dirname, '..', 'slack-brief.md'), 'utf8');
   const piTrust = path.join(dir, 'pi-trust.json');
   const piSessions = tmp();
-  const s = new OrchestratorStore({ dir, client, onChange: () => {}, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions });
+  const s = new OrchestratorStore({ dir, client, onChange: () => {}, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions, ...extra });
   opened.push(s);
   return { s, claudeConfig, claudeProjects, piTrust, piSessions };
 }
@@ -680,6 +680,42 @@ test('create() writes the ops brief, trusts its folder and makes the alerts fold
   assert.ok(fs.statSync(s.alertsFolder('watched')).isDirectory());
   const cfg = JSON.parse(fs.readFileSync(claudeConfig, 'utf8'));
   assert.strictEqual(cfg.projects[s.opsFolder('watched')].hasTrustDialogAccepted, true);
+});
+
+// ---- Times ----
+// Agents say times in the user's local zone; the app fills in its name.
+
+test('every brief has the Times rule with the local zone filled in, for claude and pi', async () => {
+  for (const agent of ['claude', 'pi']) {
+    const { s } = storeWith(fakeClient(), { timeZone: 'Pacific/Auckland' });
+    await s.create({ name: `Clock ${agent}`, root: tmp(), branch: `x/${agent}`, agent });
+    s.dispose();
+    const slug = `clock-${agent}`;
+    const file = require('../orchestrators').contextFile(agent);
+    const briefs = {
+      boss: path.join(s.folder(slug), file),
+      qa: path.join(s.qaFolder(slug), file),
+      ops: path.join(s.opsFolder(slug), file),
+      slack: path.join(s.slackFolder(slug), 'CLAUDE.md'),
+    };
+    for (const [who, p] of Object.entries(briefs)) {
+      const text = fs.readFileSync(p, 'utf8');
+      assert.match(text, /^## Times$/m, `${agent} ${who} brief has the Times rule`);
+      assert.ok(text.includes('Pacific/Auckland'), `${agent} ${who} brief names the zone`);
+      assert.ok(!/\{\{/.test(text), `no placeholder left in the ${agent} ${who} brief`);
+    }
+    const preamble = fs.readFileSync(briefs.boss, 'utf8').split('## Worker preamble')[1].split('## Rules')[0];
+    assert.match(preamble, /are local, Pacific\/Auckland/, 'workers get the rule through the preamble');
+    assert.match(fs.readFileSync(briefs.ops, 'utf8'), /since deploy 14:02 CET/);
+  }
+});
+
+test('the zone defaults to this machine\'s', async () => {
+  const { s } = storeWith(fakeClient());
+  await s.create({ name: 'Here', root: tmp(), branch: 'x/h' });
+  s.dispose();
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  assert.ok(fs.readFileSync(path.join(s.folder('here'), 'CLAUDE.md'), 'utf8').includes(`Local time here is ${zone}.`));
 });
 
 test('list() reads alert files and dismissAlert() marks one dismissed, keeping the rest', async () => {

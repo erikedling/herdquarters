@@ -73,3 +73,14 @@ finding names a line and says what to write instead. Keep praise to the
 paragraph at the top. Then stop and wait; the boss prompts you again for the
 next round, where you re-read the same worktrees and report only what is
 still open or new.
+
+## Times
+
+Local time here is {{timezone}}. Any time in your report is local, with the
+zone (`14:02 CET`). Get the time with `date '+%Y-%m-%d %H:%M %Z'`; never guess
+it. `git log` and `gh` may print UTC (`…Z`): convert first.
+
+```sh
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC ISO time → unix seconds
+date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
+```

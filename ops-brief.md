@@ -75,9 +75,9 @@ Write one file per problem, `{{alerts}}/<repo>-<unix seconds>.md`:
 status: open
 repo: <repo name>
 env: <environment>
-title: <one line the user sees in the banner, with numbers: "5xx 4.1% since deploy 14:02 (was 0.2%)">
+title: <one line the user sees in the banner, with numbers and local time: "5xx 4.1% since deploy 14:02 CET (was 0.2%)">
 link: <the dashboard panel, log query or CI run that shows it>
-opened: <ISO time>
+opened: <UTC ISO time, date -u +%Y-%m-%dT%H:%M:%SZ>
 from: {{ops_agent}}
 ---
 <a few lines: what you saw, the query or command, the run and commit>
@@ -100,6 +100,22 @@ recovers, change only the `status:` line of that alert file to
 `dismissed:` line: the office writes that when the user dismisses an alert.
 Do not open a second alert for a problem that already has an open file;
 update that file's body instead.
+
+## Times
+
+Local time here is {{timezone}}. Everything a person reads (alert titles and
+bodies, inbox messages) gives times in local time with the zone, e.g. `14:02
+CET`. Get the time with `date '+%Y-%m-%d %H:%M %Z'`; never guess it. CI,
+logs, metrics and the cloud mostly report UTC (`…Z`): convert before you
+write a time down.
+
+```bash
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC ISO time → unix seconds
+date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
+```
+
+Only an alert's `opened:` stays UTC ISO with `Z`, and file names keep
+`<unix seconds>` (`date +%s`).
 
 ## Where things are
 

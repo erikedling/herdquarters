@@ -9,7 +9,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { trustFolder } = require('./orchestrators');
+const { trustFolder, localTimeZone } = require('./orchestrators');
 const { NotesStore } = require('./notes');
 
 const BOOT_MS = 60_000;           // a session that just started (or crashed) gets this long before another start
@@ -116,8 +116,9 @@ function assistantSettings(orchestratorsDir) {
 class AssistantStore {
   // dir: <userData>/assistant; orchestratorsDir: where the bosses live (the
   // assistant reads their boards and Slack findings); template: assistant-brief.md.
-  constructor({ dir, orchestratorsDir, template, claudeConfig }) {
+  constructor({ dir, orchestratorsDir, template, claudeConfig, timeZone }) {
     this.dir = dir;
+    this.timeZone = timeZone;
     this.orchestratorsDir = orchestratorsDir;
     this.template = template || '';
     this.claudeConfig = claudeConfig;
@@ -155,6 +156,7 @@ class AssistantStore {
     fs.writeFileSync(this.file('CLAUDE.md'), this.template
       .replace(/\{\{name\}\}/g, () => name)
       .replace(/\{\{folder\}\}/g, this.dir)
+      .replace(/\{\{timezone\}\}/g, this.timeZone || localTimeZone())
       .replace(/\{\{orchestrators\}\}/g, this.orchestratorsDir));
     fs.writeFileSync(this.file('.claude', 'settings.json'), JSON.stringify(assistantSettings(this.orchestratorsDir), null, 2) + '\n');
     try { trustFolder(this.dir, this.claudeConfig); } catch (err) { console.warn(`assistant: ${err.message}`); }

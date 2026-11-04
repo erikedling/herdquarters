@@ -21,6 +21,11 @@ function git(cwd, args) {
   });
 }
 
+// Only the zone name: briefs outlive a DST switch, so agents get the offset from `date`.
+function localTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'the zone `date` prints';
+}
+
 // Claude Code's config file, where trusted folders are recorded.
 function claudeConfigPath() {
   const dir = process.env.CLAUDE_CONFIG_DIR || process.env.HOME || '';
@@ -248,8 +253,9 @@ function setFrontmatter(raw, key, value) {
 class OrchestratorStore {
   // client: HerdrClient (null in fixture mode). onChange(): called when a
   // board or orchestrator.json changes so the renderer can be refreshed.
-  constructor({ dir, client, onChange, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions }) {
+  constructor({ dir, client, onChange, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions, timeZone }) {
     this.dir = dir;
+    this.timeZone = timeZone;
     this.client = client;
     this.claudeConfig = claudeConfig || claudeConfigPath();
     this.claudeProjects = claudeProjects || claudeProjectsDir();
@@ -557,6 +563,7 @@ class OrchestratorStore {
     const kind = agentKind(json);
     return template
       .replace(/\{\{agent_kind\}\}/g, kind)
+      .replace(/\{\{timezone\}\}/g, this.timeZone || localTimeZone())
       .replace(/\{\{agent_label\}\}/g, AGENT_LABELS[kind])
       .replace(/\{\{context_file\}\}/g, contextFile(kind))
       .replace(/\{\{name\}\}/g, json.name)
@@ -1045,4 +1052,4 @@ ${text}
   }
 }
 
-module.exports = { OrchestratorStore, parseBoard, peopleMarkdown, readInbox, setFrontmatter, slugify, workerName, qaAgent, opsAgent, trustFolder, claudeConfigPath, hasConversation, trustPiFolder, hasPiConversation, piSessionDir, agentKind, contextFile, AGENT_KINDS, COLORS };
+module.exports = { OrchestratorStore, parseBoard, peopleMarkdown, readInbox, setFrontmatter, slugify, workerName, qaAgent, opsAgent, trustFolder, localTimeZone, claudeConfigPath, hasConversation, trustPiFolder, hasPiConversation, piSessionDir, agentKind, contextFile, AGENT_KINDS, COLORS };
