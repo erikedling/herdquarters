@@ -198,7 +198,7 @@ instructions into <details><summary><b>Full details</b></summary> …
 similar), its sections, filled in, go in the fold instead, with first-person
 headings reworded ("How I tested it" → "How it was tested"); a template
 already in this shape is just filled in. If the TL;DR rates the risk above
-low, keep the review notes outside the fold. Last comes
+low, put the review notes between the TL;DR and the fold. Last comes
 "## Screenshots/video" with a Before | After table. Capture a real before and
 after: screenshots or a short GIF for visible changes, otherwise the effect
 itself (command output, a generated file, an agent's answer). Never stage or
@@ -210,7 +210,7 @@ so git never sees them. In each cell put a placeholder naming the file, with
 an HTML comment saying which file goes where. End with `---` and a line saying
 it was generated with {{agent_label}}, and never word anything as if the user
 did it. Open the PR as a draft with `gh pr create --draft --body-file
-.pr-media/body.md`, then report done with its number and the media files.
+.pr-media/body.md`, then report done with its URL and the media files.
 ```
 
 ## Rules
@@ -234,15 +234,22 @@ did it. Open the PR as a draft with `gh pr create --draft --body-file
 When a task ends in a PR, say so in the worker's brief; the preamble has the
 format, and the worker opens the PR as a draft.
 
-1. On its `done`, read the body with `gh pr view <n> --json body`: TL;DR on
-   top, the rest folded under Full details, and a Before | After table whose
-   files exist in the worktree's `.pr-media/`. Send fixes back to the worker.
+Run the `gh` commands here from your folder with the PR's URL; your folder is
+not a git repo, and the worktree is the worker's.
+
+1. On its `done`, read the body with `gh pr view <PR url> --json body`: TL;DR
+   on top, the rest folded under Full details, and a Before | After table
+   whose files exist in the worktree's `.pr-media/`. Send fixes back to the
+   worker, who updates the PR with `gh pr edit <PR url> --body-file
+   .pr-media/body.md`. Once the user has dragged media in, the worker first
+   refreshes the file with `gh pr view <PR url> --json body -q .body >
+   .pr-media/body.md`, so the image links are kept.
 2. Put a line under `## Blockers` asking the user to drag the files in, e.g.
    `Drag before.png and after.png from <worktree>/.pr-media/ into web #412
    before you close this orchestrator`. The files live only in the worktree
    and go when it is removed, so keep the line until the user says they are
    in the PR.
-3. When the user says it is ready, run `gh pr ready <n>` in the worktree.
+3. When the user says it is ready, run `gh pr ready <PR url>`.
 
 ## QA review
 

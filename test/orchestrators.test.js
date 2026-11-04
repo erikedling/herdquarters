@@ -147,14 +147,16 @@ test('the worker preamble carries the PR body format and the boss brief checks i
     assert.match(preamble, /echo '\*' > \.pr-media\/\.gitignore/);
     assert.match(preamble, new RegExp(`generated with ${label},`));
     assert.match(preamble, /never word anything as if the user did it/);
-    assert.match(preamble, /gh pr create --draft --body-file \.pr-media\/body\.md/);
+    assert.match(preamble, /gh pr create --draft --body-file \.pr-media\/body\.md`, then report done with its URL/);
     assert.match(preamble, /replace the table with one line saying so and why/);
-    assert.match(preamble, /keep the review notes outside the fold/);
+    assert.match(preamble, /put the review notes between the TL;DR and the fold/);
     assert.ok(!/\{\{/.test(boss), `no placeholder left in the ${agent} boss brief`);
     assert.match(boss, /## Pull requests\n/);
-    assert.match(boss, /gh pr view <n> --json body/);
+    assert.match(boss, /gh pr view <PR url> --json body`/);
+    assert.match(boss, /gh pr edit <PR url> --body-file\s+\.pr-media\/body\.md/);
+    assert.match(boss, /gh pr view <PR url> --json body -q \.body >\s+\.pr-media\/body\.md/);
     assert.match(boss, /before you close this orchestrator/);
-    assert.match(boss, /gh pr ready <n>/);
+    assert.match(boss, /gh pr ready <PR url>/);
   }
 });
 
