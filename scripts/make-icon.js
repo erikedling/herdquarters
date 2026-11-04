@@ -18,8 +18,6 @@ app.whenReady().then(async () => {
   fs.writeFileSync(png, img.toPNG());
   console.log(`wrote ${png} (${img.getSize().width}x${img.getSize().height})`);
   if (process.platform === 'darwin') {
-    // capturePage renders at the display's scale factor; the dock wants 1024².
-    execFileSync('sips', ['-z', '1024', '1024', png], { stdio: 'ignore' });
     const set = path.join(os.tmpdir(), 'agent-office.iconset');
     fs.rmSync(set, { recursive: true, force: true }); fs.mkdirSync(set);
     for (const size of [16, 32, 128, 256, 512]) {

@@ -2,10 +2,10 @@ const path = require('node:path');
 
 // Since Electron 43 a dialog without a defaultPath opens in Downloads instead
 // of where the user last was, so the picker remembers that itself.
-function createFolderPicker(showOpenDialog) {
+function createFolderPicker(showOpenDialog, homeDir) {
   let lastDir;
   return async function pickFolder(win, defaultPath) {
-    const r = await showOpenDialog(win, { title: 'Open repo', properties: ['openDirectory', 'createDirectory'], defaultPath: defaultPath || lastDir });
+    const r = await showOpenDialog(win, { title: 'Open repo', properties: ['openDirectory', 'createDirectory'], defaultPath: defaultPath || lastDir || homeDir });
     if (r.canceled || !r.filePaths?.length) return null;
     lastDir = path.dirname(r.filePaths[0]);
     return r.filePaths[0];

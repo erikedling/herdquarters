@@ -15,11 +15,12 @@
   let current = null;   // { id, paneId }
   let resizeTimer = null;
 
-  // Keystrokes and paste bytes for the attached pane. Typing means the user
-  // is done with any selection, so output resumes (see onFrame).
+  // Keystrokes and paste bytes for the attached pane. Typing means the user is
+  // done with any selection (output resumes, see onFrame) and any paste error.
   function sendInput(data) {
     if (!current) return;
     if (term.hasSelection()) term.clearSelection();
+    hidePasteFailed();
     window.office.term.input(current.id, data);
   }
 
@@ -126,10 +127,23 @@
     write(data);
   }
 
+  const PASTE_FAILED = 'Paste failed: ';
+  function hidePasteFailed() {
+    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
+  }
+
   async function pasteFromClipboard() {
     if (!current) return;
-    const clip = await window.office.clipboardPeek();
+    let clip;
+    try {
+      clip = await window.office.clipboardPeek();
+    } catch (err) {
+      // invoke() prefixes the main-process error with this; the reason is enough.
+      showStatus(PASTE_FAILED + String(err.message || err).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''));
+      return;
+    }
     if (!current) return;
+    hidePasteFailed();
     if (clip.hasImage) {
       // Ctrl+V byte: Claude Code reads the image straight from the clipboard.
       // Image wins even when text rides along (Slack and browsers add a link

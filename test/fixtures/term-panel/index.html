@@ -20,7 +20,7 @@
   window.__clip = { hasImage: false, hasText: false, text: '' };
   window.__opened = [];
   window.office = {
-    clipboardPeek: async () => window.__clip,
+    clipboardPeek: async () => { if (window.__clip instanceof Error) throw window.__clip; return window.__clip; },
     openExternal: async (url) => { window.__opened.push(url); return { ok: true }; },
     term: {
       open: async ({ cols, rows }) => { window.__resized = [cols, rows]; window.__opens = (window.__opens || 0) + 1; return 's' + window.__opens; }, close: async () => {}, input: (_id, data) => window.__inputs.push(data),
@@ -75,6 +75,32 @@ window.scenario = async function scenario() {
   await tick(100);
   const text = [...window.__inputs];
 
+  // paste: a failed clipboard read says so in the status, and the next paste clears it
+  window.__clip = new Error("Error invoking remote method 'clipboard-peek': Error: clipboard busy");
+  window.__inputs.length = 0;
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  const $status = document.getElementById('term-status');
+  const pasteFailed = { inputs: [...window.__inputs], status: $status.textContent, shown: !$status.hidden };
+  window.__clip = { hasImage: false, hasText: true, text: 'again' };
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  pasteFailed.after = [...window.__inputs];
+  pasteFailed.hiddenAfter = $status.hidden;
+  // ...and so does the next keystroke, which leaves any other status alone
+  window.__clip = new Error('clipboard busy');
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  pasteFailed.shownAgain = !$status.hidden;
+  term.input('x', true);
+  pasteFailed.hiddenByKey = $status.hidden;
+  $status.textContent = 'something else';
+  $status.hidden = false;
+  term.input('y', true);
+  pasteFailed.otherKept = !$status.hidden;
+  $status.hidden = true;
+  pasteFailed.typed = window.__inputs.slice(-2);
+
   // copy: a line herdr wrapped over two rows, drawn the way its frames do it
   const cols = term.cols;
   const long = 'https://example.com/' + 'x'.repeat(cols - 20) + 'tail-of-the-line';
@@ -112,6 +138,6 @@ window.scenario = async function scenario() {
   const statusAfterExit = document.getElementById('term-status').textContent;
   await window.officeTerminal.open(desk2);
   const reopen = window.__opens - before;
-  return { fit, image, text, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors: window.__errors };
+  return { fit, image, text, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors: window.__errors };
 };
 </script>

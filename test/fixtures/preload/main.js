@@ -6,7 +6,7 @@ const fs = require('node:fs');
 app.whenReady().then(async () => {
   const errors = [];
   const win = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, '..', '..', '..', 'preload.js'), contextIsolation: true, nodeIntegration: false, additionalArguments: ['--office-app-name=Testname'] } });
-  win.webContents.on('console-message', (event, legacyLevel, legacyMessage) => { const msg = event.message ?? legacyMessage; if (/preload|Error/.test(String(msg))) errors.push(String(msg)); });
+  win.webContents.on('console-message', ({ message }) => { if (/preload|Error/.test(message)) errors.push(message); });
   await win.loadURL('about:blank');
   const out = await win.webContents.executeJavaScript(`JSON.stringify({ office: typeof window.office, appName: window.office && window.office.appName, keys: window.office ? Object.keys(window.office).sort() : [] })`);
   fs.writeSync(1, JSON.stringify({ ...JSON.parse(out), errors }) + '\n');
