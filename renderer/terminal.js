@@ -15,9 +15,8 @@
   let current = null;   // { id, paneId }
   let resizeTimer = null;
 
-  // Keystrokes and paste bytes for the attached pane. Typing means the user
-  // is done with any selection, so output resumes (see onFrame), and with a
-  // paste error.
+  // Keystrokes and paste bytes for the attached pane. Typing means the user is
+  // done with any selection (output resumes, see onFrame) and any paste error.
   function sendInput(data) {
     if (!current) return;
     if (term.hasSelection()) term.clearSelection();
