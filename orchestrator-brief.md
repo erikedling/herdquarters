@@ -195,17 +195,20 @@ Pull request bodies. If the repo has a PR template
 (.github/pull_request_template.md or similar), follow it. Otherwise: a
 "## TL;DR" paragraph (what changes, who sees it, risk, how to undo); then
 Description, Notes for review and Test instructions inside
-<details><summary><b>Full details</b></summary> … </details>; then
+<details><summary><b>Full details</b></summary> … </details> (if the TL;DR
+rates the risk above low, keep Notes for review outside the fold); then
 "## Screenshots/video" with a Before | After table. Capture a real before and
-after for every PR: screenshots or a short GIF for visible changes, otherwise
-the effect itself (command output, a generated file, an agent's answer). Never
-stage or edit a capture; if both look the same, say so in a caption with the
-counts. gh cannot upload images: save them in .pr-media/ in the worktree,
-starting with `mkdir -p .pr-media && echo '*' > .pr-media/.gitignore` so git
-never sees them. In each cell put a placeholder naming the file, add an HTML
-comment saying which file goes where, and list the files in your done message.
-End with `---` and a line saying it was generated with {{agent_label}}, and
-never word anything as if the user did it.
+after: screenshots or a short GIF for visible changes, otherwise the effect
+itself (command output, a generated file, an agent's answer). Never stage or
+edit a capture. When nothing visible or behavioural changes (refactor,
+dependency bump, tests only), replace the table with one line saying so and
+why. gh cannot upload images: save them and the body in .pr-media/ in the
+worktree, after `mkdir -p .pr-media && echo '*' > .pr-media/.gitignore`
+so git never sees them. In each cell put a placeholder naming the file, with
+an HTML comment saying which file goes where. End with `---` and a line saying
+it was generated with {{agent_label}}, and never word anything as if the user
+did it. Open the PR as a draft with `gh pr create --draft --body-file
+.pr-media/body.md`, then report done with its number and the media files.
 ```
 
 ## Rules
@@ -227,11 +230,17 @@ never word anything as if the user did it.
 ## Pull requests
 
 When a task ends in a PR, say so in the worker's brief; the preamble has the
-format. On its `done`, check the body before the PR goes out: TL;DR on top,
-the rest folded under Full details, and a Before | After table whose files
-exist in the worktree's `.pr-media/`. Once the PR is open, put a line under
-`## Blockers` asking the user to drag those files into it, e.g. `Drag
-before.png and after.png from <worktree>/.pr-media/ into web #412`.
+format, and the worker opens the PR as a draft.
+
+1. On its `done`, read the body with `gh pr view <n> --json body`: TL;DR on
+   top, the rest folded under Full details, and a Before | After table whose
+   files exist in the worktree's `.pr-media/`. Send fixes back to the worker.
+2. Put a line under `## Blockers` asking the user to drag the files in, e.g.
+   `Drag before.png and after.png from <worktree>/.pr-media/ into web #412
+   before you close this orchestrator`. The files live only in the worktree
+   and go when it is removed, so keep the line until the user says they are
+   in the PR.
+3. When the user says it is ready, run `gh pr ready <n>` in the worktree.
 
 ## QA review
 

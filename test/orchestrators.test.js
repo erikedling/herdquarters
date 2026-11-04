@@ -137,19 +137,41 @@ test('the worker preamble carries the PR body format and the boss brief checks i
     await s.create({ name: 'Prs', root: tmp(), branch: 'x/prs', agent });
     s.dispose();
     const boss = fs.readFileSync(path.join(s.folder('prs'), file), 'utf8');
-    const preamble = boss.split('## Worker preamble')[1].split('```text\n')[1].split('\n```')[0];
+    const preamble = boss.split('## Worker preamble')[1].split('```text\n')[1].split('\n```')[0].replace(/\s+/g, ' ');
     assert.match(preamble, /pull_request_template\.md or similar\), follow it/);
     assert.match(preamble, /## TL;DR/);
     assert.match(preamble, /<details><summary><b>Full details<\/b><\/summary>/);
     assert.match(preamble, /## Screenshots\/video" with a Before \| After table/);
-    assert.match(preamble, /Never\s+stage or edit a capture/);
+    assert.match(preamble, /Never stage or edit a capture/);
     assert.match(preamble, /echo '\*' > \.pr-media\/\.gitignore/);
     assert.match(preamble, new RegExp(`generated with ${label},`));
-    assert.match(preamble, /never word anything as if the\s+user did it/);
-    assert.ok(!/\{\{/.test(preamble), agent);
+    assert.match(preamble, /never word anything as if the user did it/);
+    assert.match(preamble, /gh pr create --draft --body-file \.pr-media\/body\.md/);
+    assert.match(preamble, /replace the table with one line saying so and why/);
+    assert.match(preamble, /keep Notes for review outside the fold/);
+    assert.ok(!/\{\{/.test(boss), `no placeholder left in the ${agent} boss brief`);
     assert.match(boss, /## Pull requests\n/);
-    assert.match(boss, /drag those files into it/);
+    assert.match(boss, /gh pr view <n> --json body/);
+    assert.match(boss, /before you close this orchestrator/);
+    assert.match(boss, /gh pr ready <n>/);
   }
+});
+
+// Closing removes worktrees by force, and `git status` hides ignored files.
+test('worktreeStatus() counts PR media not yet dragged in, but not the body or the self-ignore', async () => {
+  const { execFileSync } = require('node:child_process');
+  const repo = tmp();
+  const run = (...a) => execFileSync('git', ['-C', repo, ...a], { stdio: 'pipe' });
+  run('init', '-q');
+  run('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'first');
+  const s = store();
+  let [st] = await s.worktreeStatus([{ path: repo }]);
+  assert.deepStrictEqual([st.media, st.dirty, st.error], [0, 0, null]);
+  fs.mkdirSync(path.join(repo, '.pr-media', 'extra'), { recursive: true });
+  fs.writeFileSync(path.join(repo, '.pr-media', '.gitignore'), '*\n');
+  for (const f of ['before.png', 'extra/after.gif', 'body.md']) fs.writeFileSync(path.join(repo, '.pr-media', f), 'x');
+  [st] = await s.worktreeStatus([{ path: repo }]);
+  assert.deepStrictEqual([st.media, st.dirty, st.error], [2, 0, null]);
 });
 
 test('setQa() flips the flag on every running orchestrator', async () => {

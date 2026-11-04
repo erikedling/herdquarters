@@ -774,13 +774,17 @@ ${text}
     return out;
   }
 
-  // What is in each worktree before it is removed: uncommitted files and
-  // commits not on the upstream. worktrees: [{ workspace_id, path, repo }].
+  // What is in each worktree before it is removed: uncommitted files, commits
+  // not on the upstream, and PR media not yet dragged into a PR.
+  // worktrees: [{ workspace_id, path, repo }].
   async worktreeStatus(worktrees) {
     return Promise.all(worktrees.map(async (w) => {
-      const st = { ...w, dirty: 0, unpushed: 0, upstream: true, error: null };
+      const st = { ...w, dirty: 0, unpushed: 0, media: 0, upstream: true, error: null };
       try {
         st.dirty = (await git(w.path, ['status', '--porcelain'])).split('\n').filter(Boolean).length;
+        // Ignored files never show in `status`, and the PR body (.md) is already on GitHub.
+        st.media = (await git(w.path, ['ls-files', '--others', '--ignored', '--exclude-standard', '--', '.pr-media']))
+          .split('\n').filter((f) => f && !/(^|\/)\.gitignore$|\.md$/.test(f)).length;
         try { st.unpushed = Number((await git(w.path, ['rev-list', '--count', '@{u}..HEAD'])).trim()) || 0; }
         catch { st.upstream = false; st.unpushed = Number((await git(w.path, ['rev-list', '--count', 'HEAD', '--not', '--remotes'])).trim()) || 0; }
       } catch (err) { st.error = err.message; }

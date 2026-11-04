@@ -286,9 +286,10 @@
         for (const st of r.status) {
           const $li = document.querySelector(`.cl-list li[data-ws="${CSS.escape(st.workspace_id)}"] .cl-state`); if (!$li) continue;
           $li.textContent = st.error ? `git: ${st.error}`
-            : [st.dirty ? `${st.dirty} uncommitted file${st.dirty === 1 ? '' : 's'}` : '', st.unpushed ? `${st.unpushed} unpushed commit${st.unpushed === 1 ? '' : 's'}` : '', !st.upstream ? 'branch never pushed' : '']
+            : [st.dirty ? `${st.dirty} uncommitted file${st.dirty === 1 ? '' : 's'}` : '', st.unpushed ? `${st.unpushed} unpushed commit${st.unpushed === 1 ? '' : 's'}` : '', !st.upstream ? 'branch never pushed' : '',
+              st.media ? `${st.media} PR media file${st.media === 1 ? '' : 's'} in .pr-media/, lost unless dragged into the PR` : '']
               .filter(Boolean).join(', ') || 'clean and pushed';
-          $li.classList.toggle('warn', !!(st.dirty || st.unpushed || st.error));
+          $li.classList.toggle('warn', !!(st.dirty || st.unpushed || st.media || st.error));
         }
       });
     }
