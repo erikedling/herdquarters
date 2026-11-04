@@ -40,9 +40,12 @@ it. Many files and tools give UTC (`…Z`): alerts' `opened:`, Slack waiting
 files' `asked:` and `found:`, `gh` times. Convert before you say them:
 
 ```sh
-date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC ISO time → unix seconds
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC time ending in Z → unix seconds
 date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
 ```
+
+Use the first command only for times ending in `Z`; it misreads an offset
+like `+01:00` without an error. Its warning about the ignored `Z` is expected.
 
 `gh pr view` can do it too: `--jq '.mergedAt | fromdate | strflocaltime("%H:%M %Z")'`.
 Notes keep `due` and `created` as ISO with the local offset (below).

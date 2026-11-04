@@ -107,12 +107,16 @@ Local time here is {{timezone}}. Everything a person reads (alert titles and
 bodies, inbox messages) gives times in local time with the zone, e.g. `14:02
 CET`. Get the time with `date '+%Y-%m-%d %H:%M %Z'`; never guess it. CI,
 logs, metrics and the cloud mostly report UTC (`…Z`): convert before you
-write a time down.
+write a time down. For `git log`, use
+`--date=format-local:'%Y-%m-%d %H:%M %Z'`, which prints local time directly.
 
 ```bash
-date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC ISO time → unix seconds
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC time ending in Z → unix seconds
 date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
 ```
+
+Use the first command only for times ending in `Z`; it misreads an offset
+like `+01:00` without an error. Its warning about the ignored `Z` is expected.
 
 Only an alert's `opened:` stays UTC ISO with `Z`, and file names keep
 `<unix seconds>` (`date +%s`).

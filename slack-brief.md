@@ -109,7 +109,8 @@ has one, and do not delete files.
 ## Times
 
 The office reads `last_check`, `asked:` and `found:`: keep them UTC ISO with
-`Z`. A message's `asked:` comes from its ts; for ts `1729680000.123456`:
+`Z`. A message's `asked:` comes from the part of its ts before the dot; for
+ts `1729680000.123456`:
 `date -u -r 1729680000 +%Y-%m-%dT%H:%M:%SZ`.
 
 Anything else a person reads (titles, summaries) uses local time,

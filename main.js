@@ -70,6 +70,7 @@ function ensureOrchestrators() {
     slackTemplate: require('node:fs').readFileSync(path.join(__dirname, 'slack-brief.md'), 'utf8'),
     onChange: () => toRenderer('orchestrators', orchestrators.list()),
   });
+  if (!process.env.OFFICE_FIXTURE) orchestrators.refreshBriefs();
   return orchestrators;
 }
 
