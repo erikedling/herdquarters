@@ -901,9 +901,11 @@ const { agentKind, contextFile, hasPiConversation, piSessionDir, trustPiFolder }
 test('agentKind() defaults to claude, also for orchestrators made before the setting', () => {
   assert.strictEqual(agentKind({}), 'claude');
   assert.strictEqual(agentKind({ agent: 'pi' }), 'pi');
-  assert.strictEqual(agentKind({ agent: 'codex' }), 'claude'); // only kinds the office knows
+  assert.strictEqual(agentKind({ agent: 'codex' }), 'codex');
+  assert.strictEqual(agentKind({ agent: 'unknown' }), 'claude');
   assert.strictEqual(contextFile('claude'), 'CLAUDE.md');
   assert.strictEqual(contextFile('pi'), 'AGENTS.md');
+  assert.strictEqual(contextFile('codex'), 'AGENTS.md');
 });
 
 test('create() records claude by default and starts the boss with kind claude', async () => {
@@ -953,13 +955,86 @@ test('a pi orchestrator writes AGENTS.md briefs, a pi skill and pi trust, and st
   assert.ok(!fs.existsSync(claudeConfig));
 });
 
+test('a Codex orchestrator persists its kind and writes native briefs and skills without touching other providers\' trust', async () => {
+  const client = fakeClient();
+  const { s, claudeConfig, piTrust } = storeWith(client);
+  const root = path.join(tmp(), "repos with spaces ' $HOME;");
+  fs.mkdirSync(root);
+  const json = await s.create({ name: 'Codex Team', root, branch: 'x/codex', agent: 'codex' });
+  assert.strictEqual(json.agent, 'codex');
+  assert.strictEqual(s.read('codex-team').agent, 'codex');
+  assert.strictEqual(s.list()[0].agent, 'codex');
+  const start = client.calls.find((c) => c.method === 'agent.start').params;
+  assert.strictEqual(start.kind, 'codex');
+  assert.deepStrictEqual(start.args, ['--add-dir', root], 'fresh Codex gets the configured root as one argv element');
+  const boss = fs.readFileSync(path.join(s.folder(json.slug), 'AGENTS.md'), 'utf8');
+  assert.strictEqual(boss.match(/--kind codex --pane/g).length, 3, 'workers, QA and ops all use Codex');
+  const extra = ` -- --add-dir '${root.replace(/'/g, `'"'"'`)}'`;
+  assert.strictEqual(boss.split(extra).length - 1, 3, 'workers, QA and ops all receive the writable root');
+  const argv = require('node:child_process').execFileSync('/bin/sh', ['-c', `set --${extra}; printf '%s\\0' "$@"`], { encoding: 'utf8' }).split('\0');
+  assert.deepStrictEqual(argv, ['--', '--add-dir', root, ''], 'generated command preserves spaces, quotes and shell metacharacters');
+  assert.ok(!/--kind claude|--kind pi|Claude Code|CLAUDE\.md|\{\{/.test(boss));
+  for (const folder of [s.folder(json.slug), s.qaFolder(json.slug), s.opsFolder(json.slug)]) {
+    assert.ok(fs.existsSync(path.join(folder, 'AGENTS.md')));
+    assert.ok(!fs.existsSync(path.join(folder, 'CLAUDE.md')));
+  }
+  const skill = fs.readFileSync(path.join(s.folder(json.slug), '.agents', 'skills', 'orchestrate', 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: orchestrate\n/);
+  assert.ok(!/CLAUDE\.md|\{\{/.test(skill));
+  assert.ok(!fs.existsSync(claudeConfig));
+  assert.ok(!fs.existsSync(piTrust));
+  assert.match(fs.readFileSync(path.join(s.slackFolder(json.slug), 'CLAUDE.md'), 'utf8'), /Slack watcher/);
+  s.prepareSlack(json.slug);
+  const cfg = JSON.parse(fs.readFileSync(claudeConfig, 'utf8'));
+  assert.strictEqual(cfg.projects[s.slackFolder(json.slug)].hasTrustDialogAccepted, true);
+  assert.strictEqual(cfg.projects[s.folder(json.slug)], undefined);
+  s.dispose();
+});
+
+test('Codex restore uses native resume by recorded session, or cwd-filtered --last for older archives', async () => {
+  const client = fakeClient();
+  const { s } = storeWith(client);
+  const root = path.join(tmp(), 'repo root with spaces');
+  fs.mkdirSync(root);
+  const json = await s.create({ name: 'Codex Back', root, branch: 'x/codex-back', agent: 'codex' });
+  const session = '01912345-6789-7000-8000-123456789abc';
+  await s.reconcile({
+    workspaces: [{ workspace_id: json.boss.workspace_id }],
+    panes: [{ pane_id: json.boss.pane_id, workspace_id: json.boss.workspace_id }],
+    agents: [{ pane_id: json.boss.pane_id, agent_session: { value: session } }],
+  });
+  assert.strictEqual(s.read(json.slug).boss.session_id, session);
+  await s.archive(json.slug, 'closed');
+  client.calls.length = 0;
+  let restored = await s.restore(s.listArchived()[0].id);
+  let start = client.calls.find((c) => c.method === 'agent.start').params;
+  assert.strictEqual(start.kind, 'codex');
+  assert.deepStrictEqual(start.args, ['resume', session, '--add-dir', root]);
+  assert.strictEqual(restored.boss.session_id, session);
+  assert.strictEqual(restored.boss.resumed, true);
+  assert.ok(fs.existsSync(path.join(s.folder(json.slug), 'AGENTS.md')));
+
+  delete restored.boss.session_id;
+  s.write(json.slug, restored);
+  await s.archive(json.slug, 'closed');
+  client.calls.length = 0;
+  restored = await s.restore(s.listArchived()[0].id);
+  start = client.calls.find((c) => c.method === 'agent.start').params;
+  assert.strictEqual(start.kind, 'codex');
+  assert.deepStrictEqual(start.args, ['resume', '--last', '--add-dir', root]);
+  assert.strictEqual(restored.boss.resumed, null, 'native --last can also start fresh');
+  s.dispose();
+});
+
 test('startAgent() passes the kind to herdr', async () => {
   const client = fakeClient();
   const { s } = storeWith(client);
   await s.startAgent('w1:p1', 'x', [], 'pi');
   await s.startAgent('w1:p1', 'y');
+  await s.startAgent('w1:p1', 'z', ['resume', 'codex-session'], 'codex');
   s.dispose();
-  assert.deepStrictEqual(client.calls.map((c) => c.params.kind), ['pi', 'claude']);
+  assert.deepStrictEqual(client.calls.map((c) => c.params.kind), ['pi', 'claude', 'codex']);
+  assert.deepStrictEqual(client.calls[2].params.args, ['resume', 'codex-session']);
 });
 
 test('trustPiFolder() adds the folder and keeps other decisions; refuses a file it cannot parse', () => {
@@ -1042,9 +1117,12 @@ test('setInstructions() rewrites the brief in the file each orchestrator\'s kind
   const { s } = storeWith(fakeClient());
   await s.create({ name: 'Cl', root: tmp(), branch: 'x/cl' });
   await s.create({ name: 'Pp', root: tmp(), branch: 'x/pp', agent: 'pi' });
+  await s.create({ name: 'Cx', root: tmp(), branch: 'x/cx', agent: 'codex' });
   s.setInstructions('Be brief.');
   s.dispose();
   assert.match(fs.readFileSync(path.join(s.folder('cl'), 'CLAUDE.md'), 'utf8'), /Be brief\./);
   assert.match(fs.readFileSync(path.join(s.folder('pp'), 'AGENTS.md'), 'utf8'), /Be brief\./);
   assert.ok(!fs.existsSync(path.join(s.folder('pp'), 'CLAUDE.md')));
+  assert.match(fs.readFileSync(path.join(s.folder('cx'), 'AGENTS.md'), 'utf8'), /Be brief\./);
+  assert.ok(!fs.existsSync(path.join(s.folder('cx'), 'CLAUDE.md')));
 });

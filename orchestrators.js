@@ -101,13 +101,15 @@ function trustPiFolder(folder, trustPath = path.join(piAgentDir(), 'trust.json')
 
 // The coding agents an orchestrator can run (herdr's --kind). Orchestrators
 // made before the setting existed have no `agent` and run Claude.
-const AGENT_KINDS = ['claude', 'pi'];
+const AGENT_KINDS = ['claude', 'pi', 'codex'];
 const agentKind = (json) => (AGENT_KINDS.includes(json?.agent) ? json.agent : 'claude');
 // The file each kind reads its instructions from at session start.
-const contextFile = (kind) => (kind === 'pi' ? 'AGENTS.md' : 'CLAUDE.md');
+const contextFile = (kind) => (kind === 'pi' || kind === 'codex' ? 'AGENTS.md' : 'CLAUDE.md');
 // Where each kind finds the boss's project skills.
-const skillsDir = (kind) => (kind === 'pi' ? ['.pi', 'skills'] : ['.claude', 'skills']);
-const AGENT_LABELS = { claude: 'Claude Code', pi: 'Pi' };
+const skillsDir = (kind) => [kind === 'codex' ? '.agents' : kind === 'pi' ? '.pi' : '.claude', 'skills'];
+const AGENT_LABELS = { claude: 'Claude Code', pi: 'Pi', codex: 'Codex' };
+// Briefs contain shell commands, unlike agent.start's argv arrays.
+const shellQuote = (value) => `'${String(value).replace(/'/g, `'"'"'`)}'`;
 
 const COLORS = ['#f2c531', '#ff7ab6', '#2bb3a3', '#8a5cf6', '#f0862e', '#38c172', '#4f7cff', '#e4573d'];
 const NAME_RE = /^[a-z][a-z0-9_-]{0,31}$/;
@@ -465,7 +467,10 @@ class OrchestratorStore {
       progress(args.length ? 'Reopening the boss conversation…' : 'Starting a fresh boss…');
       this.trustFolders(json);
       await this.startBoss(json, args);
-      json.boss.resumed = args.length > 0 && json.boss.status === 'started';
+      // Codex --last starts fresh if no session exists; herdr's readiness
+      // response cannot tell which happened. Keep that outcome unknown.
+      json.boss.resumed = agentKind(json) === 'codex' && !session && json.boss.status === 'started'
+        ? null : args.length > 0 && json.boss.status === 'started';
       json.status = 'running';
       this.write(slug, json);
     } catch (err) {
@@ -483,6 +488,10 @@ class OrchestratorStore {
   // later orchestrator with the same name. [] when there is nothing to reopen.
   resumeArgs(json, session) {
     const folder = this.folder(json.slug);
+    // Use Codex's native session lookup (including its cwd-filtered --last
+    // fallback), not Claude flags or Codex's private on-disk storage layout.
+    // An explicit missing session is reported by Codex, never replaced by another.
+    if (agentKind(json) === 'codex') return session ? ['resume', session] : ['resume', '--last'];
     if (agentKind(json) === 'pi') {
       return session
         ? (hasPiConversation(folder, this.piSessions, session) ? ['--session', session] : [])
@@ -541,9 +550,11 @@ class OrchestratorStore {
 
   // Pre-accepts the agent's trust prompt for the boss, QA and ops folders (see
   // trustFolder, trustPiFolder), and Claude's for the Slack folder of a Claude
-  // orchestrator. A Pi orchestrator leaves Claude's config alone until its
-  // watcher starts (prepareSlack).
+  // orchestrator. Non-Claude orchestrators leave Claude's config alone until
+  // their watcher starts (prepareSlack). Codex manages its own interactive
+  // trust/approval prompts; do not rewrite its global TOML or bypass its sandbox.
   trustFolders(json) {
+    if (agentKind(json) === 'codex') return;
     const pi = agentKind(json) === 'pi';
     try {
       for (const f of [this.folder(json.slug), this.qaFolder(json.slug), this.opsFolder(json.slug)]) pi ? trustPiFolder(f, this.piTrust) : trustFolder(f, this.claudeConfig);
@@ -557,6 +568,7 @@ class OrchestratorStore {
     const kind = agentKind(json);
     return template
       .replace(/\{\{agent_kind\}\}/g, kind)
+      .replace(/\{\{agent_args\}\}/g, () => kind === 'codex' && json.root ? ` -- --add-dir ${shellQuote(json.root)}` : '')
       .replace(/\{\{agent_label\}\}/g, AGENT_LABELS[kind])
       .replace(/\{\{context_file\}\}/g, contextFile(kind))
       .replace(/\{\{name\}\}/g, json.name)
@@ -837,11 +849,14 @@ ${text}
   // Starts the boss in its pane, retrying while the new shell settles.
   // Sets json.boss.status to 'started', or records boss.error.
   async startBoss(json, args = []) {
+    // Keep resume's subcommand/ID first and the root as one argv element.
+    // The boss's cwd is its data folder, not the repository root it manages.
+    const launchArgs = agentKind(json) === 'codex' && json.root ? [...args, '--add-dir', json.root] : args;
     let bossErr = null;
     for (let attempt = 1; attempt <= 3 && json.boss.status !== 'started'; attempt++) {
       try {
         await sleep(attempt === 1 ? 600 : 2000);
-        json.boss.agent = await this.startAgent(json.boss.pane_id, json.boss.agent, args, agentKind(json));
+        json.boss.agent = await this.startAgent(json.boss.pane_id, json.boss.agent, launchArgs, agentKind(json));
         json.boss.status = 'started';
       } catch (err) { bossErr = err; }
     }
@@ -1035,7 +1050,7 @@ ${text}
         await this.archive(o.slug, 'boss workspace gone');
         continue;
       }
-      // The boss's session (a Claude id, a pi session file), kept so Restore can reopen exactly this conversation.
+      // The boss's session (a Claude/Codex id, a pi session file), kept so Restore can reopen exactly this conversation.
       const session = (snapshot.agents || []).find((a) => a.pane_id === o.boss.pane_id)?.agent_session?.value;
       if (o.status === 'running' && session && session !== o.boss.session_id) {
         const json = this.read(o.slug); json.boss.session_id = session; this.write(o.slug, json);
