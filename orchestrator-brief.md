@@ -190,6 +190,22 @@ visible terminal, never in the background of your session: `herdr tab create
 <new pane id> "<command>"`. Read its output with `herdr pane read`. Reuse a
 terminal with the same name if one exists; leave it running when you are done
 and name it in your done message.
+
+Pull request bodies. If the repo has a PR template
+(.github/pull_request_template.md or similar), follow it. Otherwise: a
+"## TL;DR" paragraph (what changes, who sees it, risk, how to undo); then
+Description, Notes for review and Test instructions inside
+<details><summary><b>Full details</b></summary> … </details>; then
+"## Screenshots/video" with a Before | After table. Capture a real before and
+after for every PR: screenshots or a short GIF for visible changes, otherwise
+the effect itself (command output, a generated file, an agent's answer). Never
+stage or edit a capture; if both look the same, say so in a caption with the
+counts. gh cannot upload images: save them in .pr-media/ in the worktree,
+starting with `mkdir -p .pr-media && echo '*' > .pr-media/.gitignore` so git
+never sees them. In each cell put a placeholder naming the file, add an HTML
+comment saying which file goes where, and list the files in your done message.
+End with `---` and a line saying it was generated with {{agent_label}}, and
+never word anything as if the user did it.
 ```
 
 ## Rules
@@ -207,6 +223,15 @@ and name it in your done message.
 3. When everything is done, run the QA review below if it is switched on,
    then write a final board, each finished unit on its one checked line,
    with a two-line summary per repo, and stop and wait for the user.
+
+## Pull requests
+
+When a task ends in a PR, say so in the worker's brief; the preamble has the
+format. On its `done`, check the body before the PR goes out: TL;DR on top,
+the rest folded under Full details, and a Before | After table whose files
+exist in the worktree's `.pr-media/`. Once the PR is open, put a line under
+`## Blockers` asking the user to drag those files into it, e.g. `Drag
+before.png and after.png from <worktree>/.pr-media/ into web #412`.
 
 ## QA review
 

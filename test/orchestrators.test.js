@@ -130,6 +130,28 @@ test('create() writes the QA reviewer brief and records the qa flag', async () =
   assert.strictEqual(cfg.projects[s.qaFolder('reviewed')].hasTrustDialogAccepted, true);
 });
 
+// The worker pastes the preamble and writes the PR body; the boss checks it.
+test('the worker preamble carries the PR body format and the boss brief checks it', async () => {
+  for (const [agent, file, label] of [['claude', 'CLAUDE.md', 'Claude Code'], ['pi', 'AGENTS.md', 'Pi']]) {
+    const { s } = storeWith(fakeClient());
+    await s.create({ name: 'Prs', root: tmp(), branch: 'x/prs', agent });
+    s.dispose();
+    const boss = fs.readFileSync(path.join(s.folder('prs'), file), 'utf8');
+    const preamble = boss.split('## Worker preamble')[1].split('```text\n')[1].split('\n```')[0];
+    assert.match(preamble, /pull_request_template\.md or similar\), follow it/);
+    assert.match(preamble, /## TL;DR/);
+    assert.match(preamble, /<details><summary><b>Full details<\/b><\/summary>/);
+    assert.match(preamble, /## Screenshots\/video" with a Before \| After table/);
+    assert.match(preamble, /Never\s+stage or edit a capture/);
+    assert.match(preamble, /echo '\*' > \.pr-media\/\.gitignore/);
+    assert.match(preamble, new RegExp(`generated with ${label},`));
+    assert.match(preamble, /never word anything as if the\s+user did it/);
+    assert.ok(!/\{\{/.test(preamble), agent);
+    assert.match(boss, /## Pull requests\n/);
+    assert.match(boss, /drag those files into it/);
+  }
+});
+
 test('setQa() flips the flag on every running orchestrator', async () => {
   const { s } = storeWith(fakeClient());
   await s.create({ name: 'One', root: tmp(), branch: 'x/1', qa: false });
