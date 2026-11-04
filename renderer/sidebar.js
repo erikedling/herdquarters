@@ -163,7 +163,7 @@
       ...(d.cwd ? [{ label: 'Open folder in editor', run: () => A.openInEditor(d.cwd) }] : []),
       ...(d.cwd ? [{ label: 'Open pull request', run: () => A.openPullRequest(d.cwd) }] : []),
       { label: 'Rename…', run: () => A.renameDesk(d) },
-      ...(isShell ? [{ label: 'Start Claude here', run: () => A.hireAgent(d, 'claude') }, { label: 'Start Pi here', run: () => A.hireAgent(d, 'pi') }] : []),
+      ...(isShell ? [{ label: 'Start Claude here', run: () => A.hireAgent(d, 'claude') }, { label: 'Start Pi here', run: () => A.hireAgent(d, 'pi') }, { label: 'Start Codex here', run: () => A.hireAgent(d, 'codex') }] : []),
       '-',
       { label: isShell ? 'Close terminal' : 'Close agent', danger: true, run: () => A.closeDesk(d) },
     ];

@@ -415,7 +415,7 @@ function renderBuilding(floors) {
           $desk.dataset.character = String(desk.character);
           $desk.dataset.layout = layout;
           $desk.dataset.role = roleKey;
-          $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude or Pi) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
+          $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude, Pi or Codex) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
             + `${deskSVG(desk)}<div class="nameplate"><i class="chip"></i><span class="nameplate-text"></span></div>`;
         }
         $desk.querySelector('.nameplate-text').textContent = desk.seat ? `${desk.title} · free desk` : desk.pose === 'empty' ? (desk.label || 'terminal') : desk.pose === 'away' ? `at the boss · ${desk.title}` : desk.title;
@@ -735,7 +735,7 @@ async function closeDesk(desk) {
 
 // The agents a shell desk can start (herdr's --kind). kind: one of them, or
 // null to let the user pick in the dialog.
-const AGENT_KINDS = { claude: 'Claude', pi: 'Pi' };
+const AGENT_KINDS = { claude: 'Claude', pi: 'Pi', codex: 'Codex' };
 async function hireAgent(desk, kind = null) {
   const choice = Object.entries(AGENT_KINDS)
     .map(([k, label], i) => `<label class="check"><input type="radio" name="hire-kind" value="${k}" ${i === 0 ? 'checked' : ''}> ${label} <code>${k}</code></label>`).join('');

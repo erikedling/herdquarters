@@ -13,7 +13,7 @@
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const active = () => window.officeSettings?.get().activeTab || 'office';
   // The agent an orchestrator's boss, QA and ops run (orchestrator.json `agent`).
-  const AGENT_LABELS = { claude: 'Claude', pi: 'Pi' };
+  const AGENT_LABELS = { claude: 'Claude', pi: 'Pi', codex: 'Codex' };
   const agentLabel = (o) => AGENT_LABELS[o?.agent] || AGENT_LABELS.claude;
 
   // The terminal last opened on each tab, so switching back lands where the
@@ -348,7 +348,7 @@
     if (o.boss.status === 'started' && o.boss.pane_id) openBossPane = o.boss.pane_id;
     const note = o.boss.status !== 'started'
       ? { title: `${esc(o.name)} is back, but the boss did not start`, body: `<p>${esc(o.boss.error || 'unknown error')}</p><p class="hint">Use “Start ${agentLabel(o)} here” on the boss's empty desk to start it by hand.</p>` }
-      : !o.boss.resumed
+      : o.boss.resumed === false
         ? { title: `${esc(o.name)} is back with a fresh boss`, body: '<p>No saved conversation was found for this boss, so it started a new one. Its board and inbox are as they were: ask it to pick up from the board.</p>' }
         : null;
     if (note) setTimeout(() => window.officeActions.showModal({ ...note, okLabel: 'Close', cancel: false }), 50);
