@@ -191,12 +191,14 @@ visible terminal, never in the background of your session: `herdr tab create
 terminal with the same name if one exists; leave it running when you are done
 and name it in your done message.
 
-Pull request bodies. If the repo has a PR template
-(.github/pull_request_template.md or similar), follow it. Otherwise: a
-"## TL;DR" paragraph (what changes, who sees it, risk, how to undo); then
-Description, Notes for review and Test instructions inside
-<details><summary><b>Full details</b></summary> … </details> (if the TL;DR
-rates the risk above low, keep Notes for review outside the fold); then
+Pull request bodies. Start with a "## TL;DR" paragraph (what changes, who
+sees it, risk, how to undo). Then fold Description, Notes for review and Test
+instructions into <details><summary><b>Full details</b></summary> …
+</details>. If the repo has a PR template (.github/pull_request_template.md or
+similar), its sections, filled in, go in the fold instead, with first-person
+headings reworded ("How I tested it" → "How it was tested"); a template
+already in this shape is just filled in. If the TL;DR rates the risk above
+low, keep the review notes outside the fold. Last comes
 "## Screenshots/video" with a Before | After table. Capture a real before and
 after: screenshots or a short GIF for visible changes, otherwise the effect
 itself (command output, a generated file, an agent's answer). Never stage or

@@ -138,8 +138,9 @@ test('the worker preamble carries the PR body format and the boss brief checks i
     s.dispose();
     const boss = fs.readFileSync(path.join(s.folder('prs'), file), 'utf8');
     const preamble = boss.split('## Worker preamble')[1].split('```text\n')[1].split('\n```')[0].replace(/\s+/g, ' ');
-    assert.match(preamble, /pull_request_template\.md or similar\), follow it/);
-    assert.match(preamble, /## TL;DR/);
+    assert.match(preamble, /Start with a "## TL;DR" paragraph/);
+    assert.match(preamble, /pull_request_template\.md or similar\), its sections, filled in, go in the fold instead/);
+    assert.match(preamble, /"How I tested it" → "How it was tested"/);
     assert.match(preamble, /<details><summary><b>Full details<\/b><\/summary>/);
     assert.match(preamble, /## Screenshots\/video" with a Before \| After table/);
     assert.match(preamble, /Never stage or edit a capture/);
@@ -148,7 +149,7 @@ test('the worker preamble carries the PR body format and the boss brief checks i
     assert.match(preamble, /never word anything as if the user did it/);
     assert.match(preamble, /gh pr create --draft --body-file \.pr-media\/body\.md/);
     assert.match(preamble, /replace the table with one line saying so and why/);
-    assert.match(preamble, /keep Notes for review outside the fold/);
+    assert.match(preamble, /keep the review notes outside the fold/);
     assert.ok(!/\{\{/.test(boss), `no placeholder left in the ${agent} boss brief`);
     assert.match(boss, /## Pull requests\n/);
     assert.match(boss, /gh pr view <n> --json body/);
