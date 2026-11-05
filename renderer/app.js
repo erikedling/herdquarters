@@ -624,7 +624,7 @@ function renderReception(floors) {
         <button class="ticket slack ${t.state}" data-tab="${escapeHtml(o.slug)}" data-slack="${escapeHtml(o.slug)}" style="--orch:${escapeHtml(o.color)}">
           <span class="ticket-state">${t.state === 'reminder' ? 'still waiting' : 'Slack'} <i class="ticket-orch"></i>${escapeHtml(o.name)}</span>
           <span class="ticket-title">${escapeHtml(t.newest.author ? `${t.newest.author}: ${t.newest.title || ''}` : t.newest.title || 'Someone is waiting on you')}</span>
-          <span class="ticket-where">${t.count} waiting on you in Slack · open to reply or dismiss</span>
+          <span class="ticket-where">${t.count} in Slack · open to dismiss or reply</span>
         </button>`;
   const slackHot = slack.filter((x) => x.t.state !== 'quiet').map(slackTicketHTML).join('');
   const slackQuiet = slack.filter((x) => x.t.state === 'quiet').map(slackTicketHTML).join('');

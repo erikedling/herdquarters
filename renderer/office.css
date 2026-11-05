@@ -189,6 +189,7 @@ body.layout-office .floor.boss .floor-label::before { display: none; }
 body.layout-office .floor.boss .floor-name { flex: 0 1 auto; min-width: 80px; }
 body.layout-office .boss-wall { flex: 1 1 0; min-width: 170px; max-width: 360px; margin-left: 4px; gap: 2px; }
 body.layout-office .floor.boss .slack-sign { margin: 0; padding-block: 2px; }
+body.layout-office .floor.boss .wb-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 body.layout-office .floor.boss .whiteboard {
   margin: 0; align-self: flex-start; font-family: var(--round);
   background: var(--paper); color: var(--ink); border: 3px solid #9aa3bd; border-radius: 10px; box-shadow: 0 3px 0 rgba(43, 45, 66, .15);
