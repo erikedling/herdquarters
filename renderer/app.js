@@ -356,7 +356,7 @@ function renderBuilding(floors) {
     const n = floor.rooms.reduce((acc, r) => acc + r.desks.filter((d) => d.pose !== 'empty').length, 0);
     const c = floor.closed?.length || 0;
     const labelHTML = floor.isBoss
-      ? `<span class="floor-name">${escapeHtml(floor.name)}</span>${whiteboardHTML(floor.orchestrator)}${slackSignHTML(floor.orchestrator)}`
+      ? `<span class="floor-name" title="${escapeHtml(floor.name)}">${escapeHtml(floor.name)}</span><div class="boss-wall">${whiteboardHTML(floor.orchestrator)}${slackSignHTML(floor.orchestrator)}</div>`
       : `<span class="floor-name">${escapeHtml(floor.name)}</span><span class="floor-count">${n} ${n === 1 ? 'agent' : 'agents'}</span>`
       + (floor.canManage ? `<div class="floor-actions">
           <button class="btn small floor-add" title="Create a new worktree on ${escapeHtml(floor.name)}">+ worktree</button>
@@ -624,7 +624,7 @@ function renderReception(floors) {
         <button class="ticket slack ${t.state}" data-tab="${escapeHtml(o.slug)}" data-slack="${escapeHtml(o.slug)}" style="--orch:${escapeHtml(o.color)}">
           <span class="ticket-state">${t.state === 'reminder' ? 'still waiting' : 'Slack'} <i class="ticket-orch"></i>${escapeHtml(o.name)}</span>
           <span class="ticket-title">${escapeHtml(t.newest.author ? `${t.newest.author}: ${t.newest.title || ''}` : t.newest.title || 'Someone is waiting on you')}</span>
-          <span class="ticket-where">${t.count} waiting on you in Slack</span>
+          <span class="ticket-where">${t.count} waiting on you in Slack · open to reply or dismiss</span>
         </button>`;
   const slackHot = slack.filter((x) => x.t.state !== 'quiet').map(slackTicketHTML).join('');
   const slackQuiet = slack.filter((x) => x.t.state === 'quiet').map(slackTicketHTML).join('');

@@ -141,6 +141,22 @@ test('slackTicket(): new until the user looks, quiet after, and back once a day'
   assert.strictEqual(slackTicket({ ...boss, slack: { waiting: [{ file: 'x.md', status: 'open', at: T - 1000 }], seen_at: new Date(T - 5000).toISOString() } }, T).state, 'new');
 });
 
+test('slackOnlyWaiting(): the Slack count when nothing else waits, else 0', () => {
+  const { slackOnlyWaiting } = require('../renderer/view');
+  const slack = { waiting: [msg('a.md', '2026-10-28T10:00:00Z'), msg('b.md', '2026-10-28T11:00:00Z')] };
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack }, [], T), 2);
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack: { waiting: [slack.waiting[0]] } }, [{ pose: 'idle' }], T), 1);
+  // a question or a stuck worker waits too
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack, board: { questions: ['?'] } }, [], T), 0);
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack }, [{ pose: 'blocked' }], T), 0);
+  // a boss relaying a worker's question is counted on the board, not the desk
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack }, [{ pose: 'blocked', escalated: true }], T), 2);
+  // quiet messages do not wait, and nothing in Slack is nothing
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack: { ...slack, seen_at: '2026-10-28T11:30:00Z' } }, [], T), 0);
+  assert.strictEqual(slackOnlyWaiting({ ...boss, slack: { ...slack, seen_at: '2026-10-28T11:30:00Z' } }, [], T + DAY), 2);
+  assert.strictEqual(slackOnlyWaiting({ ...boss }, [], T), 0);
+});
+
 // ---- ticket cards in the top bar ----
 const { ticketCard } = require('../renderer/view');
 const tasks = (done, open) => [...Array(done).fill({ done: true }), ...Array(open).fill({ done: false })];

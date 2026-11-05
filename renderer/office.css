@@ -185,8 +185,12 @@ body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinit
 body.layout-office .floor.boss { border-color: var(--orch); }
 body.layout-office .floor.boss .floor-label { border-bottom-color: var(--orch); }
 body.layout-office .floor.boss .floor-label::before { display: none; }
+/* whiteboard and Slack sign in a column; basis 0 keeps the name whole until the column is at its minimum */
+body.layout-office .floor.boss .floor-name { flex: 0 1 auto; min-width: 80px; }
+body.layout-office .boss-wall { flex: 1 1 0; min-width: 170px; max-width: 360px; margin-left: 4px; gap: 2px; }
+body.layout-office .floor.boss .slack-sign { margin: 0; padding-block: 2px; }
 body.layout-office .floor.boss .whiteboard {
-  margin: 0 0 0 4px; min-width: 200px; max-width: 360px; font-family: var(--round);
+  margin: 0; align-self: flex-start; font-family: var(--round);
   background: var(--paper); color: var(--ink); border: 3px solid #9aa3bd; border-radius: 10px; box-shadow: 0 3px 0 rgba(43, 45, 66, .15);
 }
 body.layout-office .room.boss { background: #fff1c9; border: 3px solid var(--orch); }
