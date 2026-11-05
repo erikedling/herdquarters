@@ -217,7 +217,10 @@
       <button class="icon-btn chat-close" title="Close (Esc)">✕</button>
     </header>
     <div class="chat-log"></div>
+    <div class="chat-attach" hidden></div>
     <form class="chat-form">
+      <button class="icon-btn chat-pick" type="button" title="Add a screenshot or image (or paste or drop one)" aria-label="Add an image">📎</button>
+      <input class="chat-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
       <textarea rows="2" placeholder="Ask anything, or “remind me to…”" spellcheck="true"></textarea>
       <button class="btn primary" type="submit">Send</button>
     </form>

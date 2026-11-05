@@ -78,7 +78,8 @@ and Slack need from you, so you don't have to:
 - a **memory** of your projects in plain markdown files, tidied up while it
   sleeps
 
-Click the bird to chat. It flies over to a ticket that needs you, celebrates
+Click the bird to chat, and paste or drop a screenshot in when words aren't
+enough. It flies over to a ticket that needs you, celebrates
 when one is done, and naps at night. Don't like the name? Call it whatever
 you want in **Settings → PiPi**.
 

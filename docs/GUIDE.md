@@ -308,6 +308,11 @@ so it knows what to link. The bird button on reception's menu bar opens the chat
 too. Its badge shows how many answers you haven't read, or **!** when a
 reminder is due or the brief is ready.
 
+You can send it screenshots and other images: paste one into the chat (⌘V),
+drop it on the chat, or pick it with 📎. Up to four go with a message, and
+big ones are scaled down first. The last 40 are kept in `chat-images/` in its
+folder, so they still show in the chat after a restart.
+
 The first time, it gets to know you. On its days (settings, Monday to Friday
 by default) from the morning time (08:30 by default) it gives a brief: what
 waits on you across every orchestrator and in Slack, today's meetings
