@@ -22,7 +22,7 @@
   let unread = null;
   try { unread = JSON.parse(localStorage.getItem(UNREAD_KEY) || 'null'); } catch { /* none */ }
   function setUnread(u) { unread = u; try { localStorage.setItem(UNREAD_KEY, JSON.stringify(u)); } catch { /* ignore */ } }
-  let visit = null;          // a ticket card the bird went to: { slug, until, text }
+  let visit = null;          // a ticket card the bird went to: { slug, until, text, slack }
   const visited = new Map(); // slug -> when the bird last went to tell about it
   let history = false;       // the chat log has been loaded
   let hovering = false;      // the mouse is on the bird or its bubble
@@ -84,10 +84,13 @@
   function nextVisit() {
     const now = Date.now();
     for (const o of orchestrators) {
-      const n = window.officeView.waitingCount(o, desks.filter((d) => d.orch?.slug === o.slug));
+      const mine = desks.filter((d) => d.orch?.slug === o.slug);
+      const n = window.officeView.waitingCount(o, mine);
       if (!n || now - (visited.get(o.slug) || 0) < 20 * 60_000) continue;
       visited.set(o.slug, now);
-      return { slug: o.slug, until: now + 45_000, text: `${n} ${n === 1 ? 'thing' : 'things'} waiting on you in <b>${esc(o.name)}</b>` };
+      const slack = window.officeView.slackOnlyWaiting(o, mine);
+      const what = slack ? `${slack} Slack ${slack === 1 ? 'message' : 'messages'}` : `${n} ${n === 1 ? 'thing' : 'things'}`;
+      return { slug: o.slug, until: now + 45_000, slack: slack > 0, text: `${what} waiting on you in <b>${esc(o.name)}</b>` };
     }
     return null;
   }
@@ -143,7 +146,13 @@
   $bubble.addEventListener('click', async (e) => {
     const $done = e.target.closest('.bb-done');
     if ($done) { $done.closest('.bb-reminder').remove(); await window.office.assistant.dismiss({ file: $done.dataset.file }); return; }
-    if (visit && !state.due.length && !state.morning) { window.officeTabs?.setActive(visit.slug); visit = null; update(); return; }
+    if (visit && !state.due.length && !state.morning) {
+      const { slug, slack } = visit;
+      window.officeTabs?.setActive(slug);
+      visit = null; update();
+      if (slack) window.officeSlack.open(slug);
+      return;
+    }
     openChat();
   });
 

@@ -164,6 +164,14 @@
     return (o.board?.questions?.length || 0) + desks.filter((d) => d.pose === 'blocked' && !d.escalated).length + (slack && slack.state !== 'quiet' ? slack.count : 0);
   }
 
+  // How many new Slack messages wait on the user when nothing else does (no
+  // questions, no stuck workers), else 0.
+  function slackOnlyWaiting(o, desks, now = Date.now()) {
+    const slack = slackTicket(o, now);
+    if (!slack || slack.state === 'quiet') return 0;
+    return waitingCount(o, desks, now) === slack.count ? slack.count : 0;
+  }
+
   // An orchestrator's card in the top bar. desks: the orchestrator's desks.
   // state: what the team is doing (working / idle / done); done/total: the
   // board's tasks. flag: what waits on the user (the boss's questions, stuck
@@ -193,6 +201,6 @@
     return { slugs, seen: next };
   }
 
-  const api = { justFinished, ticketCard, waitingCount, officeFloors, orchestratorFloors, needsAttention, workerPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, SEATS };
+  const api = { justFinished, ticketCard, waitingCount, slackOnlyWaiting, officeFloors, orchestratorFloors, needsAttention, workerPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, SEATS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.officeView = api;
 })();
