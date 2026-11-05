@@ -98,6 +98,8 @@
           ${isCollapsed ? '' : rooms + closed}
         </div>`;
     }).join('') + '<div class="sb-row sb-add-repo" data-add-repo="1"><i class="sb-sq faint"></i><span class="sb-name muted">+ repo</span></div>';
+    // The tree is rebuilt on every refresh, which restarts its animations; pin the pulse to the page clock so it never jumps.
+    for (const a of $tree.getAnimations({ subtree: true })) if (a.animationName === 'sb-dot-pulse') a.startTime = 0;
   }
 
   $tree?.addEventListener('click', (e) => {

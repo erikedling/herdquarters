@@ -138,7 +138,10 @@ body.sidebar-resizing .termpanel, body.sidebar-resizing .building { pointer-even
 .sb-room.linked .sb-sq { background: var(--idle-dim); }
 .sb-sq.faint { background: var(--line); }
 .sb-dot { flex: none; width: 8px; height: 8px; background: var(--line); }
-.sb-pane.pose-working .sb-dot { background: var(--working); }
+.sb-pane.pose-working .sb-dot { background: var(--working); animation: sb-dot-pulse 2s ease-in-out infinite; }
+/* A soft fade, not steps: blocked and alert blink hard because they need you, working should not. */
+@keyframes sb-dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .sb-pane.pose-working .sb-dot { animation: none; } }
 .sb-pane.pose-blocked .sb-dot { background: var(--blocked); animation: blink 1s steps(1) infinite; }
 .sb-pane.pose-done .sb-dot { background: var(--done); }
 .sb-pane.pose-idle .sb-dot { background: var(--idle); }
