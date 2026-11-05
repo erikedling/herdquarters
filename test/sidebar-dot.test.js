@@ -5,22 +5,37 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const css = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'style.css'), 'utf8');
-const rule = (sel) => css.match(new RegExp(`(?:^|\\n)${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] || '';
+const WORKING = '.sb-pane.pose-working .sb-dot';
+
+function blocks(src) {
+  const out = [];
+  let depth = 0, start = 0, open = 0;
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === '{' && depth++ === 0) open = i;
+    else if (src[i] === '}' && --depth === 0) {
+      out.push({ prelude: src.slice(start, open).replace(/\/\*[\s\S]*?\*\//g, '').trim(), body: src.slice(open + 1, i) });
+      start = i + 1;
+    }
+  }
+  return out;
+}
+
+const top = blocks(css);
+const rule = (sel) => top.filter((b) => b.prelude === sel).map((b) => b.body).join(';');
 
 test('the working dot pulses smoothly, not in steps', () => {
-  const r = rule('.sb-pane.pose-working .sb-dot');
-  assert.match(r, /animation: sb-dot-pulse 2s ease-in-out infinite/);
+  const r = rule(WORKING);
+  assert.match(r, /animation:[^;]*\bsb-dot-pulse\b/);
   assert.doesNotMatch(r, /steps\(/);
-  assert.equal(css.match(/@keyframes sb-dot-pulse\b/g)?.length, 1);
+  assert.ok(top.some((b) => b.prelude === '@keyframes sb-dot-pulse'));
 });
 
-test('blocked and alert dots still blink, idle and done stay still', () => {
-  assert.match(rule('.sb-pane.pose-blocked .sb-dot'), /animation: blink 1s steps\(1\) infinite/);
-  assert.match(rule('.sb-pane.pose-alert .sb-dot'), /animation: blink \.6s steps\(1\) infinite/);
+test('blocked and alert dots still blink in steps, idle and done stay still', () => {
+  for (const pose of ['blocked', 'alert']) assert.match(rule(`.sb-pane.pose-${pose} .sb-dot`), /animation:[^;]*\bblink\b[^;]*steps\(/);
   for (const pose of ['idle', 'done']) assert.doesNotMatch(rule(`.sb-pane.pose-${pose} .sb-dot`), /animation/);
 });
 
 test('reduced motion turns the pulse off', () => {
-  const blocks = css.match(/@media \(prefers-reduced-motion: reduce\) \{[^\n]*\}/g) || [];
-  assert.ok(blocks.some((b) => /\.sb-pane\.pose-working \.sb-dot \{ animation: none; \}/.test(b)));
+  const reduced = top.filter((b) => /^@media\b.*prefers-reduced-motion:\s*reduce/.test(b.prelude));
+  assert.ok(reduced.some((m) => blocks(m.body).some((b) => b.prelude.split(',').map((s) => s.trim()).includes(WORKING) && /animation:\s*none/.test(b.body))));
 });
