@@ -41,7 +41,13 @@ function parseLine(line) {
   return [];
 }
 
-const userLine = (text) => JSON.stringify({ type: 'user', message: { role: 'user', content: text } }) + '\n';
+// images: [{ mediaType, data }] (base64), sent as image blocks before the text.
+function userLine(text, images = []) {
+  if (!images.length) return JSON.stringify({ type: 'user', message: { role: 'user', content: text } }) + '\n';
+  const content = images.map((i) => ({ type: 'image', source: { type: 'base64', media_type: i.mediaType, data: i.data } }));
+  if (text) content.push({ type: 'text', text });
+  return JSON.stringify({ type: 'user', message: { role: 'user', content } }) + '\n';
+}
 
 class AssistantSession extends EventEmitter {
   // addDirs: folders outside dir it may list and read (the orchestrators).
@@ -88,10 +94,10 @@ class AssistantSession extends EventEmitter {
     });
   }
 
-  send(text) {
+  send(text, images = []) {
     if (!this.proc) throw new Error('The assistant is not running');
     this.busy = true;
-    this.proc.stdin.write(userLine(text));
+    this.proc.stdin.write(userLine(text, images));
   }
 
   stop() {

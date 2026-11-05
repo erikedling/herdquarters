@@ -40,7 +40,7 @@
     return out.sort((a, b) => (a.pose === b.pose ? b.seq - a.seq : a.pose === 'blocked' ? -1 : 1));
   }
 
-  // A boss's worker reports to the boss, not to the user: when it finishes it
+  // A boss's worker (and its QA reviewer) reports to the boss, not to the user: when it finishes it
   // sits idle instead of waving. A permission prompt still needs the user,
   // since only the worker's terminal can answer it.
   function workerPose(pose) { return pose === 'done' ? 'idle' : pose; }

@@ -53,12 +53,12 @@ scenes into `docs/images/` for the README, as looping animated PNGs
   that workspace).
 - Hover a desk and press **✕** to close it. An idle shell closes at once; a
   shell with something running, or an agent, asks first.
-- Hover an empty desk and press **✦** to start an agent there: Claude or
-  Pi (`herdr agent start --kind claude|pi`). Once herdr detects it, the desk
+- Hover an empty desk and press **✦** to start an agent there: Claude,
+  Pi or Codex (`herdr agent start --kind claude|pi|codex`). Once herdr detects it, the desk
   gets a person.
 - In the panel, **Shift+Enter** and **Option+Enter** insert a newline in
   Claude Code instead of sending (the desk summary is tuned for Claude Code's
-  screen too; for Pi it shows the last lines).
+  screen too; for Pi and Codex it shows the last lines).
 
 ## Sidebar
 
@@ -83,7 +83,7 @@ Drag its right edge to resize it; double-click the edge to reset the width.
 
 Right-click a row in the sidebar, or a desk, pod sign or wall in the scene:
 
-- **Pane**: Open, Open folder in editor, Rename…, Start Claude here / Start Pi here (shells), Close.
+- **Pane**: Open, Open folder in editor, Rename…, Start Claude here / Start Pi here / Start Codex here (shells), Close.
 - **Checkout**: Open in editor, New terminal, New worktree…, Close room (a main checkout
   says Close repo: it leaves the office, the checkout stays on disk), and for
   linked worktrees Remove worktree from disk.
@@ -102,29 +102,58 @@ orchestrator. An orchestrator's card shows its full name, what the team is
 doing (working, idle, done) and a progress bar of the board's tasks. A flag on
 its top border says what waits on you ("1 question for you", "3 waiting on
 you") or that a deploy alert is open. Give it a name, the root folder that holds your repos, a
-worktree branch name, optionally a base, and the agent: Claude Code or Pi
+worktree branch name, optionally a base, and the agent: Claude Code, Pi or Codex
 (remembered for the next one). Rename one later with ✎ on its card (or
 double-click the card); its slug, folder and branch stay. The app creates a herdr workspace
 for the boss (its folder holds the brief, `BOARD.md` and
 `orchestrator.json` under the app's data directory), marks that folder as
-trusted (a new folder would otherwise stop the boss at the trust prompt),
+trusted for Claude/Pi (Codex keeps its own trust/approval prompts),
 starts the boss and opens its terminal: you
 give it the task there, images included. Nothing else is opened.
 
-**Claude or Pi.** `orchestrator.json` has `"agent": "claude"` or `"pi"`
+**Claude, Pi or Codex.** `orchestrator.json` has `"agent": "claude"`, `"pi"` or `"codex"`
 (missing means claude, so older orchestrators keep running Claude). The boss,
 its workers, QA and ops all start with that kind; the tab's tooltip shows it.
 Per kind:
 
-| | Claude Code | Pi |
-|---|---|---|
-| brief (boss, `qa/`, `ops/`) | `CLAUDE.md` | `AGENTS.md` |
-| `orchestrate` skill | `.claude/skills/` | `.pi/skills/` |
-| folder trust | `projects[<folder>].hasTrustDialogAccepted` in `~/.claude.json` | `<folder>: true` in `~/.pi/agent/trust.json` |
-| restore | `claude --resume <id>` / `--continue` | `pi --session <session file>` / `--continue` |
+| | Claude Code | Pi | Codex CLI |
+|---|---|---|---|
+| brief (boss, `qa/`, `ops/`) | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` |
+| `orchestrate` skill | `.claude/skills/` | `.pi/skills/` | `.agents/skills/` |
+| folder trust | `projects[<folder>].hasTrustDialogAccepted` in `~/.claude.json` | `<folder>: true` in `~/.pi/agent/trust.json` | Native interactive prompts; global config is not rewritten |
+| restore | `claude --resume <id>` / `--continue` | `pi --session <session file>` / `--continue` | `codex resume <id>` / `resume --last` |
 
 herdr reports a Pi session as the path of its `.jsonl` file under
 `~/.pi/agent/sessions/`; that path is what Restore reopens.
+
+Codex uses its native interactive CLI, [AGENTS.md](https://developers.openai.com/codex/guides/agents-md)
+briefs and [skills](https://developers.openai.com/codex/skills), not Claude's
+headless protocol. Install and sign in to Codex before starting it. Accept any
+first-run, folder trust or permission prompts in its embedded terminal (including
+worker, QA and ops terminals). If startup times out while a prompt is open,
+complete that prompt in the existing terminal rather than launch another agent.
+Codex boss startup and restore include
+`--sandbox workspace-write --add-dir <configured repository root>`
+(the `root` in `orchestrator.json`), so a boss in its data folder can clone and
+create worktrees under that root. Generated worker, QA and ops launch commands
+carry the same sandbox and extra writable root; paths with spaces are kept as one
+argument. The explicit sandbox is required because read-only permissions reject
+`--add-dir`, which can otherwise prevent startup in a new data folder.
+Standalone shell-desk starts have no configured repository root and do not add
+one. This does not grant access to inbox/helper folders or worktrees outside
+that root: those may still need separate native permission approval.
+Herdquarters does not bypass Codex's sandbox or change its global configuration.
+
+Restore passes the session id recorded by herdr to `codex resume <id>`. If the
+session has been deleted, Codex reports that error; no unrelated session is
+silently substituted. For older archives without an id, `resume --last` uses
+Codex's cwd-filtered lookup and starts fresh when none exists. The app cannot
+distinguish those two outcomes from herdr's readiness response. This avoids
+depending on Codex's private session-storage layout.
+
+The assistant and Slack watcher are fixed-provider Claude services even for
+Codex/Pi orchestrators. They still require Claude Code (and the watcher's Claude
+Slack connector); selecting Codex does not migrate them.
 
 **Boss instructions** (settings) is a free-text box whose contents go into
 every boss's brief as a "Standing instructions from the user" section, for
@@ -256,8 +285,8 @@ notice, right-click **+**, or use the link in the new-orchestrator dialog. The
 list shows each one's branch, when and why it ended and its task count. Restore
 moves the folder back, gives the boss a new workspace and reopens its last
 conversation there (`claude --resume` with the session id recorded while it
-ran, `pi --session` with the recorded session file, or `--continue` for older
-archives); with no saved conversation it starts
+ran, `pi --session` with the recorded session file, `codex resume` with its
+recorded id, or the kind's continue/last option for older archives); with no saved conversation it starts
 a fresh boss, which picks up from the board and inbox. The brief is rewritten
 with the current settings. Workers are not restarted: the boss reopens the
 worktrees it needs. An orchestrator cannot be restored while one with the same
@@ -278,6 +307,11 @@ office keeps `OFFICE.md` in its folder up to date with every ticket and desk
 so it knows what to link. The bird button on reception's menu bar opens the chat
 too. Its badge shows how many answers you haven't read, or **!** when a
 reminder is due or the brief is ready.
+
+You can send it screenshots and other images: paste one into the chat (⌘V),
+drop it on the chat, or pick it with 📎. Up to four go with a message, and
+big ones are scaled down first. The last 40 are kept in `chat-images/` in its
+folder, so they still show in the chat after a restart.
 
 The first time, it gets to know you. On its days (settings, Monday to Friday
 by default) from the morning time (08:30 by default) it gives a brief: what

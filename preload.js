@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('office', {
     dismiss: (args) => ipcRenderer.invoke('assistant-dismiss', args),
     seen: () => ipcRenderer.invoke('assistant-seen'),
     history: () => ipcRenderer.invoke('assistant-history'),
-    send: (text) => ipcRenderer.invoke('assistant-send', text),
+    send: (text, images) => ipcRenderer.invoke('assistant-send', text, images),
     office: (markdown) => ipcRenderer.invoke('assistant-office', markdown),
     onState: (cb) => ipcRenderer.on('assistant', (_e, state) => cb(state)),
     onChat: (cb) => ipcRenderer.on('assistant-chat', (_e, ev) => cb(ev)),

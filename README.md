@@ -13,8 +13,8 @@ waiting on you and who's done. A little bird called PiPi, your assistant,
 makes sure you never forget what anyone is waiting for.
 
 It's a desktop app built on [herdr](https://herdr.dev), the agent multiplexer
-for your terminal, and works with [Claude Code](https://claude.com/claude-code)
-and [Pi](https://github.com/badlogic/pi-mono).
+for your terminal, and works with [Claude Code](https://claude.com/claude-code),
+[Pi](https://github.com/badlogic/pi-mono) and [Codex CLI](https://developers.openai.com/codex/cli).
 
 <img src="docs/images/app.png" alt="The Herdquarters window in the Toybox style: tabs at the top, a deploy alert, and an office with a floor per repo, each with its own walls and rugs, the boss's team at their desks and a dart board on the wall" width="720">
 
@@ -78,7 +78,8 @@ and Slack need from you, so you don't have to:
 - a **memory** of your projects in plain markdown files, tidied up while it
   sleeps
 
-Click the bird to chat. It flies over to a ticket that needs you, celebrates
+Click the bird to chat, and paste or drop a screenshot in when words aren't
+enough. It flies over to a ticket that needs you, celebrates
 when one is done, and naps at night. Don't like the name? Call it whatever
 you want in **Settings → PiPi**.
 
@@ -107,8 +108,9 @@ You need:
 - macOS (Linux and Windows are untested)
 - [Node.js](https://nodejs.org) 22.12 or newer
 - [herdr](https://herdr.dev)
-- [Claude Code](https://claude.com/claude-code) or [Pi](https://github.com/badlogic/pi-mono),
-  signed in (the assistant runs on Claude Code)
+- [Claude Code](https://claude.com/claude-code), [Pi](https://github.com/badlogic/pi-mono)
+  or [Codex CLI](https://developers.openai.com/codex/cli), signed in
+  (the assistant and Slack watcher still require Claude Code)
 - [`gh`](https://cli.github.com) for PRs and deploy watching (optional)
 
 ```sh

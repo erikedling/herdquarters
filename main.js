@@ -351,12 +351,15 @@ ipcMain.handle('notes-remove', (_e, { file }) => notesCall((n) => { n.remove(fil
 ipcMain.handle('assistant-seen', () => assistantCall((a) => a.markMorningSeen()));
 ipcMain.handle('assistant-history', () => (process.env.OFFICE_FIXTURE ? require('./fixture').assistantChat() : ensureAssistant().chat()));
 ipcMain.handle('assistant-office', (_e, markdown) => assistantCall((a) => a.writeOffice(markdown)));
-ipcMain.handle('assistant-send', (_e, text) => assistantCall((a) => {
+// images: [{ mediaType, data }] (base64) the user pasted, dropped or picked.
+ipcMain.handle('assistant-send', (_e, text, images) => assistantCall((a) => {
   const t = String(text || '').trim();
-  if (!t) return;
-  a.appendChat({ role: 'user', text: t });
+  const imgs = Array.isArray(images) ? images : [];
+  if (!t && !imgs.length) return;
+  const files = a.saveImages(imgs);
+  a.appendChat({ role: 'user', text: t, ...(files.length ? { images: files } : {}) });
   if (!session.running) { a.prepare(); session.start(a.readState().session_id || null); a.tick({ started_at: Date.now() }); }
-  session.send(t);
+  session.send(t, imgs);
 }));
 
 // Turning it back on allows another try right away.

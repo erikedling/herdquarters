@@ -48,7 +48,7 @@ Decide from the task which repos are involved. For each one, once:
 
    ```bash
    herdr pane list --workspace <workspace_id>        # take result.panes[0].pane_id
-   herdr agent start <worker agent name from the table> --kind {{agent_kind}} --pane <pane_id>
+   herdr agent start <worker agent name from the table> --kind {{agent_kind}} --pane <pane_id>{{agent_args}}
    ```
 
    Wait a moment for the shell prompt if `agent start` says the pane is not
@@ -245,7 +245,7 @@ office sends "Run the QA review now"):
 1. Give the reviewer a desk in your own room: `herdr tab create --workspace
    <your workspace id> --cwd {{qa_folder}} --no-focus` (your workspace id
    comes from `herdr pane current`), then `herdr agent start {{qa_agent}}
-   --kind {{agent_kind}} --pane <the new pane id>`. Wait a moment for the shell
+   --kind {{agent_kind}} --pane <the new pane id>{{agent_args}}`. Wait a moment for the shell
    prompt if `agent start` says the pane is not a shell. If the reviewer is
    still there from an earlier round (`herdr agent get {{qa_agent}}`), reuse
    it.
@@ -272,7 +272,7 @@ fine"), do not do it yourself and do not give it to a worker:
 
 1. Give it a desk in your own room, as for the QA reviewer: `herdr tab create
    --workspace <your workspace id> --cwd {{ops_folder}} --no-focus`, then
-   `herdr agent start {{ops_agent}} --kind {{agent_kind}} --pane <the new pane id>`.
+   `herdr agent start {{ops_agent}} --kind {{agent_kind}} --pane <the new pane id>{{agent_args}}`.
    Reuse it if it is still there (`herdr agent get {{ops_agent}}`).
 2. Prompt it with what to watch: repo and worktree path, PR / commit /
    branch, environment (prod unless the user said otherwise), how long (30

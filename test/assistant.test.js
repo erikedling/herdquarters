@@ -214,3 +214,31 @@ test('view(): a day off has no brief to show, but due reminders still fire', () 
   assert.strictEqual(store.view(idle, SAT_9).morning, true);
   assert.deepStrictEqual(store.configure({ days: 'junk' }).days, [1, 2, 3, 4, 5]);
 });
+
+test('a message with images: image blocks first, then the text', () => {
+  const png = { mediaType: 'image/png', data: 'aGk=' };
+  assert.deepStrictEqual(JSON.parse(userLine('what is this?', [png])).message.content, [
+    { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'aGk=' } },
+    { type: 'text', text: 'what is this?' },
+  ]);
+  // an image alone has no empty text block
+  assert.deepStrictEqual(JSON.parse(userLine('', [png])).message.content.map((b) => b.type), ['image']);
+});
+
+test('chat images: saved next to the chat, shown as data URLs, checked and pruned', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'assistant-'));
+  const store = new AssistantStore({ dir, orchestratorsDir: '/o', template: '', claudeConfig: path.join(dir, 'claude.json') });
+  const data = Buffer.from('png bytes').toString('base64');
+  const files = store.saveImages([{ mediaType: 'image/png', data }, { mediaType: 'image/jpeg', data }], 1000);
+  assert.deepStrictEqual(files, ['1000-0.png', '1000-1.jpg']);
+  store.appendChat({ role: 'user', text: 'look', images: [...files, 'gone.png'] });
+  assert.deepStrictEqual(store.chat()[0].images, [`data:image/png;base64,${data}`, `data:image/jpeg;base64,${data}`]);
+  assert.throws(() => store.saveImages([{ mediaType: 'image/svg+xml', data }]), /PNG, JPEG/);
+  assert.throws(() => store.saveImages(Array(5).fill({ mediaType: 'image/png', data })), /At most 4/);
+  assert.throws(() => store.saveImages([{ mediaType: 'image/png', data: '' }]), /empty/);
+  assert.strictEqual(store.imageURL('../assistant.json'), null);
+  for (let t = 2000; t < 2045; t++) store.saveImages([{ mediaType: 'image/png', data }], t);
+  const kept = fs.readdirSync(path.join(dir, 'chat-images'));
+  assert.strictEqual(kept.length, 40);
+  assert.ok(!kept.includes('1000-0.png') && kept.includes('2044-0.png'));
+});

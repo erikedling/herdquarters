@@ -258,6 +258,8 @@ function annotateOrchestrators(floors) {
           // The boss's own pane is the boss; any other agent in its room is the QA reviewer or the ops agent it opened.
           d.role = d.id === boss.boss?.pane_id ? 'boss' : window.officeView.helperRole(d, boss);
           d.orch = { slug: boss.slug, color: boss.color, name: boss.name };
+          // The QA reviewer reports to the boss, like a worker: no done ticket in reception.
+          if (d.role === 'qa') d.pose = window.officeView.workerPose(d.pose);
           // Questions on the board are waiting on the user: the boss puts a hand up.
           if (d.role === 'boss' && boss.board?.questions?.length && d.pose !== 'blocked') { d.pose = 'blocked'; d.escalated = true; }
           // An open alert: the ops agent stands at its desk with a red !, whatever it is doing.
@@ -415,7 +417,7 @@ function renderBuilding(floors) {
           $desk.dataset.character = String(desk.character);
           $desk.dataset.layout = layout;
           $desk.dataset.role = roleKey;
-          $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude or Pi) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
+          $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude, Pi or Codex) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
             + `${deskSVG(desk)}<div class="nameplate"><i class="chip"></i><span class="nameplate-text"></span></div>`;
         }
         $desk.querySelector('.nameplate-text').textContent = desk.seat ? `${desk.title} · free desk` : desk.pose === 'empty' ? (desk.label || 'terminal') : desk.pose === 'away' ? `at the boss · ${desk.title}` : desk.title;
@@ -735,7 +737,7 @@ async function closeDesk(desk) {
 
 // The agents a shell desk can start (herdr's --kind). kind: one of them, or
 // null to let the user pick in the dialog.
-const AGENT_KINDS = { claude: 'Claude', pi: 'Pi' };
+const AGENT_KINDS = { claude: 'Claude', pi: 'Pi', codex: 'Codex' };
 async function hireAgent(desk, kind = null) {
   const choice = Object.entries(AGENT_KINDS)
     .map(([k, label], i) => `<label class="check"><input type="radio" name="hire-kind" value="${k}" ${i === 0 ? 'checked' : ''}> ${label} <code>${k}</code></label>`).join('');

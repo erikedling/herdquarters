@@ -16,6 +16,12 @@ const BOOT_MS = 60_000;           // a session that just started (or crashed) ge
 const QUIET_MS = 30 * 60_000;     // dream only after this long without work
 const DREAM_EVERY_MS = 20 * 3600_000;
 const CHAT_KEEP = 400;            // lines of chat.jsonl kept when it is trimmed
+// Images the user sends in the chat: what Claude reads, at most this many per
+// message and this big each (the API's limit is 5 MB), and how many are kept.
+const IMAGE_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' };
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const IMAGES_KEEP = 40;
 const DEFAULTS = { enabled: true, morning: '08:30', name: 'PiPi', days: [1, 2, 3, 4, 5] };
 
 // What the user calls the assistant: one line, at most 24 characters, PiPi
@@ -173,18 +179,50 @@ class AssistantStore {
 
   // ---- the chat window ----
 
-  // entry: { role: 'user' | 'assistant' | 'note', text }. Trimmed to the last
-  // CHAT_KEEP lines now and then, so the file never grows without end.
+  // entry: { role: 'user' | 'assistant' | 'note', text, images? (file names
+  // from saveImages) }. Trimmed to the last CHAT_KEEP lines now and then, so
+  // the file never grows without end.
   appendChat(entry, now = Date.now()) {
     fs.mkdirSync(this.dir, { recursive: true });
     const p = this.file('chat.jsonl');
     fs.appendFileSync(p, JSON.stringify({ ...entry, at: now }) + '\n');
     if (fs.statSync(p).size > 512 * 1024) fs.writeFileSync(p, fs.readFileSync(p, 'utf8').trim().split('\n').slice(-CHAT_KEEP).join('\n') + '\n');
   }
+  // The chat for the window, images as data URLs (a pruned one is left out).
   chat(limit = 200) {
     let raw = '';
     try { raw = fs.readFileSync(this.file('chat.jsonl'), 'utf8'); } catch { return []; }
-    return raw.trim().split('\n').slice(-limit).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } });
+    return raw.trim().split('\n').slice(-limit).flatMap((l) => { try { return [JSON.parse(l)]; } catch { return []; } })
+      .map((e) => (e.images ? { ...e, images: e.images.map((n) => this.imageURL(n)).filter(Boolean) } : e));
+  }
+
+  // images: [{ mediaType, data (base64) }] from the chat window. Checks them,
+  // saves them under chat-images/ and returns their file names; the oldest
+  // beyond IMAGES_KEEP are deleted.
+  saveImages(images, now = Date.now()) {
+    const list = Array.isArray(images) ? images : [];
+    if (list.length > MAX_IMAGES) throw new Error(`At most ${MAX_IMAGES} images per message`);
+    const files = list.map((img, i) => {
+      const ext = IMAGE_TYPES[img?.mediaType];
+      if (!ext || typeof img.data !== 'string') throw new Error('Only PNG, JPEG, GIF and WebP images can be sent');
+      const bytes = Buffer.from(img.data, 'base64');
+      if (!bytes.length) throw new Error('The image is empty');
+      if (bytes.length > MAX_IMAGE_BYTES) throw new Error('The image is too big (5 MB at most)');
+      return { name: `${now}-${i}.${ext}`, bytes };
+    });
+    if (!files.length) return [];
+    const dir = this.file('chat-images');
+    fs.mkdirSync(dir, { recursive: true });
+    for (const f of files) fs.writeFileSync(path.join(dir, f.name), f.bytes);
+    const all = fs.readdirSync(dir).sort((a, b) => parseInt(a, 10) - parseInt(b, 10) || a.localeCompare(b));
+    for (const old of all.slice(0, Math.max(0, all.length - IMAGES_KEEP))) fs.rmSync(path.join(dir, old), { force: true });
+    return files.map((f) => f.name);
+  }
+  imageURL(name) {
+    const ext = path.extname(String(name)).slice(1);
+    const type = Object.keys(IMAGE_TYPES).find((t) => IMAGE_TYPES[t] === ext);
+    if (!type || path.basename(String(name)) !== name) return null;
+    try { return `data:${type};base64,${fs.readFileSync(this.file('chat-images', name)).toString('base64')}`; } catch { return null; }
   }
 
   // OFFICE.md: what is in the office right now, with the links the assistant
@@ -246,4 +284,4 @@ function runAssistant({ store, session, now = Date.now() }) {
   return action;
 }
 
-module.exports = { AssistantStore, assistantSettings, runAssistant, assistantDue, morningDue, workday, assistantDays, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS };
+module.exports = { AssistantStore, assistantSettings, runAssistant, assistantDue, morningDue, workday, assistantDays, knowsUser, reminderList, dueReminders, day, assistantName, MEMORY_FILES, DEFAULTS, PROMPTS, MAX_IMAGES };
