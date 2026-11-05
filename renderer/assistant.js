@@ -150,7 +150,10 @@
   // ---- the chat window ----
 
   function entryHTML(e) {
-    if (e.role === 'user') return `<div class="msg user">${esc(e.text).replace(/\n/g, '<br>')}</div>`;
+    if (e.role === 'user') {
+      const imgs = (e.images || []).map((src) => `<img class="msg-img" src="${esc(src)}" alt="Image you sent">`).join('');
+      return `<div class="msg user">${imgs ? `<div class="msg-imgs">${imgs}</div>` : ''}${esc(e.text || '').replace(/\n/g, '<br>')}</div>`;
+    }
     if (e.role === 'note') return `<div class="msg note">${esc(e.text)}</div>`;
     return `<div class="msg bot">${md(e.text)}</div>`;
   }
@@ -253,16 +256,98 @@
     update();
   });
 
+  // ---- images: pasted, dropped or picked, sent with the next message ----
+
+  const MAX_IMAGES = 4;
+  const MAX_SIDE = 1568;              // Claude scales anything bigger down to this anyway
+  const MAX_BYTES = 3.5 * 1024 * 1024; // well under the API's 5 MB per image
+  const KEEP_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+  const $attach = $chat.querySelector('.chat-attach');
+  const $file = $chat.querySelector('.chat-file');
+  let pending = []; // [{ mediaType, data (base64), url (data URL) }]
+
+  const readURL = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+  const loadImage = (url) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Could not read that image'));
+    img.src = url;
+  });
+  // A file → { mediaType, data, url }: kept as it is when it is small enough,
+  // else scaled down (and made a JPEG when a PNG is still too big).
+  async function prepareImage(file) {
+    const url = await readURL(file);
+    const img = await loadImage(url);
+    const side = Math.max(img.naturalWidth, img.naturalHeight);
+    if (KEEP_TYPES.includes(file.type) && file.size <= MAX_BYTES && side <= MAX_SIDE) return { mediaType: file.type, data: url.split(',')[1], url };
+    const k = Math.min(1, MAX_SIDE / side);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * k));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * k));
+    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+    let out = canvas.toDataURL('image/png');
+    if (out.length * 0.75 > MAX_BYTES) out = canvas.toDataURL('image/jpeg', 0.9);
+    return { mediaType: out.slice(5, out.indexOf(';')), data: out.split(',')[1], url: out };
+  }
+  function renderAttach() {
+    $attach.hidden = !pending.length;
+    $attach.innerHTML = pending.map((p, i) => `<span class="chat-thumb"><img src="${esc(p.url)}" alt="Image ${i + 1}"><button type="button" class="chat-thumb-x" data-i="${i}" title="Remove" aria-label="Remove image ${i + 1}">✕</button></span>`).join('');
+  }
+  async function addImages(files) {
+    const images = [...files].filter((f) => f.type.startsWith('image/'));
+    if (!images.length) return;
+    const room = MAX_IMAGES - pending.length;
+    if (images.length > room) setStatus(`At most ${MAX_IMAGES} images per message`);
+    for (const f of images.slice(0, Math.max(0, room))) {
+      try { pending.push(await prepareImage(f)); } catch (err) { setStatus(`⚠️ ${err.message || err}`); }
+    }
+    renderAttach();
+    $input.focus();
+  }
+  $attach.addEventListener('click', (e) => {
+    const $x = e.target.closest('.chat-thumb-x');
+    if (!$x) return;
+    pending.splice(Number($x.dataset.i), 1);
+    renderAttach();
+    $input.focus();
+  });
+  // A copied image wins over the text that rides along with it (a link, HTML).
+  $input.addEventListener('paste', (e) => {
+    const files = [...(e.clipboardData?.items || [])].filter((it) => it.kind === 'file' && it.type.startsWith('image/')).map((it) => it.getAsFile()).filter(Boolean);
+    if (!files.length) return;
+    e.preventDefault();
+    addImages(files);
+  });
+  $chat.querySelector('.chat-pick').addEventListener('click', () => $file.click());
+  $file.addEventListener('change', () => { addImages($file.files); $file.value = ''; });
+  const dragsFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+  $chat.addEventListener('dragover', (e) => { if (!dragsFiles(e)) return; e.preventDefault(); $chat.classList.add('dropping'); });
+  $chat.addEventListener('dragleave', (e) => { if (!$chat.contains(e.relatedTarget)) $chat.classList.remove('dropping'); });
+  $chat.addEventListener('drop', (e) => {
+    $chat.classList.remove('dropping');
+    if (!dragsFiles(e)) return;
+    e.preventDefault();
+    addImages(e.dataTransfer.files);
+  });
+
   async function send() {
     const text = $input.value.trim();
-    if (!text) return;
+    const images = pending;
+    if (!text && !images.length) return;
     $input.value = '';
+    pending = [];
+    renderAttach();
     if (!history) await loadHistory();
-    append({ role: 'user', text });
+    append({ role: 'user', text, images: images.map((p) => p.url) });
     toBottom();
     setStatus('Thinking…');
     setTyping('Thinking…');
-    const r = await window.office.assistant.send(text);
+    const r = await window.office.assistant.send(text, images.map(({ mediaType, data }) => ({ mediaType, data })));
     if (!r.ok) { setTyping(null); append({ role: 'note', text: `⚠️ ${r.error}` }); }
   }
   $chat.querySelector('.chat-form').addEventListener('submit', (e) => { e.preventDefault(); send(); });
