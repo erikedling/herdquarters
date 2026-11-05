@@ -258,6 +258,8 @@ function annotateOrchestrators(floors) {
           // The boss's own pane is the boss; any other agent in its room is the QA reviewer or the ops agent it opened.
           d.role = d.id === boss.boss?.pane_id ? 'boss' : window.officeView.helperRole(d, boss);
           d.orch = { slug: boss.slug, color: boss.color, name: boss.name };
+          // The QA reviewer reports to the boss, like a worker: no done ticket in reception.
+          if (d.role === 'qa') d.pose = window.officeView.workerPose(d.pose);
           // Questions on the board are waiting on the user: the boss puts a hand up.
           if (d.role === 'boss' && boss.board?.questions?.length && d.pose !== 'blocked') { d.pose = 'blocked'; d.escalated = true; }
           // An open alert: the ops agent stands at its desk with a red !, whatever it is doing.
