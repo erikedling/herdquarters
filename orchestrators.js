@@ -21,6 +21,21 @@ function git(cwd, args) {
   });
 }
 
+// Skips identical content because fs.watch fires onChange on every write; the
+// rename means an agent starting meanwhile reads the old brief or the new, never half.
+function writeIfChanged(file, text) {
+  let old = null;
+  try { old = fs.readFileSync(file, 'utf8'); } catch { /* new file */ }
+  if (old === text) return;
+  fs.writeFileSync(`${file}.tmp`, text);
+  fs.renameSync(`${file}.tmp`, file);
+}
+
+// Only the zone name: briefs outlive a DST switch, so agents get the offset from `date`.
+function localTimeZone() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'the zone `date` prints';
+}
+
 // Claude Code's config file, where trusted folders are recorded.
 function claudeConfigPath() {
   const dir = process.env.CLAUDE_CONFIG_DIR || process.env.HOME || '';
@@ -250,8 +265,9 @@ function setFrontmatter(raw, key, value) {
 class OrchestratorStore {
   // client: HerdrClient (null in fixture mode). onChange(): called when a
   // board or orchestrator.json changes so the renderer can be refreshed.
-  constructor({ dir, client, onChange, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions }) {
+  constructor({ dir, client, onChange, briefTemplate, skillTemplate, qaTemplate, opsTemplate, slackTemplate, claudeConfig, claudeProjects, piTrust, piSessions, timeZone }) {
     this.dir = dir;
+    this.timeZone = timeZone;
     this.client = client;
     this.claudeConfig = claudeConfig || claudeConfigPath();
     this.claudeProjects = claudeProjects || claudeProjectsDir();
@@ -504,7 +520,7 @@ class OrchestratorStore {
 
   // The boss brief, in the file the orchestrator's agent kind reads.
   writeBrief(json) {
-    fs.writeFileSync(path.join(this.folder(json.slug), contextFile(agentKind(json))), this.brief(json));
+    writeIfChanged(path.join(this.folder(json.slug), contextFile(agentKind(json))), this.brief(json));
   }
 
   // The QA reviewer's folder: a subfolder of the boss's, so the reviewer shares
@@ -518,11 +534,11 @@ class OrchestratorStore {
   slackFolder(slug) { return path.join(this.folder(slug), 'slack'); }
   waitingFolder(slug) { return path.join(this.slackFolder(slug), 'waiting'); }
 
-  // The QA reviewer's and ops agent's briefs, rewritten on create and restore.
+  // The QA reviewer's and ops agent's briefs, rewritten on create, restore and app start.
   writeHelperBriefs(json) {
     const file = contextFile(agentKind(json));
-    if (this.qaTemplate) { fs.mkdirSync(this.qaFolder(json.slug), { recursive: true }); fs.writeFileSync(path.join(this.qaFolder(json.slug), file), this.qaBrief(json)); }
-    if (this.opsTemplate) { fs.mkdirSync(this.opsFolder(json.slug), { recursive: true }); fs.writeFileSync(path.join(this.opsFolder(json.slug), file), this.opsBrief(json)); }
+    if (this.qaTemplate) { fs.mkdirSync(this.qaFolder(json.slug), { recursive: true }); writeIfChanged(path.join(this.qaFolder(json.slug), file), this.qaBrief(json)); }
+    if (this.opsTemplate) { fs.mkdirSync(this.opsFolder(json.slug), { recursive: true }); writeIfChanged(path.join(this.opsFolder(json.slug), file), this.opsBrief(json)); }
     fs.mkdirSync(this.alertsFolder(json.slug), { recursive: true });
     this.writeSlackFiles(json);
   }
@@ -535,8 +551,8 @@ class OrchestratorStore {
     const folder = this.slackFolder(json.slug);
     fs.mkdirSync(path.join(folder, '.claude'), { recursive: true });
     fs.mkdirSync(this.waitingFolder(json.slug), { recursive: true });
-    fs.writeFileSync(path.join(folder, 'CLAUDE.md'), this.slackBrief(json));
-    fs.writeFileSync(path.join(folder, '.claude', 'settings.json'), JSON.stringify(SLACK_SETTINGS, null, 2) + '\n');
+    writeIfChanged(path.join(folder, 'CLAUDE.md'), this.slackBrief(json));
+    writeIfChanged(path.join(folder, '.claude', 'settings.json'), JSON.stringify(SLACK_SETTINGS, null, 2) + '\n');
     // The list belongs to the user and the boss: a restore keeps it.
     if (!fs.existsSync(path.join(folder, 'WATCHES.md'))) fs.writeFileSync(path.join(folder, 'WATCHES.md'), WATCHES_HEAD);
   }
@@ -568,6 +584,7 @@ class OrchestratorStore {
     const kind = agentKind(json);
     return template
       .replace(/\{\{agent_kind\}\}/g, kind)
+      .replace(/\{\{timezone\}\}/g, this.timeZone || localTimeZone())
       .replace(/\{\{agent_args\}\}/g, () => kind === 'codex' && json.root ? ` -- --sandbox workspace-write --add-dir ${shellQuote(json.root)}` : '')
       .replace(/\{\{agent_label\}\}/g, AGENT_LABELS[kind])
       .replace(/\{\{context_file\}\}/g, contextFile(kind))
@@ -733,6 +750,17 @@ ${text}
       } catch { /* read-only fixture or a half-written folder */ }
     }
     this.onChange();
+  }
+
+  // At app start, so running orchestrators read briefs from the current templates.
+  refreshBriefs() {
+    for (const o of this.readAll()) {
+      try {
+        const json = this.read(o.slug);
+        this.writeBrief(json);
+        this.writeHelperBriefs(json);
+      } catch (err) { console.warn(`could not refresh briefs for ${o.slug}: ${err.message}`); }
+    }
   }
 
   // Who sits where, per orchestrator: { slug: [{name, agent, role, repo}] }.
@@ -1062,4 +1090,4 @@ ${text}
   }
 }
 
-module.exports = { OrchestratorStore, parseBoard, peopleMarkdown, readInbox, setFrontmatter, slugify, workerName, qaAgent, opsAgent, trustFolder, claudeConfigPath, hasConversation, trustPiFolder, hasPiConversation, piSessionDir, agentKind, contextFile, AGENT_KINDS, COLORS };
+module.exports = { OrchestratorStore, parseBoard, peopleMarkdown, readInbox, setFrontmatter, slugify, workerName, qaAgent, opsAgent, trustFolder, localTimeZone, claudeConfigPath, hasConversation, trustPiFolder, hasPiConversation, piSessionDir, agentKind, contextFile, AGENT_KINDS, COLORS };

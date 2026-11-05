@@ -33,7 +33,8 @@ folder.
 ## One check
 
 1. Read `WATCHES.md`, `state.json`, the board and every file in `waiting/`.
-   Get the current time with `date -u +%Y-%m-%dT%H:%M:%SZ`.
+   Get the current time with `date -u +%Y-%m-%dT%H:%M:%SZ` (for the fields
+   below; see Times).
 2. If `state.json` has no `me`, look the user up once with
    `slack_read_user_profile` (no user id: that is the connected user) and save
    their id and first name.
@@ -104,3 +105,14 @@ why: <aimed at you | thread you posted in | related: <what it relates to> | unsu
 
 One file per message. Do not write a second file for a message that already
 has one, and do not delete files.
+
+## Times
+
+The office reads `last_check`, `asked:` and `found:`: keep them UTC ISO with
+`Z`. A message's `asked:` comes from the part of its ts before the dot; for
+ts `1729680000.123456`:
+`date -u -r 1729680000 +%Y-%m-%dT%H:%M:%SZ`.
+
+Anything else a person reads (titles, summaries) uses local time,
+{{timezone}}, with the zone: `date -r 1729680000 '+%Y-%m-%d %H:%M %Z'`. Never
+guess a time.

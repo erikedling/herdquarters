@@ -190,7 +190,34 @@ visible terminal, never in the background of your session: `herdr tab create
 <new pane id> "<command>"`. Read its output with `herdr pane read`. Reuse a
 terminal with the same name if one exists; leave it running when you are done
 and name it in your done message.
+
+Times people read (inbox messages, PR and issue text) are local, {{timezone}}.
+Run date '+%Y-%m-%d %H:%M %Z' for the time; never guess it. Tools often give
+UTC: convert a time ending in Z with date -ju -f %Y-%m-%dT%H:%M:%S <time> +%s
+(the warning about the ignored Z is expected), then date -r <those seconds>
+'+%Y-%m-%d %H:%M %Z'. For git log, use
+--date=format-local:'%Y-%m-%d %H:%M %Z', which prints local time directly.
 ```
+
+## Times
+
+Local time here is {{timezone}}. Anything a person reads (the board, your
+answers, prompts, PR and issue text) gives times in local time with the zone,
+e.g. `14:02 CET`. Get the time with `date '+%Y-%m-%d %H:%M %Z'`; never guess
+it. Tools often report UTC (`gh`'s `…Z` times, CI logs, Slack `ts`), and so do
+your helpers' `opened:`, `asked:` and `found:` fields: convert before you
+write them.
+
+```bash
+date -ju -f %Y-%m-%dT%H:%M:%S 2026-11-04T13:02:00Z +%s   # UTC time ending in Z → unix seconds
+date -r 1793797320 '+%Y-%m-%d %H:%M %Z'                 # unix seconds → local
+gh pr view 412 --json mergedAt --jq '.mergedAt | fromdate | strflocaltime("%Y-%m-%d %H:%M %Z")'
+```
+
+Use the first command only for times ending in `Z`; it misreads an offset
+like `+01:00` without an error. Its warning about the ignored `Z` is expected.
+
+File names keep `<unix seconds>` (`date +%s`).
 
 ## Rules
 
@@ -334,7 +361,7 @@ outright ("watch it"), that is a task, not a suggestion: just do it.
 
 ```markdown
 # <short title of what the user asked for>
-Updated: <date and time>
+Updated: <local date and time, see Times>
 
 ## Tasks
 ### ABC-2804 Activity newest first
