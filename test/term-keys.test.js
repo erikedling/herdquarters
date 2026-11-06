@@ -32,6 +32,22 @@ test('Option+Left and Option+Right jump a word back and forward', () => {
   assert.strictEqual(keyToBytes(ev('ArrowRight', { altKey: true })), '\x1bf');
 });
 
+test('Option+P, O, D and Y reach Claude Code as Meta whatever the layout types', () => {
+  assert.strictEqual(keyToBytes(ev('π', { altKey: true, code: 'KeyP' })), '\x1bp');
+  assert.strictEqual(keyToBytes(ev('œ', { altKey: true, code: 'KeyO' })), '\x1bo');
+  assert.strictEqual(keyToBytes(ev('∂', { altKey: true, code: 'KeyD' })), '\x1bd');
+  assert.strictEqual(keyToBytes(ev('µ', { altKey: true, code: 'KeyY' })), '\x1by');
+});
+
+test('other Option+letters and shifted Option+P type the layout\'s character', () => {
+  assert.strictEqual(keyToBytes(ev('@', { altKey: true, code: 'KeyL' })), null);
+  assert.strictEqual(keyToBytes(ev('ﬁ', { altKey: true, code: 'KeyL' })), null);
+  assert.strictEqual(keyToBytes(ev('∏', { altKey: true, shiftKey: true, code: 'KeyP' })), null);
+  assert.strictEqual(keyToBytes(ev('p', { code: 'KeyP' })), null);
+  assert.strictEqual(keyToBytes(ev('π', { altKey: true, ctrlKey: true, code: 'KeyP' })), null);
+  assert.strictEqual(keyToBytes(ev('π', { altKey: true, metaKey: true, code: 'KeyP' })), null);
+});
+
 // xterm leaves these to the layout or sends them itself with macOptionIsMeta off.
 test('Option with characters, Enter and Backspace is left to xterm', () => {
   assert.strictEqual(keyToBytes(ev('@', { altKey: true, code: 'Digit2' })), null);

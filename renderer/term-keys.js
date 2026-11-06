@@ -14,11 +14,22 @@
     ArrowLeft: '\x1bb',
     ArrowRight: '\x1bf',
   };
+  // Claude Code's Meta shortcuts (model, fast mode, delete word, yank-pop). Keyed on the
+  // physical key, and only these: other layouts type ASCII with Option+letter (@ is Option+L in German).
+  const OPT_CODE = {
+    KeyP: '\x1bp',
+    KeyO: '\x1bo',
+    KeyD: '\x1bd',
+    KeyY: '\x1by',
+  };
   // Returns the bytes to send for a keydown the panel owns, or null to let xterm decide.
   function keyToBytes(ev) {
     if (ev.type !== 'keydown') return null;
     if (ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && CMD[ev.key]) return CMD[ev.key];
-    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey && OPT[ev.key]) return OPT[ev.key];
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey) {
+      if (OPT[ev.key]) return OPT[ev.key];
+      if (OPT_CODE[ev.code]) return OPT_CODE[ev.code];
+    }
     // CSI-u shifted Return, which Claude Code takes as "newline" instead of "send".
     if (ev.key === 'Enter' && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey) return '\x1b[13;2u';
     // CSI-u control Return, for "send now" on a queued message. xterm sends

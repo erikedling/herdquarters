@@ -60,7 +60,9 @@ scenes into `docs/images/` for the README, as looping animated PNGs
   Claude Code instead of sending (the desk summary is tuned for Claude Code's
   screen too; for Pi and Codex it shows the last lines). Option types the
   keyboard layout's characters (@ is Option+2 on a Swedish Mac), and
-  **Option+Left/Right** jump a word.
+  **Option+Left/Right** jump a word. **Option+P**, **Option+O**, **Option+D**
+  and **Option+Y** go to Claude Code as its shortcuts (switch model, fast mode,
+  delete word forward, yank-pop), so π œ ∂ µ can't be typed in the panel.
 
 ## Sidebar
 
