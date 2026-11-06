@@ -5,7 +5,7 @@
 // Working, idle and unknown sit behind the desk; blocked and alert stand up
 // with a hand raised; done climbs onto the desk to wave.
 // Groups carry class names (.person, .head, .arm-l, .arm-r, .frame, .bubble,
-// .glow, .steam) so office.css can animate them.
+// .glow, .steam, .code-line) so office.css can animate them.
 (function () {
   const U = 3, W = 44, H = 54;
   const FONT = "'SF Pro Rounded', ui-rounded, Nunito, system-ui, -apple-system, 'Segoe UI', sans-serif";
@@ -287,6 +287,19 @@
     return { person: `${person}</g>`, hands: `<g class="hands"><g class="arm arm-l">${hand(x + 1, x + 1)}</g><g class="arm arm-r">${hand(x + 10, x + 9)}</g></g>` };
   }
 
+  // Code a working agent streams up beside its head (office.css moves it).
+  // CODE_X keeps it one pixel clear of the widest hair or hat while the head sways.
+  const CODE_X = 31;
+  const CODE_LINES = [
+    [[0, 2, '#3f6ae0'], [3, 4, '#e8606b']],
+    [[1, 5, '#f29a2e']],
+    [[0, 3, '#3fae4f'], [4, 3, '#3f6ae0']],
+    [[1, 2, '#e8606b'], [4, 3, '#8a5cf0']],
+  ];
+  function code() {
+    return CODE_LINES.map((runs, i) => `<g class="code-line l${i + 1}">${runs.map(([dx, w, c]) => `<rect x="${CODE_X + dx}" y="21" width="${w}" height="1" fill="${c}"/>`).join('')}</g>`).join('');
+  }
+
   function scene(pose, ch, name, opts) {
     const boss = !!opts.boss;
     if (!ch || pose === 'empty' || pose === 'away') {
@@ -304,7 +317,7 @@
         + deskFront(pose, name, opts) + deskTop(pose, opts, 'none');
     }
     const s = seated(pose, ch);
-    return chair(boss) + s.person + deskFront(pose, name, opts) + deskTop(pose, opts, 'open') + s.hands;
+    return chair(boss) + s.person + deskFront(pose, name, opts) + deskTop(pose, opts, 'open') + s.hands + (pose === 'working' ? code() : '');
   }
 
   // A worker standing in the boss's room with a question bubble in the
