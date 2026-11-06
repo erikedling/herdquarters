@@ -32,9 +32,7 @@ test('Option+Left and Option+Right jump a word back and forward', () => {
   assert.strictEqual(keyToBytes(ev('ArrowRight', { altKey: true })), '\x1bf');
 });
 
-// With macOptionIsMeta off, xterm types what the layout gives for Option+key
-// (@ is Option+2 on a Swedish Mac) and already sends Option+Enter as ESC CR
-// and Option+Backspace as ESC DEL, so the panel stays out of the way.
+// xterm leaves these to the layout or sends them itself with macOptionIsMeta off.
 test('Option with characters, Enter and Backspace is left to xterm', () => {
   assert.strictEqual(keyToBytes(ev('@', { altKey: true, code: 'Digit2' })), null);
   assert.strictEqual(keyToBytes(ev('£', { altKey: true, code: 'Digit3' })), null);

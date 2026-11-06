@@ -58,7 +58,9 @@ scenes into `docs/images/` for the README, as looping animated PNGs
   gets a person.
 - In the panel, **Shift+Enter** and **Option+Enter** insert a newline in
   Claude Code instead of sending (the desk summary is tuned for Claude Code's
-  screen too; for Pi and Codex it shows the last lines).
+  screen too; for Pi and Codex it shows the last lines). Option types the
+  keyboard layout's characters (@ is Option+2 on a Swedish Mac), and
+  **Option+Left/Right** jump a word.
 
 ## Sidebar
 

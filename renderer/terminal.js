@@ -57,7 +57,7 @@
       // Paste: images cannot travel through the browser paste event, so look
       // at the clipboard ourselves. Cmd+V and Ctrl+V both work.
       if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'v') { ev.preventDefault(); pasteFromClipboard(); return false; }
-      // Cmd+arrows, Cmd+Backspace/Delete, Option+arrows, Shift+Enter, Ctrl+Enter (see term-keys.js).
+      // Editing keys the panel owns (see term-keys.js).
       const bytes = window.termKeys.keyToBytes(ev);
       if (bytes) { ev.preventDefault(); sendInput(bytes); return false; }
       return true;
