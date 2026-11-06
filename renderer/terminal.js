@@ -32,7 +32,7 @@
       lineHeight: 1.15,
       cursorBlink: true,
       allowProposedApi: true,
-      macOptionIsMeta: true, // Option+Enter reaches the agent as Meta+Enter (newline in Claude Code)
+      macOptionIsMeta: false, // Option types the layout's characters (@ is Option+2 on a Swedish Mac)
       scrollback: 0,         // herdr owns the scrollback; the wheel scrolls the pane (see onWheel)
       smoothScrollDuration: 0,
       // OSC 8 hyperlinks (Claude Code prints these): xterm's default would
@@ -57,7 +57,7 @@
       // Paste: images cannot travel through the browser paste event, so look
       // at the clipboard ourselves. Cmd+V and Ctrl+V both work.
       if ((ev.metaKey || ev.ctrlKey) && !ev.altKey && !ev.shiftKey && ev.key.toLowerCase() === 'v') { ev.preventDefault(); pasteFromClipboard(); return false; }
-      // Cmd+arrows, Cmd+Backspace/Delete, Shift+Enter, Ctrl+Enter (see term-keys.js).
+      // Cmd+arrows, Cmd+Backspace/Delete, Option+arrows, Shift+Enter, Ctrl+Enter (see term-keys.js).
       const bytes = window.termKeys.keyToBytes(ev);
       if (bytes) { ev.preventDefault(); sendInput(bytes); return false; }
       return true;

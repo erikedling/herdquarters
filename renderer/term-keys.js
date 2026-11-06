@@ -9,10 +9,16 @@
     Backspace: '\x15',   // Ctrl+U: delete to line start
     Delete: '\x0b',      // Ctrl+K: delete to line end
   };
+  // xterm sends ESC[1;3D for Option+Left, which shells don't bind; ESC b / ESC f jump a word everywhere.
+  const OPT = {
+    ArrowLeft: '\x1bb',
+    ArrowRight: '\x1bf',
+  };
   // Returns the bytes to send for a keydown the panel owns, or null to let xterm decide.
   function keyToBytes(ev) {
     if (ev.type !== 'keydown') return null;
     if (ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey && CMD[ev.key]) return CMD[ev.key];
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey && OPT[ev.key]) return OPT[ev.key];
     // CSI-u shifted Return, which Claude Code takes as "newline" instead of "send".
     if (ev.key === 'Enter' && ev.shiftKey && !ev.metaKey && !ev.ctrlKey && !ev.altKey) return '\x1b[13;2u';
     // CSI-u control Return, for "send now" on a queued message. xterm sends
