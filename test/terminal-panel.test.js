@@ -40,8 +40,11 @@ test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'elect
   assert.deepStrictEqual(drop.files, ['\x1b[200~/Users/me/Desktop/Screenshot\\ 1.png /Users/me/Desktop/a\\ \\(b\\).png\x1b[201~']);
   assert.strictEqual(drop.prevented, true);
   assert.strictEqual(drop.highlightedAfter, false);
-  // a dropped file with no path behind it (an image dragged out of a browser) types nothing
+  // a dropped file with no path behind it (an image dragged out of a browser) types nothing,
+  // says why in the status, and the next key clears it like a paste error
   assert.deepStrictEqual(drop.noPath, []);
+  assert.strictEqual(drop.noPathStatus, 'That file has no path on disk: save it first, or copy the image and paste with Cmd+V');
+  assert.strictEqual(drop.noPathClearedByKey, true);
   // a text drag is left alone: multi-line text would run line by line in a shell
   assert.strictEqual(drop.textAccepted, false);
   assert.deepStrictEqual(drop.text, []);

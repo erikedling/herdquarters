@@ -105,6 +105,10 @@ window.scenario = async function scenario() {
   window.__inputs.length = 0;
   drag('drop', (dt) => { dt.items.add(new File(['z'], 'cat.webp', { type: 'image/webp' })); dt.setData('text/plain', 'https://example.com/cat.webp'); });
   drop.noPath = [...window.__inputs];
+  const $dropStatus = document.getElementById('term-status');
+  drop.noPathStatus = $dropStatus.hidden ? '' : $dropStatus.textContent;
+  term.input('k', true);
+  drop.noPathClearedByKey = $dropStatus.hidden;
   window.__inputs.length = 0;
   const textDrag = (dt) => dt.setData('text/plain', 'echo one\necho two');
   drop.textAccepted = drag('dragover', textDrag).defaultPrevented;

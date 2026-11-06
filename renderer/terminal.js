@@ -16,11 +16,11 @@
   let resizeTimer = null;
 
   // Keystrokes and paste bytes for the attached pane. Typing means the user is
-  // done with any selection (output resumes, see onFrame) and any paste error.
+  // done with any selection (output resumes, see onFrame) and any paste or drop notice.
   function sendInput(data) {
     if (!current) return;
     if (term.hasSelection()) term.clearSelection();
-    hidePasteFailed();
+    hideInputNotice();
     window.office.term.input(current.id, data);
   }
 
@@ -128,8 +128,9 @@
   }
 
   const PASTE_FAILED = 'Paste failed: ';
-  function hidePasteFailed() {
-    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
+  const NO_PATH = 'That file has no path on disk: save it first, or copy the image and paste with Cmd+V';
+  function hideInputNotice() {
+    if ($status.textContent.startsWith(PASTE_FAILED) || $status.textContent === NO_PATH) hideStatus();
   }
 
   async function pasteFromClipboard() {
@@ -143,7 +144,7 @@
       return;
     }
     if (!current) return;
-    hidePasteFailed();
+    hideInputNotice();
     typeOut(window.pastePaths.pasteAction(clip));
   }
 
@@ -174,8 +175,8 @@
     e.preventDefault();
     const paths = [...e.dataTransfer.files].map(window.office.pathForFile).filter(Boolean);
     const action = window.pastePaths.dropAction(paths);
-    if (!action) return;
-    typeOut(action);
+    if (action) typeOut(action);
+    else showStatus(NO_PATH);
     term.focus();
   });
 
