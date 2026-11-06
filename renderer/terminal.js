@@ -16,11 +16,11 @@
   let resizeTimer = null;
 
   // Keystrokes and paste bytes for the attached pane. Typing means the user is
-  // done with any selection (output resumes, see onFrame) and any paste error.
+  // done with any selection (output resumes, see onFrame) and any paste or drop notice.
   function sendInput(data) {
     if (!current) return;
     if (term.hasSelection()) term.clearSelection();
-    hidePasteFailed();
+    hideInputNotice();
     window.office.term.input(current.id, data);
   }
 
@@ -128,8 +128,9 @@
   }
 
   const PASTE_FAILED = 'Paste failed: ';
-  function hidePasteFailed() {
-    if ($status.textContent.startsWith(PASTE_FAILED)) hideStatus();
+  const NO_PATH = 'That file has no path on disk: save it first, or copy the image and paste with Cmd+V';
+  function hideInputNotice() {
+    if ($status.textContent.startsWith(PASTE_FAILED) || $status.textContent === NO_PATH) hideStatus();
   }
 
   async function pasteFromClipboard() {
@@ -143,17 +144,41 @@
       return;
     }
     if (!current) return;
-    hidePasteFailed();
-    if (clip.hasImage) {
-      // Ctrl+V byte: Claude Code reads the image straight from the clipboard.
-      // Image wins even when text rides along (Slack and browsers add a link
-      // or HTML next to a copied image), which is what Ctrl+V does in a
-      // normal terminal too.
-      sendInput('\x16');
-    } else if (clip.hasText) {
-      term.paste(clip.text); // honours bracketed paste mode
-    }
+    hideInputNotice();
+    typeOut(window.pastePaths.pasteAction(clip));
   }
+
+  function typeOut(action) {
+    if (!action) return;
+    // Ctrl+V byte: Claude Code reads the image straight from the clipboard.
+    if (action.kind === 'image') { sendInput('\x16'); return; }
+    // herdr's frames never pass on the pane's bracketed-paste mode, so xterm
+    // sends a paste as typing. Paths are bracketed anyway: Claude Code only
+    // attaches an image for a path that arrives as a paste, and shells take it too.
+    if (action.kind === 'paths' && !term.modes.bracketedPasteMode) sendInput(window.pastePaths.bracketed(action.text));
+    else term.paste(action.text); // honours bracketed paste mode when xterm knows it
+  }
+
+  // ---- drag and drop ----
+  // Dropped files type their paths, as in macOS Terminal. Other drags are left alone.
+  const takesDrop = (e) => e.dataTransfer?.types.includes('Files');
+  $panel.addEventListener('dragover', (e) => {
+    if (!current || !takesDrop(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    $panel.classList.add('dropping');
+  });
+  $panel.addEventListener('dragleave', (e) => { if (!$panel.contains(e.relatedTarget)) $panel.classList.remove('dropping'); });
+  $panel.addEventListener('drop', (e) => {
+    $panel.classList.remove('dropping');
+    if (!current || !takesDrop(e)) return;
+    e.preventDefault();
+    const paths = [...e.dataTransfer.files].map(window.office.pathForFile).filter(Boolean);
+    const action = window.pastePaths.dropAction(paths);
+    if (action) typeOut(action);
+    else showStatus(NO_PATH);
+    term.focus();
+  });
 
   // ---- wheel scrolling ----
   // herdr keeps the scrollback and renders the viewport for us, so scrolling

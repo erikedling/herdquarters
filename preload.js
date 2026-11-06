@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // The preload is sandboxed: only Electron's built-ins can be required, so the
 // app name arrives as an argument from main.js (webPreferences.additionalArguments).
@@ -75,6 +75,8 @@ contextBridge.exposeInMainWorld('office', {
   devSettings: () => ipcRenderer.invoke('dev-settings-get'),
   devTriggers: () => ipcRenderer.invoke('dev-triggers-get'),
   clipboardPeek: () => ipcRenderer.invoke('clipboard-peek'),
+  // Real path of a dropped file ('' for one made in JS). File.path is gone since Electron 32.
+  pathForFile: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   openInEditor: (args) => ipcRenderer.invoke('open-in-editor', args),
   findPullRequest: (args) => ipcRenderer.invoke('pr-find', args),
