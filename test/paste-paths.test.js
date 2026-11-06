@@ -10,6 +10,11 @@ test('escapePath: spaces and shell specials get a backslash, like macOS Terminal
   assert.strictEqual(escapePath('/tmp/a"b`c$d|e;f<g>h{i}j[k]l*m?n!o#p~q^r\\s'), '/tmp/a\\"b\\`c\\$d\\|e\\;f\\<g\\>h\\{i\\}j\\[k\\]l\\*m\\?n\\!o\\#p\\~q\\^r\\\\s');
 });
 
+test('escapePath: the narrow no-break space macOS puts before AM/PM in English screenshot names is escaped too', () => {
+  // Claude Code attached the file with this escaping.
+  assert.strictEqual(escapePath('/Users/me/Desktop/Screenshot 2026-11-06 at 10.14.03\u202fAM.png'), '/Users/me/Desktop/Screenshot\\ 2026-11-06\\ at\\ 10.14.03\\\u202fAM.png');
+});
+
 test('escapePath: control characters are dropped, so a name cannot end the bracketed paste', () => {
   assert.strictEqual(escapePath('/tmp/evil\x1b[201~rm -rf\r.png'), '/tmp/evil\\[201\\~rm\\ -rf.png');
   assert.strictEqual(escapePath('/tmp/tab\there.png'), '/tmp/tabhere.png');
@@ -48,8 +53,7 @@ test('pasteAction: a peek with no paths field is read as no files', () => {
   assert.deepStrictEqual(pasteAction({ hasText: false, hasImage: true, text: '' }), { kind: 'image' });
 });
 
-test('dropAction: dropped files type their paths, dropped text types the text', () => {
-  assert.deepStrictEqual(dropAction(['/tmp/a b.png', '/tmp/c.png'], ''), { kind: 'paths', text: '/tmp/a\\ b.png /tmp/c.png' });
-  assert.deepStrictEqual(dropAction([], 'some words'), { kind: 'text', text: 'some words' });
-  assert.strictEqual(dropAction([], ''), null);
+test('dropAction: dropped files type their paths, a drop with no paths types nothing', () => {
+  assert.deepStrictEqual(dropAction(['/tmp/a b.png', '/tmp/c.png']), { kind: 'paths', text: '/tmp/a\\ b.png /tmp/c.png' });
+  assert.strictEqual(dropAction([]), null);
 });

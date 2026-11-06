@@ -29,11 +29,8 @@
     return null;
   }
 
-  // Dropped files type their paths; a dropped text selection types the text.
-  function dropAction(paths, text) {
-    if (paths.length) return { kind: 'paths', text: pathsToText(paths) };
-    if (text) return { kind: 'text', text };
-    return null;
+  function dropAction(paths) {
+    return paths.length ? { kind: 'paths', text: pathsToText(paths) } : null;
   }
 
   const api = { escapePath, pathsToText, bracketed, pasteAction, dropAction };

@@ -31,7 +31,10 @@ Cmd+Left/Right jump to line start/end, Cmd+Backspace/Delete delete to line
 start/end (the readline keys, as Warp sends them). Cmd+V pastes text, and when the
 clipboard holds an image (even with a link or HTML next to it, as Slack and
 browsers add) it sends Ctrl+V to the agent so Claude Code picks the image up
-from the clipboard, the same way it does in a normal terminal. Copying joins
+from the clipboard, the same way it does in a normal terminal. A file copied
+in Finder pastes as its path instead, and files dropped on the panel (it gets
+a dashed outline while you drag) type their paths; Claude Code attaches a path
+to an image as the picture. Copying joins
 the rows herdr wrapped a long line over (herdr redraws each row with a cursor
 move, so xterm alone would break a long URL at every row). URLs are links:
 click one to open it in the browser. While text is selected the frames are

@@ -84,7 +84,7 @@ window.scenario = async function scenario() {
   await tick(100);
   const filePaste = [...window.__inputs];
 
-  // drop: files type their paths, text types the text, anything else is ignored.
+  // drop: files type their paths; a file with no path behind it, a text drag and a link drag are left alone.
   // xterm's bracketed-paste mode stays off, as with herdr's frames.
   const $panel = document.getElementById('termpanel');
   const drag = (type, fill) => {
@@ -103,22 +103,18 @@ window.scenario = async function scenario() {
   drop.prevented = dropped.defaultPrevented;
   drop.highlightedAfter = $panel.classList.contains('dropping');
   window.__inputs.length = 0;
-  drag('drop', (dt) => dt.setData('text/plain', 'dragged words'));
-  drop.text = [...window.__inputs];
-  window.__inputs.length = 0;
   drag('drop', (dt) => { dt.items.add(new File(['z'], 'cat.webp', { type: 'image/webp' })); dt.setData('text/plain', 'https://example.com/cat.webp'); });
   drop.noPath = [...window.__inputs];
+  window.__inputs.length = 0;
+  const textDrag = (dt) => dt.setData('text/plain', 'echo one\necho two');
+  drop.textAccepted = drag('dragover', textDrag).defaultPrevented;
+  drag('drop', textDrag);
+  drop.text = [...window.__inputs];
   window.__inputs.length = 0;
   const other = drag('dragover', (dt) => dt.setData('text/uri-list', 'https://example.com'));
   drop.otherAccepted = other.defaultPrevented;
   drag('drop', (dt) => dt.setData('text/uri-list', 'https://example.com'));
   drop.other = [...window.__inputs];
-  // with the mode on, xterm does the bracketing for text too
-  await write('\x1b[?2004h');
-  window.__inputs.length = 0;
-  drag('drop', (dt) => dt.setData('text/plain', 'dragged words'));
-  drop.textBracketed = [...window.__inputs];
-  await write('\x1b[?2004l');
 
   // paste: a failed clipboard read says so in the status, and the next paste clears it
   window.__clip = new Error("Error invoking remote method 'clipboard-peek': Error: clipboard busy");

@@ -40,11 +40,12 @@ test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'elect
   assert.deepStrictEqual(drop.files, ['\x1b[200~/Users/me/Desktop/Screenshot\\ 1.png /Users/me/Desktop/a\\ \\(b\\).png\x1b[201~']);
   assert.strictEqual(drop.prevented, true);
   assert.strictEqual(drop.highlightedAfter, false);
-  // dropped text types the text, bracketed only when the pane asked for it; a link drag (no files, no text) is left alone
-  assert.deepStrictEqual(drop.text, ['dragged words']);
-  // a dropped file with no path behind it (an image dragged out of a browser) types the text beside it
-  assert.deepStrictEqual(drop.noPath, ['https://example.com/cat.webp']);
-  assert.deepStrictEqual(drop.textBracketed, ['\x1b[200~dragged words\x1b[201~']);
+  // a dropped file with no path behind it (an image dragged out of a browser) types nothing
+  assert.deepStrictEqual(drop.noPath, []);
+  // a text drag is left alone: multi-line text would run line by line in a shell
+  assert.strictEqual(drop.textAccepted, false);
+  assert.deepStrictEqual(drop.text, []);
+  // a link drag (no files, no text) is left alone too
   assert.strictEqual(drop.otherAccepted, false);
   assert.deepStrictEqual(drop.other, []);
   // a failed clipboard read shows in the status instead of doing nothing, and the next paste clears it

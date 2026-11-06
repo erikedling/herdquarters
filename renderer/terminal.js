@@ -144,9 +144,6 @@
     }
     if (!current) return;
     hidePasteFailed();
-    // Image wins even when text rides along (Slack and browsers add a link
-    // or HTML next to a copied image), which is what Ctrl+V does in a
-    // normal terminal too.
     typeOut(window.pastePaths.pasteAction(clip));
   }
 
@@ -162,8 +159,8 @@
   }
 
   // ---- drag and drop ----
-  // Dropped files type their paths, as in macOS Terminal; dropped text types the text.
-  const takesDrop = (e) => ['Files', 'text/plain'].some((t) => e.dataTransfer?.types.includes(t));
+  // Dropped files type their paths, as in macOS Terminal. Other drags are left alone.
+  const takesDrop = (e) => e.dataTransfer?.types.includes('Files');
   $panel.addEventListener('dragover', (e) => {
     if (!current || !takesDrop(e)) return;
     e.preventDefault();
@@ -175,9 +172,8 @@
     $panel.classList.remove('dropping');
     if (!current || !takesDrop(e)) return;
     e.preventDefault();
-    // A file with no path (an image dragged out of a browser) falls back to the text beside it.
     const paths = [...e.dataTransfer.files].map(window.office.pathForFile).filter(Boolean);
-    const action = window.pastePaths.dropAction(paths, e.dataTransfer.getData('text/plain'));
+    const action = window.pastePaths.dropAction(paths);
     if (!action) return;
     typeOut(action);
     term.focus();
