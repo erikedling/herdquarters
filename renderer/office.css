@@ -143,10 +143,26 @@ body.layout-office .figure-office .arm { animation: none; }
 @keyframes px-frame-1of2 { 0% { visibility: visible; } 50%, 100% { visibility: hidden; } }
 @keyframes px-frame-2of2 { 0% { visibility: hidden; } 50%, 100% { visibility: visible; } }
 
-body.layout-office .pose-working .arm-l .f1 { animation: px-frame-1of2 0.72s steps(1) infinite; }
-body.layout-office .pose-working .arm-l .f2 { animation: px-frame-2of2 0.72s steps(1) infinite; }
-body.layout-office .pose-working .arm-r .f1 { animation: px-frame-1of2 0.72s steps(1) -0.36s infinite; }
-body.layout-office .pose-working .arm-r .f2 { animation: px-frame-2of2 0.72s steps(1) -0.36s infinite; }
+/* working types hard enough to see from across the room: the hands take turns
+   on the keys and lift three pixels between hits, the body dips on every hit
+   and the head sways toward the busy hand */
+body.layout-office .pose-working .arm-l .f1 { animation: px-key-down 0.6s steps(1) infinite; }
+body.layout-office .pose-working .arm-l .f2 { animation: px-key-up 0.6s steps(1) infinite; }
+body.layout-office .pose-working .arm-r .f1 { animation: px-key-down 0.6s steps(1) -0.3s infinite; }
+body.layout-office .pose-working .arm-r .f2 { animation: px-key-up 0.6s steps(1) -0.3s infinite; }
+body.layout-office .person.pose-working { animation: px-key-dip 0.6s steps(1) infinite; }
+body.layout-office .person.pose-working .head { animation: px-key-sway 1.2s steps(1) infinite; }
+@keyframes px-key-down { 0% { visibility: visible; } 25%, 100% { visibility: hidden; } }
+@keyframes px-key-up { 0% { visibility: hidden; transform: none; } 25% { visibility: visible; transform: translateY(-1px); } 50% { transform: translateY(-3px); } 75%, 100% { visibility: visible; transform: translateY(-1px); } }
+@keyframes px-key-dip { 0% { transform: translateY(1px); } 12.5% { transform: none; } 50% { transform: translateY(1px); } 62.5%, 100% { transform: none; } }
+@keyframes px-key-sway { 0% { transform: translateX(1px); } 50% { transform: translateX(-1px); } }
+/* the code beside the head moves on the same beat: up a pixel on every key
+   hit (0.3s) and a new line on every left-hand hit (0.6s) */
+body.layout-office .pose-working .code-line { animation: px-code-rise 2.4s steps(8) infinite; }
+body.layout-office .pose-working .code-line.l2 { animation-delay: -0.6s; }
+body.layout-office .pose-working .code-line.l3 { animation-delay: -1.2s; }
+body.layout-office .pose-working .code-line.l4 { animation-delay: -1.8s; }
+@keyframes px-code-rise { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-8px); opacity: .35; } }
 
 /* up, mid, out, mid: holding the end poses longer reads as a wave, not a jitter */
 body.layout-office .pose-done .wave .f1 { animation: px-wave-1 0.9s steps(1) infinite; }
@@ -180,6 +196,18 @@ body.layout-office .desk.pose-idle.focused .figure, body.layout-office .desk.pos
 body.layout-office .desk.pose-idle:hover .figure, body.layout-office .desk.pose-unknown:hover .figure { opacity: 1; }
 body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinite; }
 @keyframes px-steam { 0% { transform: translate(0, 0); } 33% { transform: translate(1px, -1px); } 66% { transform: translate(0, -2px); } 100% { transform: translate(0, 0); } }
+
+/* reduced motion: working holds one still pose, a hand up and the code
+   spread out beside the head */
+@media (prefers-reduced-motion: reduce) {
+  body.layout-office .pose-working .arm .frame, body.layout-office .person.pose-working, body.layout-office .person.pose-working .head,
+  body.layout-office .pose-working .code-line, body.layout-office .pose-working .glow { animation: none; }
+  body.layout-office .pose-working .arm-l .f1 { visibility: hidden; }
+  body.layout-office .pose-working .arm-l .f2 { visibility: visible; transform: translateY(-3px); }
+  body.layout-office .pose-working .code-line.l2 { transform: translateY(-3px); }
+  body.layout-office .pose-working .code-line.l3 { transform: translateY(-6px); }
+  body.layout-office .pose-working .code-line.l4 { transform: translateY(-9px); }
+}
 
 /* boss room: the orchestrator's colour on the wall trim, whiteboard on the wall */
 body.layout-office .floor.boss { border-color: var(--orch); }

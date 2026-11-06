@@ -43,6 +43,20 @@ test('a working laptop glows; an idle one does not', () => {
   assert.doesNotMatch(w.figureOfficeSVG('idle', 0), /class="glow"/);
 });
 
+test('only a working desk streams code, a pixel clear of hair and hats as the head sways', () => {
+  const w = load();
+  for (const pose of ['idle', 'unknown', 'blocked', 'alert', 'done', 'away', 'empty']) assert.doesNotMatch(w.figureOfficeSVG(pose, 0), /class="code-line/);
+  for (let c = 0; c < w.CHARACTERS.length; c++) {
+    const svg = w.figureOfficeSVG('working', c);
+    const code = pixels(svg.slice(svg.indexOf('<g class="code-line')));
+    const left = Math.min(...code.map((p) => p.x));
+    // office.css lifts the code up to 9 rows, dips the body a row and sways the head a column
+    const top = Math.min(...code.map((p) => p.y)) - 9 - 1, bottom = Math.max(...code.map((p) => p.y));
+    const reach = Math.max(...pixels(group(svg, '<g class="person')).filter((p) => p.y >= top && p.y <= bottom).map((p) => p.x)) + 1;
+    assert.ok(reach < left - 1, `${w.CHARACTER_NAMES[c]} reaches x ${reach}, code starts at ${left}`);
+  }
+});
+
 test('every pose of every character draws, with the name on the desk', () => {
   const w = load();
   for (let c = 0; c < w.CHARACTERS.length; c++) {
