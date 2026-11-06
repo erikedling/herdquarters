@@ -32,7 +32,7 @@
       lineHeight: 1.15,
       cursorBlink: true,
       allowProposedApi: true,
-      macOptionIsMeta: false, // Option types the layout's characters (@ is Option+2 on a Swedish Mac)
+      macOptionIsMeta: false, // Option types the layout's characters (@ is Option+2 on Swedish - Pro)
       scrollback: 0,         // herdr owns the scrollback; the wheel scrolls the pane (see onWheel)
       smoothScrollDuration: 0,
       // OSC 8 hyperlinks (Claude Code prints these): xterm's default would
