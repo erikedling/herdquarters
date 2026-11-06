@@ -288,7 +288,8 @@
   }
 
   // Code a working agent streams up beside its head (office.css moves it).
-  // From x 31: one pixel clear of the widest hair or hat while the head sways.
+  // CODE_X keeps it one pixel clear of the widest hair or hat while the head sways.
+  const CODE_X = 31;
   const CODE_LINES = [
     [[0, 2, '#3f6ae0'], [3, 4, '#e8606b']],
     [[1, 5, '#f29a2e']],
@@ -296,7 +297,7 @@
     [[1, 2, '#e8606b'], [4, 3, '#8a5cf0']],
   ];
   function code() {
-    return CODE_LINES.map((runs, i) => `<g class="code-line l${i + 1}">${runs.map(([dx, w, c]) => `<rect x="${31 + dx}" y="21" width="${w}" height="1" fill="${c}"/>`).join('')}</g>`).join('');
+    return CODE_LINES.map((runs, i) => `<g class="code-line l${i + 1}">${runs.map(([dx, w, c]) => `<rect x="${CODE_X + dx}" y="21" width="${w}" height="1" fill="${c}"/>`).join('')}</g>`).join('');
   }
 
   function scene(pose, ch, name, opts) {

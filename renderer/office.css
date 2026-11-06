@@ -145,7 +145,7 @@ body.layout-office .figure-office .arm { animation: none; }
 
 /* working types hard enough to see from across the room: the hands take turns
    on the keys and lift three pixels between hits, the body dips on every hit
-   and the head sways toward the busy hand */
+   and the head sways a pixel side to side every 0.6s */
 body.layout-office .pose-working .arm-l .f1 { animation: px-key-down 0.6s steps(1) infinite; }
 body.layout-office .pose-working .arm-l .f2 { animation: px-key-up 0.6s steps(1) infinite; }
 body.layout-office .pose-working .arm-r .f1 { animation: px-key-down 0.6s steps(1) -0.3s infinite; }
