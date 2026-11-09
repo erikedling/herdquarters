@@ -64,12 +64,13 @@
   // A chibi person seen from the front, 12 wide and 20 tall from (x, y).
   // pose: 'stand' | 'wave' | 'hand' (raised, waiting on you) | 'typing'
   // (sitting behind a desk; workstation() draws the hands).
-  function person(d, x, y, ch, pose, t) {
+  // lean moves the head (and hair) that many pixels sideways.
+  function person(d, x, y, ch, pose, t, lean = 0) {
     const { p, rr } = d;
     const step = tick(t, 3);
-    const h = ch.hair, arm = shade(ch.shirt, 0.86);
-    if (ch.style === 'long') p(x, y + 2, 12, 11, h);
-    if (ch.style === 'ponytail') p(x + 10, y + 2, 3, 8, h);
+    const h = ch.hair, arm = shade(ch.shirt, 0.86), hx = x + lean;
+    if (ch.style === 'long') p(hx, y + 2, 12, 11, h);
+    if (ch.style === 'ponytail') p(hx + 10, y + 2, 3, 8, h);
     // legs, then the body over them
     p(x + 3, y + 15, 2, 4, ch.pants); p(x + 7, y + 15, 2, 4, ch.pants);
     p(x + 2, y + 19, 3, 1, INK); p(x + 7, y + 19, 3, 1, INK);
@@ -87,12 +88,12 @@
       if (pose !== 'typing') p(x + 10, y + 15, 1, 1, ch.skin);
     }
     // head and face
-    rr(x + 1, y, 10, 9, ch.skin);
-    hair(d, x, y, ch);
-    if (blinks(ch, t)) { p(x + 3, y + 6, 1, 1, INK); p(x + 8, y + 6, 1, 1, INK); } else { p(x + 3, y + 5, 1, 2, INK); p(x + 8, y + 5, 1, 2, INK); }
-    p(x + 2, y + 7, 1, 1, BLUSH); p(x + 9, y + 7, 1, 1, BLUSH);
-    p(x + 5, y + 7, 2, 1, MOUTH);
-    if (ch.phones) { p(x + 2, y - 2, 8, 1, INK); p(x, y + 3, 2, 4, INK); p(x + 10, y + 3, 2, 4, INK); }
+    rr(hx + 1, y, 10, 9, ch.skin);
+    hair(d, hx, y, ch);
+    if (blinks(ch, t)) { p(hx + 3, y + 6, 1, 1, INK); p(hx + 8, y + 6, 1, 1, INK); } else { p(hx + 3, y + 5, 1, 2, INK); p(hx + 8, y + 5, 1, 2, INK); }
+    p(hx + 2, y + 7, 1, 1, BLUSH); p(hx + 9, y + 7, 1, 1, BLUSH);
+    p(hx + 5, y + 7, 2, 1, MOUTH);
+    if (ch.phones) { p(hx + 2, y - 2, 8, 1, INK); p(hx, y + 3, 2, 4, INK); p(hx + 10, y + 3, 2, 4, INK); }
   }
 
   function hair(d, x, y, ch) {
@@ -115,17 +116,42 @@
     p(x + 1, y + 8, 2, 3, WOOD_DARK); p(x + w - 3, y + 8, 2, 3, WOOD_DARK);
   }
 
-  // Someone at a desk with a laptop. x is the person's left edge, top the
-  // desk's top; the floor is at top + 11.
+  // The office's working pose (office.css) scaled down; it repeats every second so the README loops stay seamless.
+  const BEAT = 0.25;
+  const LIFT = [0, 0, 1, 2, 2, 1]; // a hand's height over its two beats, by thirds of a beat
+  const CODE_DX = 14; // a pixel clear of the widest hair or hat (cap visor, ponytail)
+  const CODE = [
+    [[0, 2, '#3f6ae0'], [3, 2, '#e8606b']],
+    [[0, 3, '#3fae4f'], [4, 1, '#f29a2e']],
+  ];
+  function typing(t) {
+    // t is usually a whole frame (i / 12); the nudge keeps float error from losing a step
+    const k = Math.floor((t / BEAT) * 3 + 1e-6), beat = Math.floor(k / 3);
+    return {
+      left: LIFT[k % 6], right: LIFT[(k + 3) % 6],
+      dip: k % 3 === 0 ? 1 : 0,
+      lean: -(Math.floor(beat / 2) % 2),
+      rise: CODE.map((_, i) => (beat + 2 * i) % 4),
+    };
+  }
+
+  // Someone at a desk with a laptop, typing. x is the person's left edge, top
+  // the desk's top; the floor is at top + 11.
   function workstation(d, x, top, ch, t) {
-    const { p, rr } = d;
+    const { p, rr, ctx } = d, k = typing(t);
     rr(x, top - 10, 12, 11, '#6b7290');
-    person(d, x, top - 14, ch, 'typing', t);
+    person(d, x, top - 14 + k.dip, ch, 'typing', t, k.lean);
     rr(x + 2, top - 5, 8, 5, '#d5dbe8'); p(x + 5, top - 3, 2, 2, WHITE);
     p(x + 3, top - 5, 6, 1, '#9fd3ff');
-    const s = tick(t, 6);
-    p(x + 1, top - 2 - s, 2, 2, ch.skin); p(x + 9, top - 3 + s, 2, 2, ch.skin);
+    // a shade darker, so a raised hand doesn't melt into the chin
+    const hand = shade(ch.skin, 0.88);
+    p(x + 1, top - 2 - k.left, 2, 2, hand); p(x + 9, top - 2 - k.right, 2, 2, hand);
     desk(d, x - 5, top, 22);
+    CODE.forEach((runs, i) => {
+      ctx.globalAlpha = 1 - k.rise[i] * 0.15;
+      for (const [dx, w, c] of runs) p(x + CODE_DX + dx, top - 9 - k.rise[i], w, 1, c);
+    });
+    ctx.globalAlpha = 1;
   }
 
   function cat(d, x, y, c, t) {
@@ -271,7 +297,7 @@
   SCENES.delegate = (d, t) => {
     room(d, 62);
     wallWindow(d, 64, 8, 32, 22, t);
-    const ph = (t % 3.2) / 3.2;
+    const ph = (t % LOOP.delegate) / LOOP.delegate;
     // you, with the task in a bubble
     person(d, 20, 54, CAST.you, ph < 0.15 ? 'wave' : 'stand', t);
     bubble(d, 28, 48, 44, 17, WHITE);
@@ -473,8 +499,14 @@
 
   // How many seconds each scene takes to come round again, for the README's
   // looping animations (make-art.js). The clouds drift on their own time.
-  const LOOP = { welcome: 4, delegate: 3.2, team: 2, status: 3, helpers: 3.6, assistant: 7, go: 6 };
-  const api = { W, H, NAMES: Object.keys(SCENES), LOOP, draw };
+  // A scene with someone typing needs whole seconds (see typing()).
+  const LOOP = { welcome: 4, delegate: 3, team: 2, status: 3, helpers: 3.6, assistant: 7, go: 6 };
+  // The cast, typing() and a lone workstation are here for the tests.
+  const api = {
+    W, H, NAMES: Object.keys(SCENES), LOOP, draw,
+    CAST: Object.keys(CAST), CODE, typing,
+    workstation: (ctx, who, t, S = 4) => workstation(painter(ctx, S), 20, 40, CAST[who], t),
+  };
   if (typeof module !== 'undefined' && module.exports) { module.exports = api; return; }
   window.herdScenes = api;
 })();
