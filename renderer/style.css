@@ -137,20 +137,23 @@ body.sidebar-resizing .termpanel, body.sidebar-resizing .building { pointer-even
 .sb-room.main .sb-sq { background: var(--idle); }
 .sb-room.linked .sb-sq { background: var(--idle-dim); }
 .sb-sq.faint { background: var(--line); }
-.sb-dot { flex: none; width: 8px; height: 8px; background: var(--line); }
-.sb-pane.pose-working .sb-dot { background: var(--working); animation: sb-dot-pulse 2s ease-in-out infinite; }
-/* A soft fade, not steps: blocked and alert blink hard because they need you, working should not. */
-@keyframes sb-dot-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.sb-dot { flex: none; width: 8px; height: 8px; background: var(--dot, var(--line)); }
+.sb-pane.pose-working .sb-dot { --dot: var(--working); animation: sb-dot-pulse 2s ease-in-out infinite; }
+/* Working fades softly, blocked and alert blink hard because they need you; both fade the fill, not opacity, so a focus ring stays solid. */
+@keyframes sb-dot-pulse { 0%, 100% { background-color: var(--dot); } 50% { background-color: color-mix(in srgb, var(--dot) 35%, var(--dot-low, transparent)); } }
+@keyframes sb-dot-blink { 0%, 100% { background-color: var(--dot); } 50% { background-color: color-mix(in srgb, var(--dot) 35%, var(--dot-low, transparent)); } }
 @media (prefers-reduced-motion: reduce) { .sb-pane.pose-working .sb-dot { animation: none; } }
-.sb-pane.pose-blocked .sb-dot { background: var(--blocked); animation: blink 1s steps(1) infinite; }
-.sb-pane.pose-done .sb-dot { background: var(--done); }
-.sb-pane.pose-idle .sb-dot { background: var(--idle); }
-.sb-pane.pose-unknown .sb-dot { background: var(--idle-dim); }
+.sb-pane.pose-blocked .sb-dot { --dot: var(--blocked); animation: sb-dot-blink 1s steps(1) infinite; }
+.sb-pane.pose-done .sb-dot { --dot: var(--done); }
+.sb-pane.pose-idle .sb-dot { --dot: var(--idle); }
+.sb-pane.pose-unknown .sb-dot { --dot: var(--idle-dim); }
 .sb-pane.pose-blocked .sb-name, .sb-pane.pose-blocked .sb-right { color: var(--blocked-text); }
 .sb-pane.pose-done .sb-name, .sb-pane.pose-done .sb-right { color: var(--done-text); }
 .sb-mark { margin-left: 5px; font-size: 11px; }
 .sb-mark.blocked { color: var(--blocked); } .sb-mark.done { color: var(--done); }
-.sb-row.focused { background: var(--active); }
+.sb-row.focused { background: var(--active); color: var(--text); }
+/* Status colours can match the highlight (Workstation's working blue is its row blue), so ring the dot in the row's ink. */
+.sb-row.focused .sb-dot { box-shadow: 0 0 0 1px currentColor; }
 .sb-row.focused .sb-name, .sb-row.focused .sb-right, .sb-row.focused .sb-title { color: var(--text); }
 .sb-pane.open { box-shadow: inset 3px 0 0 var(--working); }
 .sb-empty { padding: 6px 14px; color: var(--muted); }
@@ -485,7 +488,7 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .desk.pose-away .chip { background: var(--orch, var(--idle)); box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 8px var(--orch, transparent); }
 .desk.pose-away::after { background: var(--orch, var(--idle)); }
 .desk.pose-away .nameplate { color: var(--accent-text); }
-.sb-pane.pose-away .sb-dot { background: var(--idle); }
+.sb-pane.pose-away .sb-dot { --dot: var(--idle); }
 .sb-pane.pose-away .sb-right { color: var(--warn-text); }
 .wb-q { color: var(--text); font-size: 12px; padding-left: 18px; opacity: .9; }
 .ticket.question { border-left-color: var(--orch); }
@@ -637,7 +640,7 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .pose-alert .person { animation: hop .7s ease-in-out infinite; }
 .pose-alert .arm-r.raise { transform-origin: 86px 58px; animation: shake .3s ease-in-out infinite alternate; }
 .pose-alert .bubble { animation: blink .6s steps(1) infinite; }
-.sb-pane.pose-alert .sb-dot { background: var(--blocked); animation: blink .6s steps(1) infinite; }
+.sb-pane.pose-alert .sb-dot { --dot: var(--blocked); animation: sb-dot-blink .6s steps(1) infinite; }
 .sb-pane.pose-alert .sb-name, .sb-pane.pose-alert .sb-right { color: var(--blocked-text); }
 .ticket.alert { border-left-color: var(--blocked); background: var(--blocked-bg); }
 .ticket.alert .ticket-state { color: var(--blocked-text); font-weight: 600; }
