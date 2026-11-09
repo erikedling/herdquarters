@@ -130,7 +130,7 @@
     return {
       left: LIFT[k % 6], right: LIFT[(k + 3) % 6],
       dip: k % 3 === 0 ? 1 : 0,
-      lean: -(Math.floor(beat / 2) % 2),
+      lean: beat & 2 ? -1 : 0,
       rise: CODE.map((_, i) => (beat + 2 * i) % 4),
     };
   }
@@ -147,11 +147,12 @@
     const hand = shade(ch.skin, 0.88);
     p(x + 1, top - 2 - k.left, 2, 2, hand); p(x + 9, top - 2 - k.right, 2, 2, hand);
     desk(d, x - 5, top, 22);
+    ctx.save();
     CODE.forEach((runs, i) => {
       ctx.globalAlpha = 1 - k.rise[i] * 0.15;
       for (const [dx, w, c] of runs) p(x + CODE_DX + dx, top - 9 - k.rise[i], w, 1, c);
     });
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function cat(d, x, y, c, t) {

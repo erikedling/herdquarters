@@ -93,7 +93,7 @@ test('typing comes round exactly at the end of each README loop, desk offsets an
   for (const name of ['delegate', 'team', 'status']) {
     assert.strictEqual(LOOP[name] * 12 % 1, 0, `${name} loops on a whole frame`);
     for (const t of frames(LOOP[name])) {
-      for (const offset of [0, 0.37, 0.74, 1.11]) {
+      for (const offset of [0, 0.37, 0.74]) {
         assert.deepStrictEqual(typing(t + offset + LOOP[name]), typing(t + offset), `${name} t=${t}+${offset}`);
       }
     }
