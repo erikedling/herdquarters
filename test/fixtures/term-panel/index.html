@@ -20,6 +20,7 @@
   window.__clip = { hasImage: false, hasText: false, text: '' };
   window.__opened = [];
   window.office = {
+    pathForFile: (file) => (file.name.endsWith('.png') ? '/Users/me/Desktop/' + file.name : ''),
     clipboardPeek: async () => { if (window.__clip instanceof Error) throw window.__clip; return window.__clip; },
     openExternal: async (url) => { window.__opened.push(url); return { ok: true }; },
     term: {
@@ -37,6 +38,7 @@
 <script src="../../../renderer/term-keys.js"></script>
 <script src="../../../renderer/term-copy.js"></script>
 <script src="../../../renderer/term-links.js"></script>
+<script src="../../../renderer/paste-paths.js"></script>
 <script src="../../../renderer/terminal.js"></script>
 <script>
 const tick = (ms = 50) => new Promise((r) => setTimeout(r, ms));
@@ -74,6 +76,49 @@ window.scenario = async function scenario() {
   textarea.dispatchEvent(clipboardEvent('paste'));
   await tick(100);
   const text = [...window.__inputs];
+
+  // paste: a copied file is its path, not Finder's icon beside it
+  window.__clip = { hasImage: true, hasText: true, text: 'Screenshot 1.png', paths: ['/Users/me/Desktop/Screenshot 1.png'] };
+  window.__inputs.length = 0;
+  textarea.dispatchEvent(clipboardEvent('paste'));
+  await tick(100);
+  const filePaste = [...window.__inputs];
+
+  // drop: files type their paths; a file with no path behind it, a text drag and a link drag are left alone.
+  // xterm's bracketed-paste mode stays off, as with herdr's frames.
+  const $panel = document.getElementById('termpanel');
+  const drag = (type, fill) => {
+    const dt = new DataTransfer();
+    fill(dt);
+    const ev = new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt });
+    host.dispatchEvent(ev);
+    return ev;
+  };
+  const twoFiles = (dt) => { dt.items.add(new File(['x'], 'Screenshot 1.png', { type: 'image/png' })); dt.items.add(new File(['y'], 'a (b).png', { type: 'image/png' })); };
+  window.__inputs.length = 0;
+  const over = drag('dragover', twoFiles);
+  const drop = { overAccepted: over.defaultPrevented, highlighted: $panel.classList.contains('dropping') };
+  const dropped = drag('drop', twoFiles);
+  drop.files = [...window.__inputs];
+  drop.prevented = dropped.defaultPrevented;
+  drop.highlightedAfter = $panel.classList.contains('dropping');
+  window.__inputs.length = 0;
+  drag('drop', (dt) => { dt.items.add(new File(['z'], 'cat.webp', { type: 'image/webp' })); dt.setData('text/plain', 'https://example.com/cat.webp'); });
+  drop.noPath = [...window.__inputs];
+  const $dropStatus = document.getElementById('term-status');
+  drop.noPathStatus = $dropStatus.hidden ? '' : $dropStatus.textContent;
+  term.input('k', true);
+  drop.noPathClearedByKey = $dropStatus.hidden;
+  window.__inputs.length = 0;
+  const textDrag = (dt) => dt.setData('text/plain', 'echo one\necho two');
+  drop.textAccepted = drag('dragover', textDrag).defaultPrevented;
+  drag('drop', textDrag);
+  drop.text = [...window.__inputs];
+  window.__inputs.length = 0;
+  const other = drag('dragover', (dt) => dt.setData('text/uri-list', 'https://example.com'));
+  drop.otherAccepted = other.defaultPrevented;
+  drag('drop', (dt) => dt.setData('text/uri-list', 'https://example.com'));
+  drop.other = [...window.__inputs];
 
   // paste: a failed clipboard read says so in the status, and the next paste clears it
   window.__clip = new Error("Error invoking remote method 'clipboard-peek': Error: clipboard busy");
@@ -138,6 +183,6 @@ window.scenario = async function scenario() {
   const statusAfterExit = document.getElementById('term-status').textContent;
   await window.officeTerminal.open(desk2);
   const reopen = window.__opens - before;
-  return { fit, image, text, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors: window.__errors };
+  return { fit, image, text, filePaste, drop, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors: window.__errors };
 };
 </script>

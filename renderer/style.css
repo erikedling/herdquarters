@@ -161,6 +161,7 @@ body.sidebar-resizing .termpanel, body.sidebar-resizing .building { pointer-even
   background: #0f1118; border-left: 1px solid var(--line);
 }
 .termpanel[hidden] { display: none; }
+.termpanel.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
 /* grab strip on the divider between the office and the split panel */
 .termpanel-resizer { position: absolute; top: 0; left: -4px; bottom: 0; width: 7px; z-index: 3; cursor: col-resize; touch-action: none; }
 .termpanel-resizer:hover, body.panel-resizing .termpanel-resizer { background: color-mix(in srgb, var(--accent) 45%, transparent); }

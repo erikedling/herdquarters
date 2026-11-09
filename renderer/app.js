@@ -14,6 +14,16 @@ const $conn = document.getElementById('conn');
 if (window.office?.appName) { document.title = window.office.appName; const $b = document.getElementById('brand-name'); if ($b) $b.title = window.office.appName; }
 const $tooltip = document.getElementById('tooltip');
 
+// Files drop only on the terminal panel and PiPi's chat; elsewhere show "no
+// drop" instead of letting the window try to open the file (main.js blocks that too).
+for (const type of ['dragover', 'drop']) {
+  document.addEventListener(type, (e) => {
+    if (e.defaultPrevented || !e.dataTransfer?.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'none';
+  });
+}
+
 const memory = {
   floorOrder: new Map(),        // floorKey -> index
   roomOrder: new Map(),         // workspaceId -> index

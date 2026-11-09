@@ -1,7 +1,8 @@
 // The terminal panel with real xterm in a hidden Electron window: pasting an
-// image sends Ctrl+V to the agent (it reads the clipboard itself), pasting text
-// sends the text, copying a line herdr wrapped over rows gives one line, and
-// the columns fit inside the host's padding.
+// image sends Ctrl+V to the agent (it reads the clipboard itself), pasting a
+// copied file or dropping files types their paths, pasting text sends the
+// text, copying a line herdr wrapped over rows gives one line, and the columns
+// fit inside the host's padding.
 // Skipped where Electron cannot start.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -20,7 +21,7 @@ function run() {
 }
 
 test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'electron not installed' }, () => {
-  const { fit, image, text, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors } = run();
+  const { fit, image, text, filePaste, drop, pasteFailed, copyWrapped, copyPlain, link, hold, doubleOpen, statusAfterExit, reopen, errors } = run();
   assert.deepStrictEqual(errors, [], 'renderer errors');
   // the last column is fully visible with a gutter on the right, and the pane was resized to match
   assert.ok(fit.textWidth <= fit.contentWidth, `text ${fit.textWidth}px is wider than the host's ${fit.contentWidth}px`);
@@ -30,6 +31,26 @@ test('terminal panel paste and copy', { skip: !fs.existsSync(electron) && 'elect
   assert.deepStrictEqual(image, ['\x16']);
   // text only is pasted as text
   assert.deepStrictEqual(text, ['hello']);
+  // a copied file pastes as its escaped path, even with Finder's icon on the clipboard, and
+  // always as a bracketed paste: herdr's frames never turn the mode on in xterm
+  assert.deepStrictEqual(filePaste, ['\x1b[200~/Users/me/Desktop/Screenshot\\ 1.png\x1b[201~']);
+  // dropped files type their paths as one bracketed paste, with a highlight while dragging over
+  assert.strictEqual(drop.overAccepted, true);
+  assert.strictEqual(drop.highlighted, true);
+  assert.deepStrictEqual(drop.files, ['\x1b[200~/Users/me/Desktop/Screenshot\\ 1.png /Users/me/Desktop/a\\ \\(b\\).png\x1b[201~']);
+  assert.strictEqual(drop.prevented, true);
+  assert.strictEqual(drop.highlightedAfter, false);
+  // a dropped file with no path behind it (an image dragged out of a browser) types nothing,
+  // says why in the status, and the next key clears it like a paste error
+  assert.deepStrictEqual(drop.noPath, []);
+  assert.strictEqual(drop.noPathStatus, 'That file has no path on disk: save it first, or copy the image and paste with Cmd+V');
+  assert.strictEqual(drop.noPathClearedByKey, true);
+  // a text drag is left alone: multi-line text would run line by line in a shell
+  assert.strictEqual(drop.textAccepted, false);
+  assert.deepStrictEqual(drop.text, []);
+  // a link drag (no files, no text) is left alone too
+  assert.strictEqual(drop.otherAccepted, false);
+  assert.deepStrictEqual(drop.other, []);
   // a failed clipboard read shows in the status instead of doing nothing, and the next paste clears it
   assert.deepStrictEqual(pasteFailed.inputs, []);
   assert.strictEqual(pasteFailed.status, 'Paste failed: clipboard busy');

@@ -17,5 +17,5 @@ test('preload.js loads in a sandboxed window and exposes window.office', { skip:
   assert.deepStrictEqual(out.errors, []);
   assert.strictEqual(out.office, 'object');
   assert.strictEqual(out.appName, 'Testname');
-  for (const key of ['onSnapshot', 'term', 'orchestrator', 'slack', 'assistant', 'clipboardPeek', 'openExternal', 'openInEditor', 'findPullRequest', 'devSettings']) assert.ok(out.keys.includes(key), key);
+  for (const key of ['onSnapshot', 'term', 'orchestrator', 'slack', 'assistant', 'clipboardPeek', 'pathForFile', 'openExternal', 'openInEditor', 'findPullRequest', 'devSettings']) assert.ok(out.keys.includes(key), key);
 });
