@@ -139,7 +139,7 @@ body.sidebar-resizing .termpanel, body.sidebar-resizing .building { pointer-even
 .sb-sq.faint { background: var(--line); }
 .sb-dot { flex: none; width: 8px; height: 8px; background: var(--dot, var(--line)); }
 .sb-pane.pose-working .sb-dot { --dot: var(--working); animation: sb-dot-pulse 2s ease-in-out infinite; }
-/* Working fades softly, blocked and alert blink hard because they need you; both fade the fill, not opacity, so a focus ring stays solid. */
+/* Fade the fill, not opacity, so the focus ring stays solid. */
 @keyframes sb-dot-pulse { 0%, 100% { background-color: var(--dot); } 50% { background-color: color-mix(in srgb, var(--dot) 35%, var(--dot-low, transparent)); } }
 @keyframes sb-dot-blink { 0%, 100% { background-color: var(--dot); } 50% { background-color: color-mix(in srgb, var(--dot) 35%, var(--dot-low, transparent)); } }
 @media (prefers-reduced-motion: reduce) { .sb-pane.pose-working .sb-dot { animation: none; } }

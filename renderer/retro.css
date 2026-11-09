@@ -152,7 +152,7 @@
 :root[data-style="workstation"] :is(#topbar, .reception) { border-color: #1a1a1a; }
 :root[data-style="workstation"] .sidebar { background: #ffffff; }
 :root[data-style="workstation"] .sb-row.focused { background: #2848b8; color: #ffffff; }
-/* The working fill is the row blue here, so pulse it toward white to keep the pulse visible. */
+/* The working fill is the row blue here, so fade it toward white to keep the pulse visible. */
 :root[data-style="workstation"] .sb-row.focused .sb-dot { --dot-low: #ffffff; }
 :root[data-style="workstation"] .sb-row.focused :is(.sb-name, .sb-right, .sb-title) { color: #ffffff; }
 :root[data-style="workstation"] body.layout-office .building, :root[data-style="workstation"] .corkboard-wall {
