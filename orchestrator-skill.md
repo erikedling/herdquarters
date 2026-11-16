@@ -76,7 +76,10 @@ Then move the file to `<inbox>/done/` and update the board. If the worker is
 `blocked` in herdr (a permission prompt), write a blocker on the board and
 move on; the user handles approvals from the office. If the worker went idle
 without writing to the inbox, read its screen with `herdr agent read` and
-remind it of the protocol.
+remind it of the protocol. Text in an agent's input box (after `❯`) may be
+the agent's own greyed-out suggestion, not something anyone typed: never
+report it as the user's input. If it matters, read again with
+`--format ansi`, where a suggestion is dim (`ESC[2m`).
 
 Keep the board short. Task lines are the steps still ahead; do not add a
 checked line for every step a worker reports. When a whole unit is finished

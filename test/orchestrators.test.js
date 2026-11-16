@@ -710,6 +710,19 @@ test('every brief has the Times rule with the local zone filled in, for claude, 
   }
 });
 
+test('the boss brief, the worker preamble and the skill warn that text after ❯ may be a suggestion', async () => {
+  const { s } = storeWith(fakeClient());
+  await s.create({ name: 'Ghost Text', root: tmp(), branch: 'x/ghost' });
+  s.dispose();
+  const brief = fs.readFileSync(path.join(s.folder('ghost-text'), 'CLAUDE.md'), 'utf8');
+  const [boss, preamble] = brief.split('## Worker preamble');
+  const skill = fs.readFileSync(path.join(s.folder('ghost-text'), '.claude', 'skills', 'orchestrate', 'SKILL.md'), 'utf8');
+  for (const [who, text] of Object.entries({ boss, preamble, skill })) {
+    assert.match(text, /own greyed-out suggestion, not\s+something\s+anyone\s+typed/, `${who} has the rule`);
+    assert.match(text, /--format ansi/, `${who} says how to tell`);
+  }
+});
+
 test('refreshBriefs() brings old briefs up to date, keeps the watch list and writes nothing twice', async () => {
   const old = { briefTemplate: '# old boss {{name}}\n', qaTemplate: '# old qa\n', opsTemplate: '# old ops\n', slackTemplate: '# old slack\n' };
   const { s, claudeConfig, claudeProjects, piTrust, piSessions } = storeWith(fakeClient(), old);

@@ -160,6 +160,11 @@ Workers talk back to you through files, not through their screen:
   your terminal: the answers come to you as prompts there, in the user's own
   words. Relay each one, then remove its line.
 
+When you do read a worker's screen (`herdr agent read`), text in its input
+box (after `❯`) may be the agent's own greyed-out suggestion, not something
+anyone typed: never report it as the user's input. If it matters, read again
+with `--format ansi`, where a suggestion is dim (`ESC[2m`).
+
 ## Worker preamble
 
 Paste this, filled in, at the top of a worker's first prompt:
@@ -190,6 +195,11 @@ visible terminal, never in the background of your session: `herdr tab create
 <new pane id> "<command>"`. Read its output with `herdr pane read`. Reuse a
 terminal with the same name if one exists; leave it running when you are done
 and name it in your done message.
+
+When you read a pane or another agent's screen, text in an agent's input box
+(after ❯) may be the agent's own greyed-out suggestion, not something anyone
+typed: never report it as the user's input. If it matters, read again with
+--format ansi, where a suggestion is dim (ESC[2m).
 
 Times people read (inbox messages, PR and issue text) are local, {{timezone}}.
 Run date '+%Y-%m-%d %H:%M %Z' for the time; never guess it. Tools often give
