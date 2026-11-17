@@ -52,7 +52,19 @@
     return { text: `${day}${hm}`, late };
   }
 
-  const api = { endOfDay, noteRows, dueNotes, wallNotes, timeLabel };
+  // The times a due reminder can be put off to: in 15 minutes, in an hour, or
+  // tomorrow at nine. [{ label, due (ms) }]
+  function postponeTimes(now) {
+    const tomorrow = new Date(endOfDay(now));
+    tomorrow.setHours(9, 0, 0, 0);
+    return [
+      { label: '15 min', due: now + 15 * 60_000 },
+      { label: '1 h', due: now + 60 * 60_000 },
+      { label: 'Tomorrow', due: tomorrow.getTime() },
+    ];
+  }
+
+  const api = { endOfDay, noteRows, dueNotes, wallNotes, timeLabel, postponeTimes };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.officeNoteRows = api;
 })(typeof window !== 'undefined' ? window : globalThis);

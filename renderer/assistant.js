@@ -26,6 +26,7 @@
   const visited = new Map(); // slug -> when the bird last went to tell about it
   let history = false;       // the chat log has been loaded
   let hovering = false;      // the mouse is on the bird or its bubble
+  const postponing = new Set(); // reminders whose "Later" was clicked: they show the times instead
 
   // ---- the bird: mood and where to be ----
 
@@ -114,7 +115,13 @@
   function renderBubble() {
     const lines = [];
     if (state.morning) lines.push('<div class="bb-line"><b>Good morning!</b> Your brief is ready.</div>');
-    for (const r of state.due) lines.push(`<div class="bb-line bb-reminder">⏰ <span>${esc(r.text)}</span><button class="bb-done" data-file="${esc(r.file)}" title="Done">✓</button></div>`);
+    for (const r of state.due) {
+      const f = esc(r.file);
+      const buttons = postponing.has(r.file)
+        ? window.officeNoteRows.postponeTimes(Date.now()).map((t) => `<button class="bb-btn bb-until" data-file="${f}" data-due="${t.due}">${t.label}</button>`).join('')
+        : `<button class="bb-btn bb-later" data-file="${f}" title="Remind me later">Later</button><button class="bb-btn bb-done" data-file="${f}" title="Done">✓</button>`;
+      lines.push(`<div class="bb-line bb-reminder">⏰ <span>${esc(r.text)}</span>${buttons}</div>`);
+    }
     if (!lines.length && visit) lines.push(`<div class="bb-line">${visit.text}</div>`);
     const html = $chat.hidden ? lines.join('') : '';
     if ($bubble._html !== html) { $bubble._html = html; $bubble.innerHTML = html; }
@@ -146,6 +153,18 @@
   $bubble.addEventListener('click', async (e) => {
     const $done = e.target.closest('.bb-done');
     if ($done) { $done.closest('.bb-reminder').remove(); await window.office.assistant.dismiss({ file: $done.dataset.file }); return; }
+    // Later: the line shows when to remind again; a time moves the note's due
+    // time there, and it chimes again then.
+    const $later = e.target.closest('.bb-later');
+    if ($later) { postponing.add($later.dataset.file); renderBubble(); return; }
+    const $until = e.target.closest('.bb-until');
+    if ($until) {
+      const file = $until.dataset.file;
+      $until.closest('.bb-reminder').remove();
+      postponing.delete(file); chimed.delete(file);
+      await window.office.notes.update(file, { due: Number($until.dataset.due) });
+      return;
+    }
     if (visit && !state.due.length && !state.morning) {
       const { slug, slack } = visit;
       window.officeTabs?.setActive(slug);

@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { NotesStore, parseNote, noteRows, dueNotes, fileName } = require('../notes');
-const { wallNotes, timeLabel } = require('../renderer/note-rows');
+const { wallNotes, timeLabel, postponeTimes } = require('../renderer/note-rows');
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'notes-'));
 const NOON = new Date(2026, 10, 3, 12, 0).getTime(); // Tue 3 Nov 2026, local
@@ -120,6 +120,14 @@ test('time labels: today, tomorrow, this week, later, and late', () => {
   assert.strictEqual(timeLabel(at(3, 9), NOON).text, 'Fri 09:00');
   assert.strictEqual(timeLabel(at(20, 9), NOON).text, '23 Nov 09:00');
   assert.strictEqual(timeLabel(null, NOON), null);
+});
+
+test('postponing a reminder: 15 minutes, an hour, or tomorrow at nine', () => {
+  const [quarter, hour, tomorrow] = postponeTimes(NOON);
+  assert.deepStrictEqual([quarter.label, hour.label, tomorrow.label], ['15 min', '1 h', 'Tomorrow']);
+  assert.strictEqual(quarter.due, NOON + 15 * 60_000);
+  assert.strictEqual(hour.due, NOON + 60 * 60_000);
+  assert.strictEqual(tomorrow.due, at(1, 9));
 });
 
 test('file names: date, time and a short slug', () => {
