@@ -201,3 +201,34 @@ test('shortError() gives npm’s actual complaint, not the path of its log', () 
   assert.strictEqual(launch.shortError({ stderr: 'hint: x\nfatal: not a git repository\n' }), 'fatal: not a git repository');
   assert.strictEqual(launch.shortError(new Error('boom')), 'boom');
 });
+
+test('stopping an install kills npm and puts the old modules back', async () => {
+  const r = setup();
+  await installed(r);
+  const before = r.marker();
+  r.commit({ 'package-lock.json': '{"v":3}\n' });
+  r.fetch();
+  r.git(r.checkout, 'checkout', '-q', '-B', 'main', 'origin/main');
+  // A stand-in npm that starts writing node_modules and then hangs, like a slow install.
+  const bin = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'hq-npm-'));
+  const pidFile = path.join(bin, 'pid');
+  fs.writeFileSync(path.join(bin, 'npm'), `#!/bin/sh\nmkdir -p node_modules/half\necho $$ > "${pidFile}"\nexec sleep 30\n`, { mode: 0o755 });
+  const oldPath = process.env.PATH;
+  process.env.PATH = `${bin}:${oldPath}`;
+  const controller = new AbortController();
+  try {
+    const install = launch.installModules(r.root, r.checkout, { signal: controller.signal });
+    while (!fs.existsSync(pidFile)) await new Promise((res) => setTimeout(res, 20));
+    const pid = Number(fs.readFileSync(pidFile, 'utf8'));
+    controller.abort();
+    await assert.rejects(install, /abort/i);
+    const alive = () => { try { process.kill(pid, 0); return true; } catch { return false; } };
+    for (let i = 0; i < 100 && alive(); i++) await new Promise((res) => setTimeout(res, 20));
+    assert.strictEqual(alive(), false, 'npm is no longer running');
+  } finally {
+    process.env.PATH = oldPath;
+  }
+  assert.strictEqual(r.marker(), before);
+  assert.strictEqual(fs.existsSync(path.join(r.modules, 'half')), false);
+  assert.strictEqual(fs.existsSync(`${r.modules}.prev`), false);
+});

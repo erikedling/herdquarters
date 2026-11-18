@@ -59,7 +59,7 @@
       return { warn: true, html: `<div class="update-line"><span class="update-icon">⚠</span><span class="update-text">${text}</span><button class="btn small" data-act="dismiss">OK</button></div>` };
     }
     if (s.status === 'restart') {
-      const slow = s.kind === 'shell' ? ' It downloads a new Electron first, which can take a few minutes.' : s.kind === 'deps' ? ' It installs new packages first.' : '';
+      const slow = { shell: ' It downloads a new Electron first, which can take a few minutes.', deps: ' It installs new packages first.', bootstrap: ' It updates the app itself first.' }[s.kind] || '';
       return { html: `<div class="update-line"><span class="update-icon">↻</span><span class="update-text"><b>Restart Herdquarters to finish updating</b><small>Takes a few seconds; your agents keep running.${slow}</small></span>
         <button class="btn small primary" data-act="restart">Restart now</button>
         <button class="btn small ghost" data-act="next-launch">On next launch</button></div>` };

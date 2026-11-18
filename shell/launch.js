@@ -44,9 +44,9 @@ function modulesReady(root, checkout) {
 }
 
 // Only the xterm packages are needed at run time; Electron comes from the .app.
-function npmCi(checkout, { args = ['--omit=dev'], run = execFile } = {}) {
+function npmCi(checkout, { args = ['--omit=dev'], run = execFile, signal } = {}) {
   return new Promise((resolve, reject) => {
-    run('npm', ['ci', ...args, '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: checkout, encoding: 'utf8', timeout: NPM_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+    run('npm', ['ci', ...args, '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: checkout, encoding: 'utf8', timeout: NPM_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024, signal }, (err, stdout, stderr) => {
       if (err) { err.stderr = stderr; reject(err); } else resolve();
     });
   });
@@ -54,7 +54,8 @@ function npmCi(checkout, { args = ['--omit=dev'], run = execFile } = {}) {
 
 // npm ci deletes node_modules before it installs, so the old one is moved aside
 // and put back if the install fails or is cut short.
-async function installModules(root, checkout, { npm = npmCi } = {}) {
+// signal: aborting kills npm, and the old modules are put back before this rejects.
+async function installModules(root, checkout, { npm = (dir, opts) => npmCi(dir, opts), signal } = {}) {
   const live = modulesDir(checkout);
   const staged = stagedDir(checkout);
   if (fs.existsSync(staged)) {
@@ -64,7 +65,7 @@ async function installModules(root, checkout, { npm = npmCi } = {}) {
   if (modulesReady(root, checkout)) return false;
   if (fs.existsSync(live)) fs.renameSync(live, staged);
   try {
-    await npm(checkout);
+    await npm(checkout, { signal });
   } catch (err) {
     fs.rmSync(live, { recursive: true, force: true });
     if (fs.existsSync(staged)) fs.renameSync(staged, live);

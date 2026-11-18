@@ -28,7 +28,9 @@ function gitIn(cwd) {
 const lines = (s) => String(s || '').split('\n').filter(Boolean);
 
 class Updater {
-  constructor({ shell, send = () => {}, electronVersion = process.versions.electron, git = shell ? gitIn(shell.checkout) : null, now = Date.now }) {
+  // onStuck: the window did not come back even after a live update was undone; only a restart helps then.
+  constructor({ shell, send = () => {}, onStuck = () => {}, electronVersion = process.versions.electron, git = shell ? gitIn(shell.checkout) : null, now = Date.now }) {
+    this.onStuck = onStuck;
     this.shell = shell;
     // The bundle's copy, which is what the bootstrap reads and writes state.json with.
     this.launch = shell?.launch || require('./shell/launch');
@@ -128,7 +130,8 @@ class Updater {
   // After a live update's reload: no ready message in time puts the previous commit back and reloads again.
   watchReload(reload, ms = READY_TIMEOUT_MS) {
     clearTimeout(this.reloadTimer);
-    this.reloadTimer = setTimeout(() => this.revertLive(reload).catch(() => {}), ms);
+    this.readyMs = ms;
+    this.reloadTimer = setTimeout(() => this.revertLive(reload).catch(() => this.onStuck()), ms);
   }
 
   async revertLive(reload) {
@@ -140,6 +143,7 @@ class Updater {
     const notice = { kind: 'rolledBack', from: target, to: this.previous, error: 'the window did not come up after the update', at: this.now() };
     this.launch.updateState(root, { bad: target, notice });
     this.set({ status: 'current', kind: null, target: null, commits: [], notice });
+    this.reloadTimer = setTimeout(() => this.onStuck(), this.readyMs ?? READY_TIMEOUT_MS);
     reload();
   }
 

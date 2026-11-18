@@ -87,6 +87,33 @@ test('a live update whose window never says it is ready is put back and reloaded
   assert.strictEqual((await u.check()).status, 'current', 'not offered again');
 });
 
+test('when even the undone update brings no window back, the user is told to restart', async () => {
+  const r = repos();
+  const broken = r.commit({ 'renderer/app.js': 'throw\n' });
+  let stuck = 0;
+  const u = new Updater({ shell: { root: r.root, checkout: r.checkout, branch: 'main' }, onStuck: () => { stuck += 1; }, electronVersion: '45.0.0' });
+  await u.check();
+  await u.apply(broken);
+  let reloads = 0;
+  u.watchReload(() => { reloads += 1; }, 20);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(reloads, 1);
+  assert.strictEqual(stuck, 1);
+  assert.strictEqual(r.head(), r.first);
+});
+
+test('a window that comes back after the undo needs no restart prompt', async () => {
+  const r = repos();
+  const broken = r.commit({ 'renderer/app.js': 'throw\n' });
+  let stuck = 0;
+  const u = new Updater({ shell: { root: r.root, checkout: r.checkout, branch: 'main' }, onStuck: () => { stuck += 1; }, electronVersion: '45.0.0' });
+  await u.check();
+  await u.apply(broken);
+  u.watchReload(() => { setTimeout(() => u.loaded(), 5); }, 20);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(stuck, 0);
+});
+
 test('a ready message in time keeps the live update', async () => {
   const r = repos();
   const next = r.commit({ 'renderer/app.js': 'two\n' });

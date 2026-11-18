@@ -51,7 +51,7 @@ function makeApp({ out, root, checkout, electron = path.join(repo, 'node_modules
   const app = path.join(resources, 'app');
   fs.mkdirSync(app);
   for (const f of fs.readdirSync(shellSrc)) if (f.endsWith('.js')) fs.copyFileSync(path.join(shellSrc, f), path.join(app, f));
-  fs.writeFileSync(path.join(app, 'package.json'), `${JSON.stringify({ name: 'herdquarters-shell', productName, version, private: true, main: 'bootstrap.js' }, null, 2)}\n`);
+  fs.writeFileSync(path.join(app, 'package.json'), `${JSON.stringify({ name: 'herdquarters-shell', productName, version, private: true, main: 'loader.js' }, null, 2)}\n`);
   fs.writeFileSync(path.join(app, 'shell.json'), `${JSON.stringify({ root: path.resolve(root), checkout: path.resolve(checkout), branch: 'main' }, null, 2)}\n`);
 
   // Ad hoc is enough: an app built on this Mac is not quarantined, so Gatekeeper opens it.

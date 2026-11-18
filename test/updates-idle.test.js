@@ -13,6 +13,7 @@ function load({ mode = 'auto' } = {}) {
   const el = () => ({ hidden: true, innerHTML: '', textContent: '', disabled: false, classList: { toggle() {}, remove() {} }, addEventListener() {}, querySelectorAll: () => [] });
   const els = { updatebar: el(), 'set-updates-row': el(), 'set-updates-info': el(), 'set-update-check': el(), settings: el(), modal: el() };
   const applied = [];
+  const push = {};
   const document = {
     activeElement: null,
     getElementById: (id) => els[id] || null,
@@ -21,14 +22,14 @@ function load({ mode = 'auto' } = {}) {
   };
   const window = {
     office: {
-      updates: { onState() {}, get: () => new Promise(() => {}), apply: async (t) => { applied.push(t); return { ok: true }; } },
+      updates: { onState: (cb) => { push.state = cb; }, get: () => new Promise(() => {}), apply: async (t) => { applied.push(t); return { ok: true }; } },
       onSnapshot: () => () => {},
     },
     officeSettings: { get: () => ({ updateMode: mode }) },
     getSelection: () => '',
   };
   vm.runInNewContext(src, { window, document, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} }, setInterval() {}, setTimeout, Date });
-  return { updates: window.officeUpdates, document, listeners, els };
+  return { updates: window.officeUpdates, document, listeners, els, push };
 }
 
 test('a quiet window counts as idle', () => {
@@ -62,4 +63,13 @@ test('settings or a dialog open is busy, as is half-typed text', () => {
   els.modal.hidden = true;
   document.activeElement = { tagName: 'INPUT', type: 'text', value: 'half', closest: () => null };
   assert.strictEqual(updates.idle(), false);
+});
+
+test('the restart bar says when the app updates itself first', () => {
+  const { push, els } = load({ mode: 'ask' });
+  push.state({ enabled: true, status: 'restart', kind: 'bootstrap', commits: [] });
+  assert.match(els.updatebar.innerHTML, /Restart Herdquarters to finish updating/);
+  assert.match(els.updatebar.innerHTML, /It updates the app itself first\./);
+  push.state({ enabled: true, status: 'restart', kind: 'restart', commits: [] });
+  assert.doesNotMatch(els.updatebar.innerHTML, /updates the app itself/);
 });

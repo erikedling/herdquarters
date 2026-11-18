@@ -53,7 +53,17 @@ const toRenderer = (channel, payload) => { if (win && !win.isDestroyed()) win.we
 const terminals = new StreamManager(toRenderer);
 const worktreeLister = createWorktreeLister(client);
 // Set by shell/bootstrap.js when the Dock app runs this checkout; absent under npm start.
-const updater = new Updater({ shell: global.herdquartersShell || null, send: (state) => toRenderer('update-state', state) });
+const updater = new Updater({
+  shell: global.herdquartersShell || null,
+  send: (state) => toRenderer('update-state', state),
+  onStuck: () => dialog.showMessageBox({
+    type: 'warning',
+    message: 'Herdquarters could not bring its window back',
+    detail: 'An update was undone, but the window still did not come up. Restart Herdquarters to get it back; your agents keep running.',
+    buttons: ['Restart now', 'Later'],
+    defaultId: 0,
+  }).then(({ response }) => { if (response === 0) { app.relaunch(); app.quit(); } }),
+});
 
 // Orchestrators (boss + workers). Folders live under userData; in fixture
 // mode the prototype's fixture/orchestrators so the fixture can ship one.

@@ -509,7 +509,11 @@ hour, and sorts what came in by what applying it takes (`updater.js`):
   scripts): needs a restart. It is checked out at the next launch, before
   `main.js` loads, so a running app never mixes old and new files.
 - `shell/` changed: as above. The app runs its own copy of `shell/`, so at that
-  launch it copies the new files into the bundle, signs it again and starts over.
+  launch it checks that each new file parses, swaps them into the bundle, signs
+  it again and starts over. The bundle's entry point is `shell/loader.js`, which
+  is never swapped: it keeps the previous set in `Resources/app.prev` until a
+  window has come up, and if the new `bootstrap.js` throws, or six launches pass
+  without a window, it puts the previous set back and rolls the commit back.
 - `package-lock.json` changed: as above, with `npm ci` at that launch. The old
   `node_modules` is moved aside first and put back if the install fails, and
   `state.json` records which lockfile it was installed from, so an install that
@@ -519,7 +523,9 @@ hour, and sorts what came in by what applying it takes (`updater.js`):
   if the app still does not match after that, it goes back to the last good one.
 
 A launch that has to install or rebuild shows a small *Updating Herdquarters…*
-window while it works, then starts again.
+window while it works, then starts again. The window cannot be closed, and ⌘Q
+asks first: **Stop and quit** stops npm, puts the old `node_modules` back and
+quits on the version it had.
 
 Settings > General > Updates picks **Ask** (the default) or **Automatic**. Ask
 shows a bar under the top bar: *Update available* with the changes (the PR
@@ -532,17 +538,21 @@ launch**. **Check now** in settings checks at once. A check that fails (offline)
 stays quiet and is tried again in an hour; settings shows the error.
 
 A version counts as started when the window says so: `renderer/ready.js`, the
-last script, checks that every part set itself up without an error and sends
-`renderer-ready`. If a new commit throws while `main.js` loads, or the window
+last script, checks that every part set itself up and that none of the window's
+own scripts (`renderer/*.js`) threw, and sends `renderer-ready`. A rejected call
+to something outside the window, such as herdr still starting or `gh` offline,
+is only logged. If a new commit throws while `main.js` loads, or the window
 has not said it is ready within 30 s, the bootstrap checks out the last commit
-that did start, starts again and says so in the bar. That commit is not offered
+that did start, starts again and says so in the bar. A live update that does not
+come up is undone the same way with a reload; if even that window does not come
+back, a dialog offers to restart. That commit is not offered
 again; the next one is. The checkout belongs to the app: if it has local changes,
 or commits that `origin/main` does not have, updates stop and say why instead of
 dropping them. Its state is in `state.json` next to it.
 
 If the app cannot get itself going again (a bad commit was marked good, the
-checkout has local changes or a history of its own, or a broken `shell/` was
-copied into the bundle), reset it from any source checkout:
+checkout has local changes or a history of its own), reset it from any source
+checkout:
 
 ```sh
 npm run install-app -- --reset

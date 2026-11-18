@@ -5,6 +5,7 @@ const { app, dialog, ipcMain, BrowserWindow } = require('electron');
 const { importLoginPath } = require('./login-path');
 const launch = require('./launch');
 const rebuild = require('./rebuild');
+const { guardQuit } = require('./quit-guard');
 
 const READY_TIMEOUT_MS = 30_000;
 const { root, checkout, branch = 'main' } = JSON.parse(fs.readFileSync(path.join(__dirname, 'shell.json'), 'utf8'));
@@ -34,7 +35,9 @@ function start() {
     return fail(`Herdquarters could not read its checkout at ${checkout}`, err);
   }
   try {
-    if (rebuild.syncShell({ checkout, appDir: __dirname, bundle })) return relaunch();
+    // Not a set that loader.js already had to give back.
+    if (launch.readState(root).shellFailed !== rebuild.shellHash(path.join(checkout, 'shell'))
+      && rebuild.syncShell({ checkout, appDir: __dirname, bundle })) return relaunch();
   } catch (err) {
     console.error(`could not update the app's own files: ${launch.shortError(err)}`);
   }
@@ -53,13 +56,22 @@ function installFirst(current, newElectron) {
     const text = newElectron
       ? 'Downloading a new Electron and building the app again. This can take a few minutes.'
       : 'Installing packages for the new version.';
-    const win = new BrowserWindow({ width: 440, height: 130, resizable: false, minimizable: false, maximizable: false, title: 'Herdquarters', backgroundColor: '#1b1e2b' });
+    const win = new BrowserWindow({ width: 440, height: 130, resizable: false, minimizable: false, maximizable: false, closable: false, title: 'Herdquarters', backgroundColor: '#1b1e2b' });
     win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<body style="margin:0;padding:22px 26px;font:14px -apple-system,sans-serif;color:#e6e9f5;background:#1b1e2b"><b>Updating Herdquarters…</b><p style="color:#9aa3c0;margin:8px 0 0">${text}</p></body>`)}`);
+    const controller = new AbortController();
+    const release = guardQuit({ app, dialog, win, controller });
     try {
-      if (newElectron) await rebuild.rebuild({ root, checkout, bundle, current });
-      else await launch.installModules(root, checkout);
+      if (newElectron) await rebuild.rebuild({ root, checkout, bundle, current, signal: controller.signal });
+      else await launch.installModules(root, checkout, { signal: controller.signal });
+      release();
       relaunch();
     } catch (err) {
+      release();
+      if (controller.signal.aborted) {
+        // A stopped rebuild was not a real try; the next launch may try it again.
+        if (newElectron) launch.updateState(root, { rebuildTried: null });
+        return app.exit(0);
+      }
       const back = launch.rollBack({ ...opts, error: launch.shortError(err) });
       if (back !== current) relaunch();
       else fail('Herdquarters could not install its packages. Check the network and open it again.', err);
@@ -77,6 +89,7 @@ function run(current) {
   ipcMain.once('renderer-ready', () => {
     clearTimeout(watchdog);
     launch.markGood(root, current);
+    rebuild.confirmShell(__dirname);
   });
   try {
     require(path.join(checkout, 'main.js'));

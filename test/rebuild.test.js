@@ -46,27 +46,56 @@ test('a failed rebuild is still counted, so it is not retried at every launch', 
   assert.strictEqual(rebuild.rebuildPlan({ root, checkout, current: 'abc', running: '45.0.0' }), 'gaveUp');
 });
 
-test('syncShell() copies changed shell/ files into the bundle, drops removed ones and signs again', () => {
+function bundleWithShell() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'hq-sync-'));
   const checkout = path.join(dir, 'app');
-  const appDir = path.join(dir, 'Herdquarters.app', 'Contents', 'Resources', 'app');
+  const bundle = path.join(dir, 'Herdquarters.app');
+  const appDir = path.join(bundle, 'Contents', 'Resources', 'app');
   fs.mkdirSync(path.join(checkout, 'shell'), { recursive: true });
   fs.mkdirSync(appDir, { recursive: true });
-  fs.writeFileSync(path.join(checkout, 'shell', 'bootstrap.js'), 'new\n');
-  fs.writeFileSync(path.join(checkout, 'shell', 'launch.js'), 'same\n');
-  fs.writeFileSync(path.join(appDir, 'bootstrap.js'), 'old\n');
-  fs.writeFileSync(path.join(appDir, 'launch.js'), 'same\n');
-  fs.writeFileSync(path.join(appDir, 'gone.js'), 'removed upstream\n');
-  fs.writeFileSync(path.join(appDir, 'shell.json'), '{}\n');
-  fs.writeFileSync(path.join(appDir, 'package.json'), '{}\n');
-  const signed = [];
-  const run = (cmd, args) => signed.push([cmd, args.at(-1)]);
-  const bundle = path.join(dir, 'Herdquarters.app');
-  assert.strictEqual(rebuild.shellDiffers(checkout, appDir), true);
-  assert.strictEqual(rebuild.syncShell({ checkout, appDir, bundle, run }), true);
-  assert.deepStrictEqual(fs.readdirSync(appDir).sort(), ['bootstrap.js', 'launch.js', 'package.json', 'shell.json']);
-  assert.strictEqual(fs.readFileSync(path.join(appDir, 'bootstrap.js'), 'utf8'), 'new\n');
-  assert.deepStrictEqual(signed, [['codesign', bundle]]);
-  assert.strictEqual(rebuild.syncShell({ checkout, appDir, bundle, run }), false, 'nothing to do the second time');
-  assert.strictEqual(signed.length, 1);
+  const write = (dir2, files) => { for (const [f, t] of Object.entries(files)) fs.writeFileSync(path.join(dir2, f), t); };
+  write(path.join(checkout, 'shell'), { 'bootstrap.js': '// new\n', 'launch.js': '// same\n', 'loader.js': '// loader from the checkout\n' });
+  write(appDir, { 'bootstrap.js': '// old\n', 'launch.js': '// same\n', 'gone.js': '// removed upstream\n', 'loader.js': '// the bundle loader\n', 'shell.json': '{}\n', 'package.json': '{}\n' });
+  const calls = [];
+  const run = (cmd, args) => { calls.push([path.basename(cmd), ...args.map((a) => path.basename(a))]); };
+  return { dir, checkout, bundle, appDir, calls, run, prev: path.join(bundle, 'Contents', 'Resources', 'app.prev') };
+}
+
+test('syncShell() checks, then swaps in changed files, keeps the old set in app.prev and never touches loader.js', () => {
+  const b = bundleWithShell();
+  assert.strictEqual(rebuild.shellDiffers(b.checkout, b.appDir), true);
+  assert.strictEqual(rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run, execPath: '/x/Electron' }), true);
+  assert.deepStrictEqual(fs.readdirSync(b.appDir).sort(), ['bootstrap.js', 'launch.js', 'loader.js', 'package.json', 'shell.json']);
+  assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'bootstrap.js'), 'utf8'), '// new\n');
+  assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'loader.js'), 'utf8'), '// the bundle loader\n');
+  assert.deepStrictEqual(fs.readdirSync(b.prev).sort(), ['bootstrap.js', 'gone.js', 'launch.js']);
+  assert.strictEqual(fs.readFileSync(path.join(b.prev, 'bootstrap.js'), 'utf8'), '// old\n');
+  assert.deepStrictEqual(b.calls, [['Electron', '--check', 'bootstrap.js'], ['Electron', '--check', 'launch.js'], ['codesign', '--force', '--deep', '--sign', '-', 'Herdquarters.app']]);
+  assert.strictEqual(rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run }), false, 'nothing to do the second time');
+});
+
+test('a second sync before any ready window keeps the first old set in app.prev', () => {
+  const b = bundleWithShell();
+  rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
+  fs.writeFileSync(path.join(b.checkout, 'shell', 'bootstrap.js'), '// newer\n');
+  rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
+  assert.strictEqual(fs.readFileSync(path.join(b.prev, 'bootstrap.js'), 'utf8'), '// old\n');
+  rebuild.confirmShell(b.appDir);
+  assert.strictEqual(fs.existsSync(b.prev), false);
+});
+
+test('a file that does not parse never reaches the bundle', () => {
+  const b = bundleWithShell();
+  fs.writeFileSync(path.join(b.checkout, 'shell', 'bootstrap.js'), 'const = ;\n');
+  assert.throws(() => rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: require('node:child_process').execFileSync }));
+  assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'bootstrap.js'), 'utf8'), '// old\n');
+  assert.ok(fs.readdirSync(b.appDir).every((f) => !f.endsWith('.new')));
+  assert.strictEqual(fs.existsSync(b.prev), false);
+});
+
+test('loader.js hashes shell/ the same way as rebuild.js', () => {
+  const b = bundleWithShell();
+  const src = path.join(b.checkout, 'shell');
+  assert.strictEqual(require('../shell/loader').shellHash(src), rebuild.shellHash(src));
+  assert.notStrictEqual(rebuild.shellHash(src), rebuild.shellHash(b.appDir));
 });
