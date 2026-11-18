@@ -37,7 +37,7 @@ function start() {
   try {
     // Not a set that loader.js already had to give back.
     if (launch.readState(root).shellFailed !== rebuild.shellHash(path.join(checkout, 'shell'))
-      && rebuild.syncShell({ checkout, appDir: __dirname, bundle })) return relaunch();
+      && rebuild.syncShell({ root, checkout, appDir: __dirname, bundle })) return relaunch();
   } catch (err) {
     console.error(`could not update the app's own files: ${launch.shortError(err)}`);
   }
@@ -89,7 +89,7 @@ function run(current) {
   ipcMain.once('renderer-ready', () => {
     clearTimeout(watchdog);
     launch.markGood(root, current);
-    rebuild.confirmShell(__dirname);
+    rebuild.confirmShell(root);
   });
   try {
     require(path.join(checkout, 'main.js'));

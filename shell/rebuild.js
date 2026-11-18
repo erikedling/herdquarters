@@ -46,7 +46,8 @@ async function rebuild({ root, checkout, bundle, current, execPath = process.exe
 }
 
 const shellFiles = (dir) => fs.readdirSync(dir).filter((f) => f.endsWith('.js') && f !== LOADER).sort();
-const prevDir = (appDir) => path.join(path.dirname(appDir), 'app.prev');
+// Outside the bundle, so keeping and dropping it never breaks the bundle's signature.
+const prevDir = (root) => path.join(root, 'shell.prev');
 
 function shellHash(dir) {
   const h = crypto.createHash('sha256');
@@ -64,14 +65,14 @@ function shellDiffers(checkout, appDir) {
 }
 
 // The bundle runs its own copy of shell/ (all but loader.js); bring it in line with the checkout and sign again.
-// The set that last reached a ready window stays in app.prev, for loader.js to put back, until a new one does.
-function syncShell({ checkout, appDir, bundle, run = execFileSync, execPath = process.execPath }) {
+// The set that last reached a ready window stays in shell.prev, for loader.js to put back, until a new one does.
+function syncShell({ root, checkout, appDir, bundle, run = execFileSync, execPath = process.execPath }) {
   if (!shellDiffers(checkout, appDir)) return false;
   const src = path.join(checkout, 'shell');
   const want = shellFiles(src);
   for (const f of want) run(execPath, ['--check', path.join(src, f)], { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, stdio: 'ignore' });
   for (const f of want) fs.copyFileSync(path.join(src, f), path.join(appDir, `.${f}.new`));
-  const prev = prevDir(appDir);
+  const prev = prevDir(root);
   if (!fs.existsSync(prev)) {
     fs.mkdirSync(`${prev}.tmp`, { recursive: true });
     for (const f of shellFiles(appDir)) fs.copyFileSync(path.join(appDir, f), path.join(`${prev}.tmp`, f));
@@ -83,6 +84,6 @@ function syncShell({ checkout, appDir, bundle, run = execFileSync, execPath = pr
   return true;
 }
 
-const confirmShell = (appDir) => fs.rmSync(prevDir(appDir), { recursive: true, force: true });
+const confirmShell = (root) => fs.rmSync(prevDir(root), { recursive: true, force: true });
 
-module.exports = { electronMajor, wantedMajor, rebuildPlan, rebuild, shellDiffers, shellHash, syncShell, confirmShell };
+module.exports = { electronMajor, wantedMajor, rebuildPlan, rebuild, shellDiffers, shellHash, syncShell, confirmShell, prevDir };

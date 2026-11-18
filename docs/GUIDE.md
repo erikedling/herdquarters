@@ -511,8 +511,8 @@ hour, and sorts what came in by what applying it takes (`updater.js`):
 - `shell/` changed: as above. The app runs its own copy of `shell/`, so at that
   launch it checks that each new file parses, swaps them into the bundle, signs
   it again and starts over. The bundle's entry point is `shell/loader.js`, which
-  is never swapped: it keeps the previous set in `Resources/app.prev` until a
-  window has come up, and if the new `bootstrap.js` throws, or six launches pass
+  is never swapped: the previous set waits in `shell.prev` next to `state.json`
+  (outside the bundle, so its signature stays valid) until a window has come up, and if the new `bootstrap.js` throws, or six launches pass
   without a window, it puts the previous set back and rolls the commit back.
 - `package-lock.json` changed: as above, with `npm ci` at that launch. The old
   `node_modules` is moved aside first and put back if the install fails, and

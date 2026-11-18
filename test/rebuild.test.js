@@ -58,36 +58,36 @@ function bundleWithShell() {
   write(appDir, { 'bootstrap.js': '// old\n', 'launch.js': '// same\n', 'gone.js': '// removed upstream\n', 'loader.js': '// the bundle loader\n', 'shell.json': '{}\n', 'package.json': '{}\n' });
   const calls = [];
   const run = (cmd, args) => { calls.push([path.basename(cmd), ...args.map((a) => path.basename(a))]); };
-  return { dir, checkout, bundle, appDir, calls, run, prev: path.join(bundle, 'Contents', 'Resources', 'app.prev') };
+  return { dir, root: dir, checkout, bundle, appDir, calls, run, prev: path.join(dir, 'shell.prev') };
 }
 
-test('syncShell() checks, then swaps in changed files, keeps the old set in app.prev and never touches loader.js', () => {
+test('syncShell() checks, then swaps in changed files, keeps the old set in shell.prev, outside the bundle, and never touches loader.js', () => {
   const b = bundleWithShell();
   assert.strictEqual(rebuild.shellDiffers(b.checkout, b.appDir), true);
-  assert.strictEqual(rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run, execPath: '/x/Electron' }), true);
+  assert.strictEqual(rebuild.syncShell({ root: b.root, checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run, execPath: '/x/Electron' }), true);
   assert.deepStrictEqual(fs.readdirSync(b.appDir).sort(), ['bootstrap.js', 'launch.js', 'loader.js', 'package.json', 'shell.json']);
   assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'bootstrap.js'), 'utf8'), '// new\n');
   assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'loader.js'), 'utf8'), '// the bundle loader\n');
   assert.deepStrictEqual(fs.readdirSync(b.prev).sort(), ['bootstrap.js', 'gone.js', 'launch.js']);
   assert.strictEqual(fs.readFileSync(path.join(b.prev, 'bootstrap.js'), 'utf8'), '// old\n');
   assert.deepStrictEqual(b.calls, [['Electron', '--check', 'bootstrap.js'], ['Electron', '--check', 'launch.js'], ['codesign', '--force', '--deep', '--sign', '-', 'Herdquarters.app']]);
-  assert.strictEqual(rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run }), false, 'nothing to do the second time');
+  assert.strictEqual(rebuild.syncShell({ root: b.root, checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run }), false, 'nothing to do the second time');
 });
 
-test('a second sync before any ready window keeps the first old set in app.prev', () => {
+test('a second sync before any ready window keeps the first old set in shell.prev', () => {
   const b = bundleWithShell();
-  rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
+  rebuild.syncShell({ root: b.root, checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
   fs.writeFileSync(path.join(b.checkout, 'shell', 'bootstrap.js'), '// newer\n');
-  rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
+  rebuild.syncShell({ root: b.root, checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: b.run });
   assert.strictEqual(fs.readFileSync(path.join(b.prev, 'bootstrap.js'), 'utf8'), '// old\n');
-  rebuild.confirmShell(b.appDir);
+  rebuild.confirmShell(b.root);
   assert.strictEqual(fs.existsSync(b.prev), false);
 });
 
 test('a file that does not parse never reaches the bundle', () => {
   const b = bundleWithShell();
   fs.writeFileSync(path.join(b.checkout, 'shell', 'bootstrap.js'), 'const = ;\n');
-  assert.throws(() => rebuild.syncShell({ checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: require('node:child_process').execFileSync }));
+  assert.throws(() => rebuild.syncShell({ root: b.root, checkout: b.checkout, appDir: b.appDir, bundle: b.bundle, run: require('node:child_process').execFileSync }));
   assert.strictEqual(fs.readFileSync(path.join(b.appDir, 'bootstrap.js'), 'utf8'), '// old\n');
   assert.ok(fs.readdirSync(b.appDir).every((f) => !f.endsWith('.new')));
   assert.strictEqual(fs.existsSync(b.prev), false);
