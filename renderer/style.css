@@ -344,6 +344,7 @@ body.term-full .termpanel { flex: 1 1 auto; min-width: 0; border-left: none; }
 .ubar { display: inline-block; flex: none; width: 34px; height: 6px; border-radius: 2px; overflow: hidden; background: var(--line); }
 .ubar i { display: block; height: 100%; background: var(--working); }
 .ubar.warn i { background: var(--warn); } .ubar.high i { background: var(--blocked); }
+@media (max-width: 1239px) { .usage-unit { display: none; } }
 @media (max-width: 1100px) { .usage-reset { display: none; } }
 @media (max-width: 860px) { .usage .ubar { display: none; } }
 .usage-pop {

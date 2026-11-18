@@ -34,6 +34,8 @@
   const level = (used) => (used >= 90 ? 'high' : used >= 75 ? 'warn' : 'ok');
   const usedPct = (w) => Math.max(0, Math.min(100, Math.round(w.usedPercent)));
   const pct = (w, show) => (show === 'used' ? `${usedPct(w)}% used` : `${100 - usedPct(w)}% left`);
+  // In the status bar the word goes first when space runs out (style.css); the tooltip keeps it.
+  const shortPct = (w, show) => (show === 'used' ? `${usedPct(w)}%<span class="usage-unit"> used</span>` : `${100 - usedPct(w)}%<span class="usage-unit"> left</span>`);
   const fill = (w, show) => { const used = Math.max(0, Math.min(100, w.usedPercent)); return show === 'used' ? used : 100 - used; };
   const bar = (w, show) => `<span class="ubar ${level(w.usedPercent)}"><i style="width:${fill(w, show)}%"></i></span>`;
 
@@ -47,7 +49,7 @@
       const wins = mainWindows(p);
       const dim = p.stale ? ' stale' : '';
       if (!wins.length) return `<span class="usage-prov"><b>${esc(p.name)}</b> <span class="usage-off" title="${esc(p.error || '')}">–</span></span>`;
-      return `<span class="usage-prov${dim}"><b>${esc(p.name)}</b>${wins.map((w) => `<span class="usage-win" title="${esc(`${p.name} ${w.label}: ${pct(w, show)}${w.resetsAt ? `, resets ${resetTime(w.resetsAt, now)}` : ''}`)}">${esc(w.short)} ${bar(w, show)} ${pct(w, show)}${w.resetsAt ? ` <span class="usage-reset">↺${countdown(w.resetsAt, now)}</span>` : ''}</span>`).join('')}</span>`;
+      return `<span class="usage-prov${dim}"><b>${esc(p.name)}</b>${wins.map((w) => `<span class="usage-win" title="${esc(`${p.name} ${w.label}: ${pct(w, show)}${w.resetsAt ? `, resets ${resetTime(w.resetsAt, now)}` : ''}`)}">${esc(w.short)} ${bar(w, show)} ${shortPct(w, show)}${w.resetsAt ? ` <span class="usage-reset">↺${countdown(w.resetsAt, now)}</span>` : ''}</span>`).join('')}</span>`;
     }).join('');
   }
 

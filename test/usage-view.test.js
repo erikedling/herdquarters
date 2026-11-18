@@ -34,14 +34,14 @@ const claude = { id: 'claude', name: 'Claude', status: 'ok', at: NOW, windows: [
 test('status bar: the two main windows per provider, with countdowns', () => {
   const html = statusHtml(view([claude, { id: 'codex', name: 'Codex', status: 'missing' }]), NOW, 'used');
   assert.match(html, /<b>Claude<\/b>/);
-  assert.match(html, /5h <span class="ubar ok"><i style="width:42%"><\/i><\/span> 42% used <span class="usage-reset">↺2h05<\/span>/);
+  assert.match(html, /5h <span class="ubar ok"><i style="width:42%"><\/i><\/span> 42%<span class="usage-unit"> used<\/span> <span class="usage-reset">↺2h05<\/span>/);
   assert.doesNotMatch(html, /week:opus|7%/, 'per-model weeks only in the popover');
   assert.doesNotMatch(html, /Codex/, 'a CLI that is not installed gets no place');
 });
 
 test('status bar, remaining (the default): a draining bar and "% left"', () => {
   const html = statusHtml(view([claude]), NOW);
-  assert.match(html, /5h <span class="ubar ok"><i style="width:58%"><\/i><\/span> 58% left <span class="usage-reset">↺2h05<\/span>/);
+  assert.match(html, /5h <span class="ubar ok"><i style="width:58%"><\/i><\/span> 58%<span class="usage-unit"> left<\/span> <span class="usage-reset">↺2h05<\/span>/);
   assert.match(html, /title="Claude session: 58% left, resets 13:28"/);
   assert.doesNotMatch(html, /used/);
 });
@@ -49,15 +49,15 @@ test('status bar, remaining (the default): a draining bar and "% left"', () => {
 test('colours follow how close the limit is, in both modes', () => {
   const at = (used) => ({ ...claude, windows: [win('session', used, 60)] });
   for (const [used, cls, left] of [[74, 'ok', 26], [75, 'warn', 25], [89, 'warn', 11], [90, 'high', 10]]) {
-    assert.match(statusHtml(view([at(used)]), NOW), new RegExp(`ubar ${cls}"><i style="width:${left}%"></i></span> ${left}% left`));
-    assert.match(statusHtml(view([at(used)]), NOW, 'used'), new RegExp(`ubar ${cls}"><i style="width:${used}%"></i></span> ${used}% used`));
+    assert.match(statusHtml(view([at(used)]), NOW), new RegExp(`ubar ${cls}"><i style="width:${left}%"></i></span> ${left}%<span class="usage-unit"> left`));
+    assert.match(statusHtml(view([at(used)]), NOW, 'used'), new RegExp(`ubar ${cls}"><i style="width:${used}%"></i></span> ${used}%<span class="usage-unit"> used`));
   }
 });
 
 test('left and used add up to 100 after rounding', () => {
   const html = statusHtml(view([{ ...claude, windows: [win('session', 40.5, 60)] }]), NOW);
-  assert.match(html, /> 59% left /);
-  assert.match(statusHtml(view([{ ...claude, windows: [win('session', 40.5, 60)] }]), NOW, 'used'), /> 41% used /);
+  assert.match(html, /> 59%<span class="usage-unit"> left/);
+  assert.match(statusHtml(view([{ ...claude, windows: [win('session', 40.5, 60)] }]), NOW, 'used'), /> 41%<span class="usage-unit"> used/);
 });
 
 test('status bar: nothing while off, loading, or with no CLI at all', () => {
