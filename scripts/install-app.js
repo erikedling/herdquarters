@@ -1,7 +1,7 @@
 // npm run install-app [-- --out <path> --root <dir> --remote <url> --reset]; see "The Dock app" in docs/GUIDE.md.
 //   --out <path>     the app (default ~/Applications/Herdquarters.app)
 //   --root <dir>     the app's own folder (default ~/Library/Application Support/Herdquarters)
-//   --remote <url>   what the checkout tracks (default: this repo's origin)
+//   --remote <url>   what the checkout tracks (default: the public repo over HTTPS)
 //   --reset          put the app's checkout back on origin/main, dropping its local changes and update state
 const fs = require('node:fs');
 const os = require('node:os');
@@ -12,6 +12,9 @@ const launch = require('../shell/launch');
 const { wantedMajor } = require('../shell/rebuild');
 
 const repo = path.join(__dirname, '..');
+// HTTPS, so the app's hourly fetch never needs an SSH key in the agent.
+const DEFAULT_REMOTE = 'https://github.com/erikedling/herdquarters.git';
+const remoteFor = (a) => (typeof a.remote === 'string' && a.remote) || DEFAULT_REMOTE;
 const run = (cmd, argv, opts = {}) => String(execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }) ?? '').trim();
 
 function resetCheckout({ root, checkout, branch = 'main' }) {
@@ -28,7 +31,7 @@ async function main() {
   checkTarget(out);
 
   if (!fs.existsSync(path.join(checkout, '.git'))) {
-    const remote = a.remote || run('git', ['-C', repo, 'remote', 'get-url', 'origin']);
+    const remote = remoteFor(a);
     console.log(`cloning ${remote} into ${checkout}`);
     fs.mkdirSync(root, { recursive: true });
     run('git', ['clone', '--quiet', '--branch', 'main', remote, checkout], { stdio: 'inherit' });
@@ -55,4 +58,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { resetCheckout };
+module.exports = { resetCheckout, remoteFor, DEFAULT_REMOTE };

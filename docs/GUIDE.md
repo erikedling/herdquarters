@@ -478,7 +478,9 @@ Turn this off with "Start herdr" in settings. The server's output goes to
 you no longer need `npm start`. It clones the repo into a checkout the app owns,
 `~/Library/Application Support/Herdquarters/app` (never the one you ran it
 from), installs its packages there, and builds `~/Applications/Herdquarters.app`
-around it (`--out`, `--root` and `--remote` change those). Quit `npm start`,
+around it (`--out`, `--root` and `--remote` change those). The checkout tracks
+`https://github.com/erikedling/herdquarters.git`, so its hourly fetch needs no
+SSH key; `--remote` points it elsewhere, such as a fork. Quit `npm start`,
 open the app and drag it to the Dock. Run it again to rebuild the app; the
 checkout and its update state are kept. `--out` must name a `.app`, and an
 existing one is only replaced if this script built it.

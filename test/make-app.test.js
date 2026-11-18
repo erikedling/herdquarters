@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { makeApp, checkTarget, args } = require('../scripts/make-app');
-const { resetCheckout } = require('../scripts/install-app');
+const { resetCheckout, remoteFor, DEFAULT_REMOTE } = require('../scripts/install-app');
 const launch = require('../shell/launch');
 const { repos } = require('./helpers/git-repos');
 
@@ -60,4 +60,12 @@ test('--reset puts a dirty, diverged checkout back on origin/main and clears the
   assert.strictEqual(fs.readFileSync(path.join(r.checkout, 'main.js'), 'utf8'), 'two\n');
   assert.strictEqual(r.git(r.checkout, 'status', '--porcelain', '--untracked-files=no'), '');
   assert.deepStrictEqual(launch.readState(r.root), { lastGood: null, bad: null, pending: null, booting: null, notice: null, rebuildTried: null, modulesFor: null });
+});
+
+test('the app’s checkout tracks the public repo over HTTPS unless --remote says otherwise', () => {
+  assert.strictEqual(DEFAULT_REMOTE, 'https://github.com/erikedling/herdquarters.git');
+  assert.strictEqual(remoteFor(args([])), DEFAULT_REMOTE, 'not this checkout’s origin, which may be SSH');
+  assert.strictEqual(remoteFor(args(['--root', '/r'])), DEFAULT_REMOTE);
+  assert.strictEqual(remoteFor(args(['--remote', '/tmp/origin.git'])), '/tmp/origin.git');
+  assert.strictEqual(remoteFor(args(['--remote'])), DEFAULT_REMOTE, 'a bare flag is not a URL');
 });
