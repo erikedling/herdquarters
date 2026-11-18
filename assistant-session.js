@@ -11,15 +11,17 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-// An app started from Finder has a short PATH: look where Claude installs too.
-function findClaude(env = process.env) {
-  const dirs = [...String(env.PATH || '').split(':'), path.join(os.homedir(), '.local', 'bin'), path.join(os.homedir(), '.claude', 'local'), '/opt/homebrew/bin', '/usr/local/bin'];
+// An app started from Finder or the Dock has a short PATH: look where the CLIs install too.
+function findBin(name, env = process.env) {
+  const home = os.homedir();
+  const dirs = [...String(env.PATH || '').split(':').filter(Boolean), path.join(home, '.local', 'bin'), path.join(home, '.claude', 'local'), '/opt/homebrew/bin', '/usr/local/bin', path.join(home, '.npm-global', 'bin')];
   for (const dir of dirs) {
-    const p = path.join(dir, 'claude');
+    const p = path.join(dir, name);
     try { fs.accessSync(p, fs.constants.X_OK); return p; } catch { /* next */ }
   }
-  return 'claude';
+  return null;
 }
+const findClaude = (env = process.env) => findBin('claude', env) || 'claude';
 
 // One stream-json line → the events the office cares about.
 function parseLine(line) {
@@ -108,4 +110,4 @@ class AssistantSession extends EventEmitter {
   }
 }
 
-module.exports = { AssistantSession, parseLine, userLine, findClaude };
+module.exports = { AssistantSession, parseLine, userLine, findClaude, findBin };

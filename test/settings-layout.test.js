@@ -39,7 +39,7 @@ function load(stored, office = {}, extra = {}) {
     },
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
   });
-  return { settings: window.officeSettings, vars, classes, $width: $pop.els['#set-width'] };
+  return { settings: window.officeSettings, vars, classes, $pop, $width: $pop.els['#set-width'] };
 }
 
 test('a fresh install opens the terminal as a split panel at 46%', () => {
@@ -111,4 +111,44 @@ test('animals hidden with the old paw button come back: the button is gone', () 
 test('a fresh install opens in the Toybox style', () => {
   const { settings } = load();
   assert.strictEqual(settings.get().style, 'toybox');
+});
+
+test('plan usage is on at 10 minutes, and main hears it at startup and on change', () => {
+  const calls = [];
+  // JSON: objects made inside the vm context have another Object prototype.
+  const { settings } = load(undefined, { usage: { configure: (p) => calls.push(JSON.parse(JSON.stringify(p))) } });
+  assert.strictEqual(settings.get().usageMeter, true);
+  assert.strictEqual(settings.get().usageInterval, 10);
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 10 });
+  settings.set({ usageInterval: 30 });
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 30 });
+  settings.set({ usageMeter: false });
+  assert.deepStrictEqual(calls.at(-1), { enabled: false, interval: 30 });
+});
+
+test('a saved usage interval main would not accept shows, and is sent, as 10 minutes', () => {
+  const calls = [];
+  const { $pop } = load({ usageInterval: 7 }, { usage: { configure: (p) => calls.push(JSON.parse(JSON.stringify(p))) } });
+  assert.strictEqual($pop.els['#set-usage-interval'].value, '10');
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 10 });
+});
+
+test('usage shows what is left by default; the choice reaches the view and the form', () => {
+  const shows = [];
+  const { settings, $pop } = load(undefined, {}, { officeUsageView: { setShow: (s) => shows.push(s) } });
+  assert.strictEqual(settings.get().usageShow, 'remaining');
+  assert.strictEqual(shows.at(-1), 'remaining');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'remaining');
+  settings.set({ usageShow: 'used' });
+  assert.strictEqual(shows.at(-1), 'used');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'used');
+  settings.set({ usageMeter: false });
+  assert.strictEqual($pop.els['#set-usage-show'].disabled, true);
+});
+
+test('a saved usage display that is neither used nor remaining shows remaining', () => {
+  const shows = [];
+  const { $pop } = load({ usageShow: 'tokens' }, {}, { officeUsageView: { setShow: (s) => shows.push(s) } });
+  assert.strictEqual(shows.at(-1), 'remaining');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'remaining');
 });

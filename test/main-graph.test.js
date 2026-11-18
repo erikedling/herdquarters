@@ -35,6 +35,13 @@ test('nothing the main process or preload loads counts as a live update', () => 
   assert.deepStrictEqual(live, [], `add these to MAIN_LOADS in updater.js: ${live.join(', ')}`);
 });
 
+test('plan usage: main’s usage.js needs a restart, the status bar’s renderer/usage.js only a reload', () => {
+  const files = graph(['main.js', 'preload.js']);
+  assert.ok(files.has('usage.js') && !files.has('renderer/usage.js'));
+  assert.strictEqual(isLive('usage.js'), false);
+  assert.strictEqual(isLive('renderer/usage.js'), true);
+});
+
 test('MAIN_LOADS has no stale entries', () => {
   const files = graph(['main.js', 'preload.js']);
   for (const f of MAIN_LOADS) assert.ok(files.has(f), `${f} is no longer loaded by main`);

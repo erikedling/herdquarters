@@ -420,6 +420,40 @@ bird flies to the board. Reminders from before the corkboard
 (`assistant/reminders/`) move in as notes the first time they are read. The
 board works with the assistant switched off.
 
+## Plan usage
+
+The right end of the status bar shows how much of your Claude and Codex plan
+limits is left: a bar per window (5 hours and the week), the percentage
+(`84% left`), and the time left until it resets (`↺2h05`). The bars drain as
+you use the limit. Set it to show what is used instead (`16% used`, bars that
+fill up) in Settings > General. Either way, a bar turns amber when 25% or less
+is left and red at 10% or less.
+Click it for every window, per-model weeks included, with the exact reset
+times, when the numbers were checked, a ↻ to check now, and a warning when
+Claude's sign-in ends within a week.
+
+The numbers come from the CLIs themselves, so no token is read and nothing
+is sent anywhere new (`usage.js`):
+
+- **Claude**: `claude -p /usage --safe-mode` (no hooks, MCP servers, plugins
+  or CLAUDE.md) with session saving off, run in an empty `usage-probe` folder
+  in the app's data folder. It costs no tokens and takes about two seconds.
+- **Codex**: `codex app-server`, asking `account/rateLimits/read` and stopping it.
+
+A CLI that is not installed is left out; with neither, nothing shows. Signed out
+or on a plan without limits, the popover says so instead of showing 0%.
+When a check fails (offline, say), the last numbers stay, dimmed, with the time
+they are from, and that provider is tried again after 5, 10, then 30 minutes.
+The CLIs are found on `PATH` and in the usual install folders
+(`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, `~/.npm-global/bin`),
+so a Dock launch finds them too.
+
+**Usage limits** in Settings > General turns it on and off (on by default),
+picks what it shows (remaining, the default, or used), and sets how often it
+checks: every 5, 10 (the default), 15 or 30 minutes.
+It also checks when the window gets focus and the numbers are over two minutes old.
+Turning it off, or quitting, stops a check that is still running.
+
 ## Settings
 
 **Style** sets the shape of the whole app. **Toybox** is the default. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
@@ -429,9 +463,9 @@ The settings button on the menu bar in reception opens settings: the style, the 
 the office and reception, not the terminal), whether the terminal opens as a
 split panel beside the office (the default) or takes the full window, the
 split panel width, the workspace sidebar, the editor command for "Open in
-editor", the alert sound, updates (Ask or Automatic, see
-[the Dock app](#the-dock-app-and-updates)), and the two orchestrator options
-above (boss instructions and QA review). The ⤢ button in the terminal header toggles split
+editor", the alert sound, plan usage (what it shows and how often it checks), updates (Ask or Automatic, see
+[the Dock app](#the-dock-app-and-updates)), and the two orchestrator options above (boss
+instructions and QA review). The ⤢ button in the terminal header toggles split
 and full on the spot. Dragging the divider between the office and the split
 terminal sets the same panel width (the slider follows); double-click it to
 go back to 46%. Settings are stored in
@@ -573,7 +607,9 @@ Contributors keep using `npm start`; the updater only runs inside the app.
   `{"activeTab":"dark-mode"}` opens the fixture's orchestrator tab.
 - `OFFICE_ASSISTANT=talk|dream|idle|wave` sets the assistant's mood in fixture runs, `OFFICE_CHAT=1` opens its chat.
 - `OFFICE_MODAL=<create|closed|remove|orchestrator|archived|slack:<slug>> npm start` opens that dialog on launch;
-  `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings.
+  `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings
+  (`=general`, `=agents`… on that section); `OFFICE_USAGE_OPEN=1` opens the plan usage popover.
+- Fixture runs show made-up plan usage; `OFFICE_USAGE_LIVE=1` reads the real `claude` and `codex` CLIs instead.
 - `OFFICE_OPEN=<pane_id> npm start` opens that desk's terminal on launch.
 - `OFFICE_CORKBOARD=big|note|both npm start` opens the big corkboard, the first note on the wall, or a note on the big board.
 - `OFFICE_USER_DATA=/tmp/agent-office-dev npm start` runs a second window beside the

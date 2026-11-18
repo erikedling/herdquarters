@@ -179,3 +179,26 @@ exports.seedNotes = function seedNotes(store) {
   ];
   notes.forEach((n, i) => store.create(n, now - (notes.length - i) * 60_000));
 };
+
+// Plan limits in fixture runs: Claude busy this session, Codex near its cap.
+exports.usage = function usage(now = Date.now()) {
+  const h = 3600_000;
+  return {
+    claude: {
+      status: 'ok',
+      windows: [
+        { id: 'session', label: 'Session', short: '5h', usedPercent: 42, resetsAt: now + 2 * h + 5 * 60_000 },
+        { id: 'week', label: 'Week', short: 'wk', usedPercent: 18, resetsAt: now + 5 * 24 * h + 18 * h },
+        { id: 'week:opus', label: 'Week Opus', short: 'wk Opus', usedPercent: 7, resetsAt: now + 5 * 24 * h + 18 * h },
+      ],
+      signInEndsAt: now + 3 * 24 * h,
+    },
+    codex: {
+      status: 'ok', plan: 'Plus',
+      windows: [
+        { id: 'primary', label: '5 hours', short: '5h', usedPercent: 91, resetsAt: now + 47 * 60_000 },
+        { id: 'secondary', label: 'Week', short: 'wk', usedPercent: 63, resetsAt: now + 2 * 24 * h + 4 * h },
+      ],
+    },
+  };
+};

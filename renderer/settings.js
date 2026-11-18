@@ -1,7 +1,7 @@
-// User settings: theme, UI scale, the orchestrator tabs' order, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, updates, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
+// User settings: theme, UI scale, the orchestrator tabs' order, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, updates, office animals, boss instructions, the assistant (on, name, morning time, days, dart board), plan usage in the status bar (on, what it shows, how often). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', tabOrder: null, orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false, updateMode: 'ask' };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', tabOrder: null, orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false, updateMode: 'ask', usageMeter: true, usageInterval: 10, usageShow: 'remaining' };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
   // The paw that hid the animals is gone; Settings > Appearance turns them on
@@ -22,6 +22,7 @@
     window.officeBird?.setDartBoard?.(!!settings.dartBoard);
     window.officeTerminal?.layoutChanged?.();
     window.officeRerender?.();
+    window.officeUsageView?.setShow?.(usageShow());
     syncAssistantName();
     syncForm();
     syncMain();
@@ -38,10 +39,16 @@
   function set(patch) {
     Object.assign(settings, patch); save(); apply();
     if ('assistant' in patch || 'morning' in patch || 'assistantName' in patch || 'assistantDays' in patch) pushAssistant();
+    if ('usageMeter' in patch || 'usageInterval' in patch) pushUsage();
   }
   // getDay() numbers, 0 is Sunday; main cleans them up again with assistantDays().
   const days = () => (Array.isArray(settings.assistantDays) ? settings.assistantDays : DEFAULTS.assistantDays);
   // The assistant's clock runs in main; it keeps its own copy of these.
+  // main polls the CLIs; it only needs to know whether and how often.
+  // The same choices main accepts (usage.js cleanInterval), so the select never shows blank.
+  const usageInterval = () => ([5, 10, 15, 30].includes(Number(settings.usageInterval)) ? Number(settings.usageInterval) : DEFAULTS.usageInterval);
+  const usageShow = () => (settings.usageShow === 'used' ? 'used' : 'remaining');
+  const pushUsage = () => window.office.usage?.configure({ enabled: settings.usageMeter !== false, interval: usageInterval() });
   const pushAssistant = () => window.office.assistant?.configure({ enabled: settings.assistant, morning: settings.morning, name: settings.assistantName, days: days() });
   // Same rule as assistantName() in assistant.js: one line, 24 characters, PiPi when empty.
   const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24).trim() || DEFAULTS.assistantName;
@@ -80,6 +87,9 @@
     const $snd = $pop.querySelector('#set-alert-sound'); if ($snd) $snd.checked = settings.alertSound !== false;
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
+    const $usage = $pop.querySelector('#set-usage'); if ($usage) $usage.checked = settings.usageMeter !== false;
+    const $ui = $pop.querySelector('#set-usage-interval'); if ($ui) { $ui.value = String(usageInterval()); $ui.disabled = settings.usageMeter === false; }
+    const $us = $pop.querySelector('#set-usage-show'); if ($us) { $us.value = usageShow(); $us.disabled = settings.usageMeter === false; }
     const $auto = $pop.querySelector('#set-herdr-autostart'); if ($auto) $auto.checked = settings.herdrAutostart !== false;
     const $ed = $pop.querySelector('#set-editor'); if ($ed && document.activeElement !== $ed) $ed.value = settings.editor || '';
     // Leave the box alone while it is being typed in; it is read on change.
@@ -121,7 +131,7 @@
     for (const $t of $pop.querySelectorAll('.settings-tab')) $t.classList.toggle('active', $t.dataset.section === name);
     for (const $s of $pop.querySelectorAll('.settings-section')) $s.hidden = $s.dataset.section !== name;
   }
-  const open = () => { $pop.hidden = false; };
+  const open = (section) => { if ($pop.querySelector(`.settings-tab[data-section="${section}"]`)) showSection(section); $pop.hidden = false; };
   const close = () => { $pop.hidden = true; };
   $btn?.addEventListener('click', () => ($pop.hidden ? open() : close()));
   // A click on the dimmed backdrop closes it, a click in the window does not.
@@ -149,6 +159,9 @@
     if (e.target.id === 'set-cats') set({ cats: e.target.checked, ...(e.target.checked ? { petsHidden: false } : {}) });
     if (e.target.id === 'set-dogs') set({ dogs: e.target.checked, ...(e.target.checked ? { petsHidden: false } : {}) });
     if (e.target.id === 'set-herdr-autostart') set({ herdrAutostart: e.target.checked });
+    if (e.target.id === 'set-usage') set({ usageMeter: e.target.checked });
+    if (e.target.id === 'set-usage-interval') set({ usageInterval: Number(e.target.value) });
+    if (e.target.id === 'set-usage-show') set({ usageShow: e.target.value === 'used' ? 'used' : 'remaining' });
     if (e.target.id === 'set-qa') { set({ qa: e.target.checked }); window.office.orchestrator?.setQa?.(e.target.checked); }
   });
   $pop?.querySelector('#set-morning')?.addEventListener('change', (e) => { if (/^\d\d:\d\d$/.test(e.target.value)) set({ morning: e.target.value }); });
@@ -167,4 +180,5 @@
   window.officeSettings = { get: () => ({ ...settings }), assistantName: () => cleanName(settings.assistantName), defaults: { ...DEFAULTS }, set, apply, openPopover: open };
   apply();
   pushAssistant();
+  pushUsage();
 })();
