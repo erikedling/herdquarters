@@ -104,7 +104,7 @@
 }
 :root[data-style="handheld"] :is(.tab-name, .ticket-state, .reception-title, .sidebar-title) { font-size: 11px; }
 /* the office, its animals, the board and the bird in the screen's greens */
-:root[data-style="handheld"] :is(.building, .corkboard-wall, .bigboard-frame, #bird-canvas, .menubar svg, .note-pop, .brand-logo, .tab-office-icon) {
+:root[data-style="handheld"] :is(.building, .corkboard-wall, .bigboard-frame, #bird-canvas, .species-pv, .menubar svg, .note-pop, .brand-logo, .tab-office-icon) {
   filter: grayscale(1) sepia(1) hue-rotate(38deg) saturate(1.4) brightness(.95);
 }
 :root[data-style="handheld"] body.layout-office .building, :root[data-style="handheld"] .corkboard-wall {

@@ -123,14 +123,17 @@
     // The theme and dark/light only color Modern.
     $pop.querySelector('#set-theme-row')?.classList.toggle('disabled', current !== 'modern');
   }
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // A card per kind of bird, PiPi standing as it does in the office; Theme
-  // in the accent color on screen.
+  // in the accent color on screen. Built once the PiPi section shows, so a
+  // launch doesn't paint 17 previews nobody looks at.
   function renderSpecies() {
     const $grid = $pop.querySelector('#set-species'); if (!$grid || !window.pipiSpecies || !window.pipiSprite) return;
+    if ($pop.hidden || $grid.closest('.settings-section')?.hidden) return;
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-    const html = window.pipiSpecies.SPECIES.map((sp) => `<button class="theme-card species-card ${sp.id === settings.pipiSpecies ? 'active' : ''}" data-species="${sp.id}" title="${sp.latin ? `${sp.name} (${sp.latin}): ` : ''}${sp.note}">
+    const html = window.pipiSpecies.SPECIES.map((sp) => `<button class="theme-card species-card ${sp.id === settings.pipiSpecies ? 'active' : ''}" data-species="${esc(sp.id)}" title="${esc(sp.latin ? `${sp.name} (${sp.latin}): ${sp.note}` : sp.note)}">
         <img class="species-pv" alt="" src="${speciesPreview(sp, accent)}">
-        <span class="theme-name">${sp.name}</span>
+        <span class="theme-name">${esc(sp.name)}</span>
       </button>`).join('');
     if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
   }
@@ -150,9 +153,10 @@
   function showSection(name) {
     for (const $t of $pop.querySelectorAll('.settings-tab')) $t.classList.toggle('active', $t.dataset.section === name);
     for (const $s of $pop.querySelectorAll('.settings-section')) $s.hidden = $s.dataset.section !== name;
+    renderSpecies();
   }
   // section: appearance | assistant | agents | general; anything else keeps the one showing.
-  const open = (section) => { if ($pop.querySelector(`.settings-tab[data-section="${section}"]`)) showSection(section); $pop.hidden = false; };
+  const open = (section) => { if ($pop.querySelector(`.settings-tab[data-section="${section}"]`)) showSection(section); $pop.hidden = false; renderSpecies(); };
   const close = () => { $pop.hidden = true; };
   $btn?.addEventListener('click', () => ($pop.hidden ? open() : close()));
   // A click on the dimmed backdrop closes it, a click in the window does not.
