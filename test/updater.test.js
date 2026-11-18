@@ -85,9 +85,15 @@ test('a commit that failed to start is not offered again', async () => {
   const r = repos();
   const broken = r.commit({ 'main.js': 'throw\n' });
   launch.updateState(r.root, { bad: broken });
-  const s = await updater(r).check();
+  const u = updater(r);
+  const s = await u.check();
   assert.strictEqual(s.status, 'current');
   assert.strictEqual(s.skipped, broken);
+  const fixed = r.commit({ 'main.js': 'fixed\n' });
+  const next = await u.check();
+  assert.strictEqual(next.status, 'available');
+  assert.strictEqual(next.target, fixed);
+  assert.strictEqual(next.skipped, null);
 });
 
 test('a failed fetch keeps the last result and reports the error', async () => {

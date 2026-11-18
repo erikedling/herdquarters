@@ -1,7 +1,4 @@
-// An app opened from the Dock gets launchd's PATH (/usr/bin:/bin:/usr/sbin:/sbin),
-// and everything it starts inherits it: herdr, PiPi's claude, gh, npm. Ask the
-// user's shell once at launch. Interactive as well as login, because tools like
-// fnm and ~/.local/bin are often set up in .zshrc only.
+// A Dock app gets launchd's bare PATH; -i as well as -l because fnm and ~/.local/bin often live in .zshrc only.
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -24,7 +21,6 @@ function loginShellPath({ shell = process.env.SHELL || '/bin/zsh', run = execFil
   }
 }
 
-// The shell's entries first, then whatever the app already had, then the usual install folders.
 function mergePath(current, fromShell, extra = FALLBACK) {
   const out = [];
   for (const p of [...split(fromShell), ...split(current), ...extra]) if (!out.includes(p)) out.push(p);

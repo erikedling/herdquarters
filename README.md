@@ -120,6 +120,10 @@ npm install
 npm start
 ```
 
+To open it from the Dock instead, run `npm run install-app` once: it builds
+`~/Applications/Herdquarters.app`, which updates itself from `main`. See
+[the Dock app](docs/GUIDE.md#the-dock-app-and-updates) in the guide.
+
 `npm install` downloads the Electron binary, cached in `~/Library/Caches/electron`.
 Behind a proxy, set `ELECTRON_GET_USE_PROXY=true` and `HTTPS_PROXY`.
 

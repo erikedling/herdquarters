@@ -1,15 +1,4 @@
-// Which commit of the managed checkout the Dock app runs. An update that
-// needs a restart is only recorded while the app runs (state.pending) and is
-// checked out here, before main.js loads, so a running app never mixes old and
-// new files. A commit that never gets a window up is rolled back to the last
-// one that did (state.lastGood) and remembered as bad, so it is not offered again.
-//
-// state.json in the root folder:
-//   lastGood  commit whose window last finished loading
-//   booting   commit being started; cleared once its window has loaded
-//   pending   commit to check out at the next launch
-//   bad       commit that failed to start and was rolled back
-//   notice    what the office should tell the user: { kind: 'rolledBack' | 'applyFailed', from, to, error, at }
+// state.json: lastGood (window loaded), booting (started, not loaded yet), pending (for the next launch), bad, notice.
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -55,8 +44,6 @@ function assertClean(checkout) {
   if (dirty) throw new Error(`the app's checkout at ${checkout} has local changes`);
 }
 
-// Checks out sha on the tracked branch, installing again when the lockfile
-// differs. On a failed install it goes back to where it was.
 function moveTo(checkout, sha, { branch = 'main', npm = npmCi } = {}) {
   const from = head(checkout);
   if (from === sha) return;
@@ -74,7 +61,6 @@ function moveTo(checkout, sha, { branch = 'main', npm = npmCi } = {}) {
 
 const shortError = (err) => String(err?.stderr || err?.message || err).trim().split('\n').filter(Boolean).pop() || 'unknown error';
 
-// Runs before main.js loads. Returns the commit that will run.
 function prepareLaunch({ root, checkout, branch = 'main', npm = npmCi, now = Date.now() }) {
   let state = readState(root);
   let current = head(checkout);
@@ -92,7 +78,6 @@ function prepareLaunch({ root, checkout, branch = 'main', npm = npmCi, now = Dat
   return current;
 }
 
-// Back to the last commit that started. Returns the commit now checked out.
 function rollBack({ root, checkout, branch = 'main', npm = npmCi, now = Date.now(), error }) {
   const state = readState(root);
   const from = head(checkout);

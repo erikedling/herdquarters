@@ -1,10 +1,4 @@
-// Updates for the Dock app (see shell/). Fetches the tracked branch, sorts what
-// came in by what applying it takes, and applies it:
-//   live     only the renderer and files the app never reads: check out and reload the window
-//   restart  anything main.js or preload.js loads: checked out at the next launch
-//   deps     package-lock.json changed: as restart, with npm ci at that launch
-//   shell    another Electron major: as restart, and the .app rebuilds itself at that launch
-// Under `npm start` there is no shell and the updater stays off.
+// live: reload the window; restart, deps, shell: applied by shell/bootstrap.js at the next launch. See docs/GUIDE.md.
 const { execFile } = require('node:child_process');
 const launch = require('./shell/launch');
 const { electronMajor } = require('./shell/rebuild');
@@ -63,7 +57,6 @@ class Updater {
     return { sha, date, subject };
   }
 
-  // A check that fails keeps what the last one found; the settings row shows the error.
   check() {
     if (!this.shell) return Promise.resolve(this.view());
     if (this.s.status === 'applying') return Promise.resolve(this.view());
@@ -80,7 +73,7 @@ class Updater {
       const target = await this.git(['rev-parse', `refs/remotes/origin/${branch}`]);
       const state = launch.readState(root);
       const current = await this.describe('HEAD');
-      const base = { checking: false, checkedAt: this.now(), error: null, current };
+      const base = { checking: false, checkedAt: this.now(), error: null, current, skipped: null };
       if (target === head || target === state.bad) {
         this.set({ ...base, status: 'current', kind: null, target: null, commits: [], skipped: target === state.bad ? state.bad : null });
       } else if (target === state.pending) {
@@ -101,8 +94,7 @@ class Updater {
     return this.view();
   }
 
-  // Live: check out now; the caller reloads the window. Otherwise record it
-  // for the next launch, which shell/bootstrap.js applies before main.js loads.
+  // Restart kinds are not checked out yet: main.js reads some files lazily and must not see a mix.
   async apply(target) {
     if (!this.shell || this.s.status !== 'available' || target !== this.s.target) return { ok: false, error: 'nothing to apply' };
     const { root, branch = 'main' } = this.shell;
@@ -123,7 +115,6 @@ class Updater {
     return { ok: true, reload: true };
   }
 
-  // The window finished loading. After a live update that makes the new commit the last good one.
   async loaded() {
     if (!this.shell || !this.awaitingLoad) return;
     launch.markGood(this.shell.root, this.awaitingLoad);

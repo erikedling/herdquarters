@@ -1,9 +1,4 @@
-// Builds Herdquarters.app: a copy of Electron's own bundle, named and given the
-// icon like scripts/brand.js does for the dev bundle, whose app is the shell/
-// folder (it runs the managed checkout's main.js). Signed ad hoc; an app built
-// on this Mac is never quarantined, so Gatekeeper lets it open.
-//   node scripts/make-app.js --out <Herdquarters.app> --root <dir> --checkout <dir> [--electron <Electron.app>]
-// Built beside the target and swapped in, so a running copy can rebuild itself.
+// Builds Herdquarters.app: node scripts/make-app.js --out <Herdquarters.app> --root <dir> --checkout <dir> [--electron <Electron.app>]
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -47,8 +42,10 @@ function makeApp({ out, root, checkout, electron = path.join(repo, 'node_modules
   fs.writeFileSync(path.join(app, 'package.json'), `${JSON.stringify({ name: 'herdquarters-shell', productName, version, private: true, main: 'bootstrap.js' }, null, 2)}\n`);
   fs.writeFileSync(path.join(app, 'shell.json'), `${JSON.stringify({ root: path.resolve(root), checkout: path.resolve(checkout), branch: 'main' }, null, 2)}\n`);
 
+  // Ad hoc is enough: an app built on this Mac is not quarantined, so Gatekeeper opens it.
   execFileSync('codesign', ['--force', '--deep', '--sign', '-', building], { stdio: 'ignore' });
   fs.rmSync(old, { recursive: true, force: true });
+  // Swapped in by rename so a running copy can rebuild itself.
   if (fs.existsSync(out)) fs.renameSync(out, old);
   fs.renameSync(building, out);
   fs.rmSync(old, { recursive: true, force: true });

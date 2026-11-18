@@ -1,6 +1,4 @@
-// The Dock app's entry point (scripts/make-app.js copies the shell/ folder into
-// Herdquarters.app). It prepares the managed checkout named in shell.json and
-// then runs that checkout's main.js, which works as it does under `npm start`.
+// Copied into Herdquarters.app by scripts/make-app.js; see "The Dock app" in docs/GUIDE.md.
 const fs = require('node:fs');
 const path = require('node:path');
 const { app, dialog } = require('electron');
@@ -16,8 +14,7 @@ const opts = { root, checkout, branch };
 const relaunch = () => { app.relaunch(); app.exit(0); };
 const fail = (title, err) => { dialog.showErrorBox(title, launch.shortError(err)); app.exit(1); };
 
-// The lock is per data folder, as in main.js, which takes it again. Taking it
-// here first means a second launch quits before it changes the checkout.
+// Taken here as well as in main.js so a second launch quits before it touches the checkout.
 const devUserData = process.env.OFFICE_USER_DATA ? path.resolve(process.env.OFFICE_USER_DATA) : null;
 app.setPath('userData', devUserData || path.join(app.getPath('appData'), 'agent-office'));
 const primary = devUserData || process.env.OFFICE_SCREENSHOT || app.requestSingleInstanceLock();

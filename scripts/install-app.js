@@ -1,7 +1,4 @@
-// npm run install-app: sets up the Dock app. Clones the repo into a checkout
-// the app owns (never this one), installs its run-time packages and builds
-// Herdquarters.app around it. Run it again to rebuild the app; the checkout,
-// the app's update state and the data folder are kept.
+// npm run install-app [-- --out <path> --root <dir> --remote <url>]; see "The Dock app" in docs/GUIDE.md.
 //   --out <path>     the app (default ~/Applications/Herdquarters.app)
 //   --root <dir>     the app's own folder (default ~/Library/Application Support/Herdquarters)
 //   --remote <url>   what the checkout tracks (default: this repo's origin)

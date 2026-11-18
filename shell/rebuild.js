@@ -1,5 +1,3 @@
-// The .app carries its own Electron. When the checkout moves to another major
-// version, the app is built again from the checkout and swapped in place.
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
@@ -20,8 +18,7 @@ function needsRebuild(checkout, runningVersion) {
   return wanted !== null && wanted !== Number(String(runningVersion).split('.')[0]);
 }
 
-// Full install (Electron is a dev dependency), download Electron's binary with
-// this app's own Node, then build the bundle over the running one.
+// Electron is a dev dependency, and its binary is downloaded by install.js, which needs a Node: the app's own.
 function rebuild({ checkout, root, bundle, execPath = process.execPath, run = execFileSync }) {
   const opts = { cwd: checkout, encoding: 'utf8', timeout: 10 * 60_000, stdio: ['ignore', 'pipe', 'pipe'] };
   const asNode = { ...process.env, ELECTRON_RUN_AS_NODE: '1' };

@@ -1,7 +1,4 @@
-// Updates for the Dock app (updater.js in main): the bar under the top bar and
-// the Updates row in Settings > General. Ask shows "Update available" first;
-// Automatic applies changes that only need a window reload as soon as nobody is
-// in the middle of something. A restart is always asked, in both modes.
+// The update bar and the Updates row in settings; a restart is always asked, also in Automatic.
 (function () {
   const api = window.office.updates;
   if (!api) return;
@@ -20,7 +17,6 @@
 
   const auto = () => window.officeSettings?.get().updateMode === 'auto';
 
-  // Nothing the user is in the middle of: no dialog, no half-typed text, no selection.
   function idle() {
     if (document.getElementById('settings')?.hidden === false) return false;
     if (document.getElementById('modal')?.hidden === false) return false;
@@ -138,7 +134,6 @@
   api.onState(update);
   api.get().then(update);
   reopen();
-  // Automatic mode waits for a quiet moment; look again now and then.
   setInterval(autoApply, 30_000);
   window.officeUpdates = { modeChanged: () => { renderBar(); autoApply(); } };
 })();
