@@ -372,12 +372,12 @@ ipcMain.handle('herdr-autostart-set', (_e, { enabled }) => {
 // Dev aids, pulled by the renderer at startup (pushing on a timer raced the page load):
 // OFFICE_DEV_SETTINGS='{"theme":"ocean"}' settings patch; OFFICE_MODAL=<create|closed|remove|orchestrator|archived>
 // opens that dialog; OFFICE_OPEN=<pane_id> opens a desk's terminal; OFFICE_TOOLTIP=<pane_id> shows
-// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window; OFFICE_CHAT=1 the assistant's chat;
+// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window (=<section> on that section); OFFICE_CHAT=1 the assistant's chat;
 // OFFICE_WELCOME=<step> opens the welcome tour at that step (screenshot runs skip it otherwise).
 ipcMain.handle('dev-settings-get', () => (process.env.OFFICE_DEV_SETTINGS ? JSON.parse(process.env.OFFICE_DEV_SETTINGS) : null));
 ipcMain.handle('dev-triggers-get', () => ({
   modal: process.env.OFFICE_MODAL || null, open: process.env.OFFICE_OPEN || null,
-  tooltip: process.env.OFFICE_TOOLTIP || null, settingsOpen: !!process.env.OFFICE_SETTINGS_OPEN, chatOpen: !!process.env.OFFICE_CHAT,
+  tooltip: process.env.OFFICE_TOOLTIP || null, settingsOpen: process.env.OFFICE_SETTINGS_OPEN || null, chatOpen: !!process.env.OFFICE_CHAT,
   welcome: process.env.OFFICE_WELCOME || null, screenshot: !!process.env.OFFICE_SCREENSHOT,
   corkboard: process.env.OFFICE_CORKBOARD || null,
 }));

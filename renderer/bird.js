@@ -7,11 +7,12 @@
 // a finished ticket and sleeps in its nest at night. The user can pick it up
 // and drop it, or fling it across the office, at a dart board if it is on.
 // assistant.js says what is going on (setMood, pin, celebrate); the rest it
-// decides itself. Its feathers are the theme's accent color.
+// decides itself. Its feathers are the theme's accent color, or a real
+// species' plumage picked in Settings > PiPi (pipi-species.js).
 (function () {
   const $hit = document.getElementById('bird');
   const $cv = document.getElementById('bird-canvas');
-  if (!$hit || !$cv || !window.pipiSprite || !window.pipiBackflip || !window.birdDrop || !window.birdThrow) return;
+  if (!$hit || !$cv || !window.pipiSprite || !window.pipiSpecies || !window.pipiBackflip || !window.birdDrop || !window.birdThrow) return;
   const { pipiFrame, ANIM, SIZE, GROUND } = window.pipiSprite;
   const { backflip } = window.pipiBackflip;
   const ctx = $cv.getContext('2d');
@@ -19,26 +20,16 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let dpr = 1;
 
-  // ---- colors: from the theme's accent ----
+  // ---- colors: the species', or from the theme's accent ----
 
-  const hex = (c) => {
-    const m = String(c).trim().match(/^#([0-9a-f]{6})$/i);
-    if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
-    const r = String(c).match(/\d+(\.\d+)?/g);
-    return r ? r.slice(0, 3).map(Number) : [79, 124, 255];
-  };
-  const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`;
-  let palette = null, accentSeen = '';
+  let species = window.pipiSpecies.byId('theme');
+  let palette = null, paletteFor = '';
   function updatePalette() {
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent');
-    if (accent === accentSeen && palette) return;
-    accentSeen = accent; sprites.clear();
-    const a = hex(accent), k = [0, 0, 0], w = [255, 255, 255];
-    palette = {
-      O: mix(a, [20, 16, 34], 0.78), B: mix(a, k, 0), S: mix(a, k, 0.28), H: mix(a, w, 0.35),
-      C: '#fff3dc', D: '#ecd0a2', W: mix(a, k, 0.18), X: mix(a, k, 0.45),
-      Y: '#ffb02e', Z: '#d9730f', L: '#e8902a', K: '#1a1420', G: '#ffffff', P: '#ff8fa3',
-    };
+    const accent = species.palette ? '' : getComputedStyle(document.documentElement).getPropertyValue('--accent');
+    const key = `${species.id} ${accent}`;
+    if (key === paletteFor && palette) return;
+    paletteFor = key; sprites.clear();
+    palette = species.palette || window.pipiSpecies.themePalette(window.pipiSpecies.rgb(accent));
   }
 
   // One small canvas per pose, painted once.
@@ -50,7 +41,7 @@
     c = document.createElement('canvas');
     c.width = c.height = SIZE;
     const g = c.getContext('2d');
-    pipiFrame(pose).forEach((row, y) => row.forEach((k, x) => { if (k) { g.fillStyle = palette[k]; g.fillRect(x, y, 1, 1); } }));
+    pipiFrame(pose, species.look).forEach((row, y) => row.forEach((k, x) => { if (k) { g.fillStyle = palette[k]; g.fillRect(x, y, 1, 1); } }));
     if (sprites.size > 300) sprites.clear();
     sprites.set(key, c);
     return c;
@@ -350,7 +341,7 @@
         ctx.translate(Math.round(motion.hit.x), Math.round(motion.hit.y));
         ctx.scale(facing * SCALE, SCALE);
         ctx.rotate(motion.angle + Math.sin(a / 25) * 0.2 * Math.max(0, 1 - a / 400));
-        ctx.translate(-STUCK_TIP.x, -STUCK_TIP.y);
+        ctx.translate(-dartTip.x, -dartTip.y);
       } else {
         ctx.translate(Math.round(pos.x), Math.round(pos.y - lift));
         ctx.scale(facing * SCALE, SCALE);
@@ -535,7 +526,8 @@
   const BOARD_R = 22;       // sprite px of the scoring face; a wooden rim goes around it
   const STICK_MS = 1300;
   const STUCK_POSE = { wing: 'up', legs: 'tuck', eye: 'wide', beak: 'open' };
-  const STUCK_TIP = window.birdThrow.beakTip(pipiFrame(STUCK_POSE), SIZE, GROUND);
+  const stuckTip = () => window.birdThrow.beakTip(pipiFrame(STUCK_POSE, species.look), SIZE, GROUND);
+  let dartTip = stuckTip();
   // Where the last hit went in, from the board's middle; stays after PiPi drops off.
   let hitMark = null;
   const MARK = ['OO.OO', 'OWOWO', '.OWO.', 'OWOWO', 'OO.OO'];
@@ -617,7 +609,7 @@
     lastScore = s;
     if (s > bestScore) { bestScore = s; try { localStorage.setItem(BEST_KEY, String(s)); } catch { /* ignore */ } }
     hitMark = { dx: point.x - b.x, dy: point.y - b.y };
-    const dart = window.birdThrow.dartPose(point, v, STUCK_TIP, SCALE, facing);
+    const dart = window.birdThrow.dartPose(point, v, dartTip, SCALE, facing);
     facing = dart.facing;
     // Its feet, so the box for the mouse follows it and the drop starts from there.
     pos = dart.feet;
@@ -661,6 +653,8 @@
     setHidden(h) { hidden = h; $hit.hidden = h; },
     // Settings > PiPi > Dart board.
     setDartBoard(on) { dartBoard = !!on; if (!dartBoard) hitMark = null; },
+    // Settings > PiPi > Bird: a species id; an unknown one is the theme's bird.
+    setSpecies(id) { species = window.pipiSpecies.byId(id); dartTip = stuckTip(); },
     position: () => ({ ...pos }),
   };
   resize();

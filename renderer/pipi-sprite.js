@@ -1,13 +1,15 @@
 // PiPi's sprite, drawn pixel by pixel into a 40 × 40 grid of palette keys
 // (null is see-through). The body and head are shaded ellipses with an
 // outline; eyes, beak, wing, tail, crest and legs are small parts that
-// change per frame. pipiFrame(pose) builds one frame; bird.js paints it.
+// change per frame. pipiFrame(pose, look) builds one frame; bird.js paints it.
 // No DOM, so test/pipi-sprite.test.js runs it in node; the browser gets
 // window.pipiSprite.
 //
 // Palette keys: O outline, B body, S body shadow, H highlight, C belly,
 // D belly shadow, W wing, X wing dark, Y beak, Z beak dark, L legs,
-// K eye, G eye glint, P cheek.
+// K eye, G eye glint, P cheek. A species look (pipi-species.js) can also
+// use A cap, a cap shadow, E breast, e breast shadow, M mask, N collar,
+// Q cheek patch, V wing mark, T tail, U tail dark, I and J beak marks.
 (function () {
   const N = 40;      // room around the bird for jumps, squash and stretch
   const GROUND = 37; // the row the feet stand on
@@ -16,7 +18,9 @@
   // headDy, eye: open|blink|closed|happy|wide, beak: closed|open|wide,
   // wing: fold|up|mid|down|stretch, legs: stand|stepA|stepB|tuck,
   // tail (px up), blush, crest (px of bob) }
-  function pipiFrame(pose = {}) {
+  // look: a species' shapes and markings (pipi-species.js); none is the
+  // classic PiPi.
+  function pipiFrame(pose = {}, look = {}) {
     const p = { sx: 1, sy: 1, lift: 0, headDx: 0, headDy: 0, eye: 'open', beak: 'closed', wing: 'fold', legs: 'stand', tail: 0, blush: false, crest: 0, ...pose };
     const g = Array.from({ length: N }, () => Array(N).fill(null));
     const set = (x, y, k) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = k; };
@@ -31,7 +35,8 @@
 
     // Tail first, so the body covers its root.
     const tx = Math.round(cx - 8.2 + 1), ty = Math.round(cy - 1 - p.tail); // not squashed: it stays in the box
-    map(tx - 6, ty - 2, ['XXX....', '.XWWX..', '..XWWWX', '...XWWW', '....XWW']);
+    const [tdx, tdy, tail] = TAILS[look.tail] || TAILS.short;
+    map(tx + tdx, ty + tdy, tail, look.tailKeys);
 
     // Shaded ellipse: light from the top left.
     function blob(ox, oy, ax, ay, fill) {
@@ -45,20 +50,28 @@
       }
     }
     const fur = (nx, ny, shade) => (shade > 0.5 ? 'S' : shade < -0.62 ? 'H' : 'B');
+    const shaded = (k, nx, ny, shade) => (k === 'A' && shade > 0.5 ? 'a' : k === 'E' && (ny > 0.6 || nx > 0.9) ? 'e' : k);
     blob(cx, cy, rx, ry, (nx, ny, shade) => {
       // The belly: the front lower part, cream.
       const bx = (nx - 0.5) / 0.62, by = (ny - 0.4) / 0.7;
-      if (bx * bx + by * by < 1) return ny > 0.6 || nx > 0.9 ? 'D' : 'C';
+      const belly = bx * bx + by * by < 1;
+      const mark = look.body?.(nx, ny, belly);
+      if (mark) return shaded(mark, nx, ny, shade);
+      if (belly) return ny > 0.6 || nx > 0.9 ? 'D' : 'C';
       return fur(nx, ny, shade);
     });
     blob(hx, hy, hr, hr * 0.95, (nx, ny, shade) => {
+      const mark = look.head?.(nx, ny);
+      if (mark) return shaded(mark, nx, ny, shade);
       // The face below the eye is a little lighter, the chin cream.
       if (ny > 0.5 && nx > 0.15) return 'C';
       return fur(nx, ny, shade);
     });
-    // Crest: two feathers on top of the head.
+    // Crest on top of the head. A bird without one ruffles its head
+    // feathers when it bobs.
     const crx = Math.round(hx - 1), cry = Math.round(hy - hr + 1 - p.crest);
-    map(crx, cry - 3, ['.B.', 'BB.', '.BB', '..B']);
+    const crest = look.crest === 'none' ? (p.crest > 0 ? CRESTS.ruffle : null) : CRESTS[look.crest] || CRESTS.tuft;
+    if (crest) map(crx + crest[0], cry + crest[1], crest[2], { B: look.crestKey || 'B' });
 
     // Wing, from the shoulder.
     const sx0 = Math.round(cx - 1), sy0 = Math.round(cy - 2);
@@ -70,7 +83,7 @@
       stretch: [-7, -12, ['WW......', 'WWW.....', '.WWW....', '.HWWW...', '..WWWW..', '...WWWX.', '....WWWX', '.....WWX']],
     };
     const [wx, wy, rows] = WINGS[p.wing] || WINGS.fold;
-    map(sx0 + wx, sy0 + wy, rows);
+    map(sx0 + wx, sy0 + wy, wingMarks(rows, look.wing));
 
     // Eye and cheek.
     const ex = Math.round(hx + 1.5), ey = Math.round(hy - 2);
@@ -86,12 +99,8 @@
 
     // Beak on the front of the head.
     const bx = Math.round(hx + hr - 0.5), by = Math.round(hy);
-    const BEAKS = {
-      closed: ['YYY.', 'ZZYY', 'ZZ..'],
-      open: ['YYYY', 'K...', 'ZZZ.'],
-      wide: ['YYYY', 'KK..', 'KK..', 'ZZZ.'],
-    };
-    map(bx - 1, by - 1, BEAKS[p.beak] || BEAKS.closed);
+    const beak = BEAKS[look.beak] || BEAKS.short;
+    map(bx + beak.at[0], by + beak.at[1], beak[p.beak] || beak.closed);
 
     // Legs and toes.
     const lx = Math.round(cx), ly = feet;
@@ -119,6 +128,51 @@
     return out;
   }
 
+  // Shapes a species can pick: [dx, dy, rows] from the tail's root, the
+  // crest's spot on the head; beaks from the front of the head.
+  const TAILS = {
+    short: [-6, -2, ['XXX....', '.XWWX..', '..XWWWX', '...XWWW', '....XWW']],
+    stub: [-3, -1, ['XX...', '.XWWX', '..XWW']],
+    long: [-9, -1, ['.......XWW', '.....XXWWW', '...XXWWWWX', '.XXWWWWXX.', 'XWWWWXX...', 'XWXX......']],
+    streamers: [-10, -2, ['....XXX....', '......XWWX.', '.......XWWW', 'X.....XWWWW', '.XX.XX.XWWW', '...X.......']],
+  };
+  const CRESTS = {
+    tuft: [0, -3, ['.B.', 'BB.', '.BB', '..B']],
+    ruffle: [0, -1, ['B.B', '.B.']],
+    peak: [-4, -4, ['B....', 'BB...', '.BBB.', '.BBBB', '..BBB']],
+    jay: [-3, -3, ['BB...', '.BBB.', '..BBB', '...BB']],
+    plume: [-1, -6, ['BB...', '..B..', '..BB.', '...B.', '...BB', '....B']],
+  };
+  const BEAKS = {
+    short: { at: [-1, -1], closed: ['YYY.', 'ZZYY', 'ZZ..'], open: ['YYYY', 'K...', 'ZZZ.'], wide: ['YYYY', 'KK..', 'KK..', 'ZZZ.'] },
+    thin: { at: [-1, 0], closed: ['YYYY', 'ZZZ.'], open: ['YYYY', 'K...', 'ZZZ.'], wide: ['YYYY', 'KK..', 'KK..', 'ZZZ.'] },
+    finch: { at: [-1, -2], closed: ['YYY.', 'YYYY', 'ZZZ.', 'ZZ..'], open: ['YYY.', 'YYYY', 'KK..', 'ZZZ.'], wide: ['YYY.', 'YYYY', 'KK..', 'KK..', 'ZZZ.'] },
+    hook: { at: [-1, -2], closed: ['YYY.', 'YYYY', 'ZZ.Y', 'ZZ..'], open: ['YYY.', 'YYYY', 'KK.Y', 'ZZZ.'], wide: ['YYY.', 'YYYY', 'KK.Y', 'KK..', 'ZZZ.'] },
+    dagger: { at: [-1, -1], closed: ['YYYYYY.', 'ZZZZZZZ'], open: ['YYYYYYY', 'K......', 'ZZZZZZ.'], wide: ['YYYYYYY', 'KK.....', 'KK.....', 'ZZZZZZ.'] },
+    toucan: { at: [-2, -3], closed: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'JJJZZYYI', '.JJJJJI.'], open: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'KKK....I', 'JJJJJI..'], wide: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'KKK....I', 'KKK.....', 'JJJJJI..'] },
+    puffin: { at: [-1, -3], closed: ['JYZ..', 'JYZZ.', 'JYZZZ', 'JYZZ.', 'JYZ..'], open: ['JYZ..', 'JYZZ.', 'JYZZZ', 'KK...', 'JYZZ.', 'JYZ..'], wide: ['JYZ..', 'JYZZ.', 'JYZZZ', 'KK...', 'KK...', 'JYZZ.'] },
+  };
+
+  // Marks on the wing's feathers, worked out from each wing pose's rows:
+  // bar, a stripe where the coverts meet the flight feathers; scallop,
+  // alternate rows; spots; patch, the coverts away from the flight feathers.
+  function wingMarks(rows, kind) {
+    if (!kind) return rows;
+    const at = (x, y) => rows[y]?.[x];
+    const nearX = (x, y, r) => {
+      for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (at(x + i, y + j) === 'X') return true;
+      return false;
+    };
+    return rows.map((row, y) => [...row].map((c, x) => {
+      if (c !== 'W') return c;
+      if (kind === 'bar') return at(x, y + 1) === 'X' || at(x + 1, y) === 'X' ? 'V' : c;
+      if (kind === 'scallop') return y % 2 ? 'V' : c;
+      if (kind === 'spots') return (x * 3 + y * 2) % 5 === 0 ? 'V' : c;
+      if (kind === 'patch') return nearX(x, y, 1) ? c : 'V';
+      return c;
+    }).join(''));
+  }
+
   // The animations: a list of poses and how long each frame lasts (ms).
   const ANIM = {
     idle: { ms: 600, frames: [{}, { sy: 1.03, sx: 0.99 }] },
@@ -140,6 +194,6 @@
     celebrate: { ms: 90, frames: [{ eye: 'happy', wing: 'up', lift: 3, blush: true }, { eye: 'happy', wing: 'mid', lift: 6, blush: true }, { eye: 'happy', wing: 'down', lift: 4, blush: true }, { eye: 'happy', wing: 'mid', lift: 1, blush: true }] },
   };
 
-  const api = { pipiFrame, ANIM, SIZE: N, GROUND };
+  const api = { pipiFrame, ANIM, SIZE: N, GROUND, TAILS, CRESTS, BEAKS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.pipiSprite = api;
 })();

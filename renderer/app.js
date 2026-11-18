@@ -1032,7 +1032,7 @@ function runDevTriggers() {
   devTriggersDone = true;
   window.office.devTriggers?.().then((t) => {
     if (!t) return;
-    if (t.settingsOpen) setTimeout(() => window.officeSettings?.openPopover(), 300);
+    if (t.settingsOpen) setTimeout(() => window.officeSettings?.openPopover(t.settingsOpen), 300);
     if (t.chatOpen) setTimeout(() => window.officeAssistant?.openChat(), 300);
     // big: the big board; note: the first note on the wall, opened; both: the big board with a note open.
     if (t.corkboard) setTimeout(() => window.officeCorkboard?.dev(t.corkboard), 800);

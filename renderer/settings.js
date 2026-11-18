@@ -1,12 +1,15 @@
-// User settings: theme, UI scale, the orchestrator tabs' order, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, morning time, days, dart board). Stored per machine.
+// User settings: theme, UI scale, the orchestrator tabs' order, terminal layout, panel width, sidebar, editor, QA review, alert sound, herdr autostart, office animals, boss instructions, the assistant (on, name, kind of bird, morning time, days, dart board). Stored per machine.
 (function () {
   const KEY = 'agent-office.settings';
-  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', tabOrder: null, orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
+  const DEFAULTS = { scale: 0.85, termLayout: 'split', panelWidth: 46, sidebar: true, sidebarWidth: 250, activeTab: 'office', tabOrder: null, orchRoot: '', orchAgent: 'claude', qa: false, alertSound: true, herdrAutostart: true, cats: true, dogs: true, petsHidden: false, instructions: '', editor: 'code', style: 'toybox', theme: 'midnight', mode: 'dark', assistant: true, assistantName: 'PiPi', pipiSpecies: 'theme', morning: '08:30', assistantDays: [1, 2, 3, 4, 5], dartBoard: false };
   let settings = { ...DEFAULTS };
   try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { /* keep defaults */ }
   // The paw that hid the animals is gone; Settings > Appearance turns them on
   // and off. Animals hidden with it come back, or there is no way to get them.
   settings.petsHidden = false;
+  // A species that is gone (or a typo in OFFICE_DEV_SETTINGS) is the theme's bird.
+  const speciesId = (id) => window.pipiSpecies?.byId(id).id ?? DEFAULTS.pipiSpecies;
+  settings.pipiSpecies = speciesId(settings.pipiSpecies);
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* ignore */ } }
 
@@ -20,6 +23,7 @@
     document.body.classList.toggle('term-full', settings.termLayout === 'full');
     window.officeSidebar?.setVisible(settings.sidebar);
     window.officeBird?.setDartBoard?.(!!settings.dartBoard);
+    window.officeBird?.setSpecies?.(settings.pipiSpecies);
     window.officeTerminal?.layoutChanged?.();
     window.officeRerender?.();
     syncAssistantName();
@@ -36,7 +40,9 @@
   }
 
   function set(patch) {
-    Object.assign(settings, patch); save(); apply();
+    Object.assign(settings, patch);
+    if ('pipiSpecies' in patch) settings.pipiSpecies = speciesId(settings.pipiSpecies);
+    save(); apply();
     if ('assistant' in patch || 'morning' in patch || 'assistantName' in patch || 'assistantDays' in patch) pushAssistant();
   }
   // getDay() numbers, 0 is Sunday; main cleans them up again with assistantDays().
@@ -70,6 +76,7 @@
     for (const r of $pop.querySelectorAll('input[name=sidebar]')) r.checked = r.value === (settings.sidebar ? 'on' : 'off');
     for (const r of $pop.querySelectorAll('input[name=mode]')) r.checked = r.value === settings.mode;
     renderThemes();
+    renderSpecies();
     const $qa = $pop.querySelector('#set-qa'); if ($qa) $qa.checked = !!settings.qa;
     const $as = $pop.querySelector('#set-assistant'); if ($as) $as.checked = settings.assistant !== false;
     const $an = $pop.querySelector('#set-assistant-name'); if ($an && document.activeElement !== $an) $an.value = settings.assistantName;
@@ -116,11 +123,36 @@
     // The theme and dark/light only color Modern.
     $pop.querySelector('#set-theme-row')?.classList.toggle('disabled', current !== 'modern');
   }
+  // A card per kind of bird, PiPi standing as it does in the office; Theme
+  // in the accent color on screen.
+  function renderSpecies() {
+    const $grid = $pop.querySelector('#set-species'); if (!$grid || !window.pipiSpecies || !window.pipiSprite) return;
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    const html = window.pipiSpecies.SPECIES.map((sp) => `<button class="theme-card species-card ${sp.id === settings.pipiSpecies ? 'active' : ''}" data-species="${sp.id}" title="${sp.latin ? `${sp.name} (${sp.latin}): ` : ''}${sp.note}">
+        <img class="species-pv" alt="" src="${speciesPreview(sp, accent)}">
+        <span class="theme-name">${sp.name}</span>
+      </button>`).join('');
+    if ($grid._html !== html) { $grid._html = html; $grid.innerHTML = html; }
+  }
+  const previews = new Map();
+  function speciesPreview(sp, accent) {
+    const key = sp.palette ? sp.id : `${sp.id} ${accent}`;
+    if (previews.has(key)) return previews.get(key);
+    const { pipiFrame, SIZE } = window.pipiSprite;
+    const pal = sp.palette || window.pipiSpecies.themePalette(window.pipiSpecies.rgb(accent));
+    const c = document.createElement('canvas');
+    c.width = c.height = SIZE;
+    const g = c.getContext('2d');
+    pipiFrame({}, sp.look).forEach((row, y) => row.forEach((k, x) => { if (k) { g.fillStyle = pal[k]; g.fillRect(x, y, 1, 1); } }));
+    previews.set(key, c.toDataURL());
+    return previews.get(key);
+  }
   function showSection(name) {
     for (const $t of $pop.querySelectorAll('.settings-tab')) $t.classList.toggle('active', $t.dataset.section === name);
     for (const $s of $pop.querySelectorAll('.settings-section')) $s.hidden = $s.dataset.section !== name;
   }
-  const open = () => { $pop.hidden = false; };
+  // section: appearance | assistant | agents | general; anything else keeps the one showing.
+  const open = (section) => { if ($pop.querySelector(`.settings-tab[data-section="${section}"]`)) showSection(section); $pop.hidden = false; };
   const close = () => { $pop.hidden = true; };
   $btn?.addEventListener('click', () => ($pop.hidden ? open() : close()));
   // A click on the dimmed backdrop closes it, a click in the window does not.
@@ -128,6 +160,7 @@
   $pop?.querySelector('#set-close')?.addEventListener('click', close);
   $pop?.querySelector('.settings-nav')?.addEventListener('click', (e) => { const $t = e.target.closest('.settings-tab'); if ($t) showSection($t.dataset.section); });
   $pop?.querySelector('#set-styles')?.addEventListener('click', (e) => { const $t = e.target.closest('.style-card'); if ($t) set({ style: $t.dataset.styleId }); });
+  $pop?.querySelector('#set-species')?.addEventListener('click', (e) => { const $t = e.target.closest('.species-card'); if ($t) set({ pipiSpecies: $t.dataset.species }); });
   $pop?.querySelector('#set-themes')?.addEventListener('click', (e) => { const $t = e.target.closest('.theme-card'); if ($t) set({ theme: $t.dataset.theme }); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$pop.hidden) close(); });
   // System mode follows the OS as it switches.

@@ -345,7 +345,18 @@ context stays small.
 
 PiPi (`renderer/bird.js`, sprite frames in `renderer/pipi-sprite.js`) is
 drawn on a canvas over the office: shaded pixel art in the theme's accent
-color, with squash and stretch, a walk and a flap cycle and particles. It
+color, or as a real bird. Pick one under **Settings → PiPi → Bird**: Theme
+(the default), European robin, blue tit, European goldfinch, common
+kingfisher, Eurasian bullfinch, northern cardinal, blue jay, scarlet macaw,
+rainbow lorikeet, Gouldian finch, budgerigar, cockatiel, painted bunting,
+lilac-breasted roller, keel-billed toucan or Atlantic puffin. Each species
+(`renderer/pipi-species.js`) is a palette in its real plumage plus its own
+crest, tail, beak, wing marks and head and body markings; a bird without a
+crest ruffles its head feathers instead. Every species does everything below,
+and the feathers it drops are its own colors. A saved species that no longer
+exists falls back to Theme. `npx electron scripts/pipi-previews.js <folder>`
+renders an animated preview of each species, a sheet of every pose and every
+species on every theme. It has squash and stretch, a walk and a flap cycle and particles. It
 walks along the edges it perches on and flies between ticket cards, room
 signs, desks and reception, with a shadow under it. It watches the cursor and
 startles (dropping a feather) when you sweep past fast; hover to make it happy,
@@ -422,6 +433,11 @@ board works with the assistant switched off.
 
 ## Settings
 
+**PiPi** holds the assistant's settings: on or off, its name, which bird it
+is (Theme, in the accent color, is the default), the morning brief's time
+and days, and the dart board. **Reset to defaults** sets every section back,
+PiPi's bird to Theme too.
+
 **Style** sets the shape of the whole app. **Toybox** is the default. **Modern** is the smooth, rounded look in your theme and dark/light mode. The five retro styles are pixel looks with hard edges, solid outlines and pixel fonts (`renderer/retro.css`, fonts bundled in `renderer/fonts/`, SIL Open Font License), and each brings its own colors, so the theme and mode only apply to Modern: **Workshop** (wood, cork and paper), **Quest** (16-bit RPG menus), **Handheld** (four shades of green), **Toybox** (the welcome screen's pastels) and **Workstation** (a beige early-90s desktop). The terminal keeps its own colors in every style. `OFFICE_DEV_SETTINGS='{"style":"quest"}'` opens in one.
 
 
@@ -478,7 +494,8 @@ Turn this off with "Start herdr" in settings. The server's output goes to
   `{"activeTab":"dark-mode"}` opens the fixture's orchestrator tab.
 - `OFFICE_ASSISTANT=talk|dream|idle|wave` sets the assistant's mood in fixture runs, `OFFICE_CHAT=1` opens its chat.
 - `OFFICE_MODAL=<create|closed|remove|orchestrator|archived|slack:<slug>> npm start` opens that dialog on launch;
-  `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings.
+  `OFFICE_TOOLTIP=<pane_id>` shows a desk tooltip; `OFFICE_SETTINGS_OPEN=1` opens settings, `=assistant` (or
+  `appearance`, `agents`, `general`) on that section.
 - `OFFICE_OPEN=<pane_id> npm start` opens that desk's terminal on launch.
 - `OFFICE_CORKBOARD=big|note|both npm start` opens the big corkboard, the first note on the wall, or a note on the big board.
 - `OFFICE_USER_DATA=/tmp/agent-office-dev npm start` runs a second window beside the
