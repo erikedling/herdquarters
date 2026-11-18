@@ -423,8 +423,11 @@ board works with the assistant switched off.
 ## Plan usage
 
 The right end of the status bar shows how much of your Claude and Codex plan
-limits is used: a bar per window (5 hours and the week), the percentage, and
-the time left until it resets (`↺2h05`). Bars turn amber at 75% and red at 90%.
+limits is left: a bar per window (5 hours and the week), the percentage
+(`84% left`), and the time left until it resets (`↺2h05`). The bars drain as
+you use the limit. Set it to show what is used instead (`16% used`, bars that
+fill up) in Settings > General. Either way, a bar turns amber when 25% or less
+is left and red at 10% or less.
 Click it for every window, per-model weeks included, with the exact reset
 times, when the numbers were checked, a ↻ to check now, and a warning when
 Claude's sign-in ends within a week.
@@ -445,8 +448,9 @@ The CLIs are found on `PATH` and in the usual install folders
 (`~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, `~/.npm-global/bin`),
 so a Dock launch finds them too.
 
-**Usage limits** in Settings > General turns it on and off (on by default)
-and sets how often it checks: every 5, 10 (the default), 15 or 30 minutes.
+**Usage limits** in Settings > General turns it on and off (on by default),
+picks what it shows (remaining, the default, or used), and sets how often it
+checks: every 5, 10 (the default), 15 or 30 minutes.
 It also checks when the window gets focus and the numbers are over two minutes old.
 Turning it off, or quitting, stops a check that is still running.
 
@@ -459,7 +463,7 @@ The settings button on the menu bar in reception opens settings: the style, the 
 the office and reception, not the terminal), whether the terminal opens as a
 split panel beside the office (the default) or takes the full window, the
 split panel width, the workspace sidebar, the editor command for "Open in
-editor", the alert sound, plan usage and how often it checks, and the two orchestrator options above (boss
+editor", the alert sound, plan usage (what it shows and how often it checks), and the two orchestrator options above (boss
 instructions and QA review). The ⤢ button in the terminal header toggles split
 and full on the spot. Dragging the divider between the office and the split
 terminal sets the same panel width (the slider follows); double-click it to

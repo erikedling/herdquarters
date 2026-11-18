@@ -136,8 +136,12 @@
             <input id="set-alert-sound" type="checkbox">
           </label>
           <div class="settings-row settings-check">
-            <label class="settings-check-text" for="set-usage">Usage limits<small>Claude and Codex plan usage in the status bar: how much of the 5-hour and weekly limits is used, and when they reset. Read from the claude and codex CLIs, so nothing shows for one that is not installed.</small></label>
+            <label class="settings-check-text" for="set-usage">Usage limits<small>Claude and Codex plan usage in the status bar: how much of the 5-hour and weekly limits is left (or used), and when they reset. Read from the claude and codex CLIs, so nothing shows for one that is not installed.</small></label>
             <span class="settings-pair">
+              <select id="set-usage-show" title="Show what is left of each limit, or what is used">
+                <option value="remaining">show remaining</option>
+                <option value="used">show used</option>
+              </select>
               <select id="set-usage-interval" title="How often to check">
                 <option value="5">every 5 min</option>
                 <option value="10">every 10 min</option>

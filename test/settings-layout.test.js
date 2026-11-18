@@ -132,3 +132,23 @@ test('a saved usage interval main would not accept shows, and is sent, as 10 min
   assert.strictEqual($pop.els['#set-usage-interval'].value, '10');
   assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 10 });
 });
+
+test('usage shows what is left by default; the choice reaches the view and the form', () => {
+  const shows = [];
+  const { settings, $pop } = load(undefined, {}, { officeUsageView: { setShow: (s) => shows.push(s) } });
+  assert.strictEqual(settings.get().usageShow, 'remaining');
+  assert.strictEqual(shows.at(-1), 'remaining');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'remaining');
+  settings.set({ usageShow: 'used' });
+  assert.strictEqual(shows.at(-1), 'used');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'used');
+  settings.set({ usageMeter: false });
+  assert.strictEqual($pop.els['#set-usage-show'].disabled, true);
+});
+
+test('a saved usage display that is neither used nor remaining shows remaining', () => {
+  const shows = [];
+  const { $pop } = load({ usageShow: 'tokens' }, {}, { officeUsageView: { setShow: (s) => shows.push(s) } });
+  assert.strictEqual(shows.at(-1), 'remaining');
+  assert.strictEqual($pop.els['#set-usage-show'].value, 'remaining');
+});
