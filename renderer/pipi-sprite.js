@@ -10,7 +10,7 @@
 // K eye, G eye glint, P cheek. A species look (pipi-species.js) can also
 // use A cap, a cap shadow, E breast, e breast shadow, M mask, N collar,
 // Q cheek patch, V wing mark, T tail, U tail dark, I and J
-// beak marks, F eye star, R chest mark.
+// beak marks, F eye glint, R chest mark.
 (function () {
   const N = 40;      // room around the bird for jumps, squash and stretch
   const GROUND = 37; // the row the feet stand on

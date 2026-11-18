@@ -343,30 +343,30 @@ day, the office asks it to **dream**: fold the journal into the cards, merge
 and prune, delete old journal days. Then it starts a fresh session, so its
 context stays small.
 
-PiPi (`renderer/bird.js`, sprite frames in `renderer/pipi-sprite.js`) is
-drawn on a canvas over the office: shaded pixel art in the theme's accent
-color, or as a real bird. Pick one under **Settings → PiPi → Bird**: Theme
-(the default), European robin, blue tit, European goldfinch, common
-kingfisher, Eurasian bullfinch, northern cardinal, blue jay, scarlet macaw,
-rainbow lorikeet, Gouldian finch, budgerigar, cockatiel, painted bunting,
+PiPi (`renderer/bird.js`, sprite frames in `renderer/pipi-sprite.js`) is drawn
+on a canvas over the office: shaded pixel art in the theme's accent color, or
+as a real bird. Pick one under **Settings → PiPi → Bird**: Theme (the
+default), European robin, blue tit, European goldfinch, common kingfisher,
+Eurasian bullfinch, northern cardinal, blue jay, scarlet macaw, rainbow
+lorikeet, Gouldian finch, budgerigar, cockatiel, painted bunting,
 lilac-breasted roller, keel-billed toucan, Atlantic puffin or Java sparrow.
-Each species (`renderer/pipi-species.js`) is a palette in its real plumage
-plus its own crest, tail, beak, eyes, wing marks, chest mark, puffed cheeks
-and head and body markings; a bird without a crest ruffles its head feathers instead.
-Every species does everything below,
-and the feathers it drops are its own colors. A saved species that no longer
+Each species (`renderer/pipi-species.js`) is a palette for its plumage plus
+its own crest, tail, beak, wing marks and head and body markings (the Java
+sparrow also its eyes, chest mark and puffed cheeks); a bird without a crest
+ruffles its head feathers instead. Every species does everything below, and
+the feathers it drops are its own colors. A saved species that no longer
 exists falls back to Theme. `npx electron scripts/pipi-previews.js <folder>`
 renders an animated preview of each species, a sheet of every pose and every
-species on every theme. It has squash and stretch, a walk and a flap cycle and particles. It
-walks along the edges it perches on and flies between ticket cards, room
-signs, desks and reception, with a shadow under it. It watches the cursor and
-startles (dropping a feather) when you sweep past fast; hover to make it happy,
-hold to pet it (hearts), double-click for a flip. When a ticket has something
-waiting on you it pecks at that card; when a ticket's tasks are all done it
-celebrates there with confetti. It talks while it answers, yawns and
-stretches when it wakes up, gets sleepy late in the afternoon, and sleeps in
-its nest on top of the menu bar at night and while it dreams. For a due reminder or
-the morning brief it hovers under the top bar with a bubble.
+species on every theme. It has squash and stretch, a walk and a flap cycle and
+particles. It walks along the edges it perches on and flies between ticket
+cards, room signs, desks and reception, with a shadow under it. It watches the
+cursor and startles (dropping a feather) when you sweep past fast; hover to
+make it happy, hold to pet it (hearts), double-click for a flip. When a ticket
+has something waiting on you it pecks at that card; when a ticket's tasks are
+all done it celebrates there with confetti. It talks while it answers, yawns
+and stretches when it wakes up, gets sleepy late in the afternoon, and sleeps
+in its nest on top of the menu bar at night and while it dreams. For a due
+reminder or the morning brief it hovers under the top bar with a bubble.
 
 ## The office
 

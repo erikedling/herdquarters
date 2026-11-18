@@ -319,7 +319,7 @@
     },
     {
       id: 'java-sparrow', name: 'Java sparrow', latin: 'Padda oryzivora',
-      note: 'Grey, with white cheeks, a coral beak, a white star mark on the chest and a yellow glint in the eye',
+      note: 'Grey, with white cheeks and a coral beak; this one has a white star on its chest',
       look: {
         crest: 'none', beak: 'chunky', eyes: 'spark', chest: 'star', tailKeys: { W: 'T', X: 'U' },
         cheek: { dx: 2.6, dy: 2.2, rx: 4.4, ry: 2.4 },
