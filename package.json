@@ -12,6 +12,7 @@
     "postinstall": "install-electron && node scripts/brand.js",
     "icon": "electron scripts/make-icon.js",
     "art": "electron scripts/make-art.js",
+    "install-app": "node scripts/install-app.js",
     "test": "install-electron && node --test 'test/**/*.test.js'"
   },
   "engines": {

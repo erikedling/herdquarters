@@ -68,9 +68,9 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
-body { display: grid; grid-template-rows: auto auto auto 1fr auto auto; height: 100vh; overflow: hidden; }
+body { display: grid; grid-template-rows: auto auto auto auto 1fr auto auto; height: 100vh; overflow: hidden; }
 /* Explicit rows, so a hidden alert bar or task bar does not shift the others. */
-#topbar { grid-row: 1; } #alertbar { grid-row: 2; } #taskbar { grid-row: 3; } #workspace { grid-row: 4; } #reception { grid-row: 5; } #statusbar { grid-row: 6; }
+#topbar { grid-row: 1; } #updatebar { grid-row: 2; } #alertbar { grid-row: 3; } #taskbar { grid-row: 4; } #workspace { grid-row: 5; } #reception { grid-row: 6; } #statusbar { grid-row: 7; }
 
 /* top bar */
 #topbar {
@@ -623,6 +623,27 @@ body.tab-dragging, body.tab-dragging * { cursor: grabbing !important; user-selec
 .settings-text .settings-check-text { display: flex; flex-direction: column; gap: 2px; }
 .settings-text small { color: var(--muted); font-size: 11px; line-height: 1.35; font-weight: normal; }
 .settings-text textarea, .settings-text input[type=text] { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; resize: vertical; }
+
+/* app updates: a calm bar under the top bar, above any alerts */
+.updatebar {
+  display: flex; flex-direction: column; gap: 6px; padding: 7px 18px;
+  background: var(--door); border-bottom: 2px solid var(--working); color: var(--text); font-size: 13px;
+}
+.updatebar[hidden] { display: none; }
+.updatebar.warn { background: var(--warn-bg); border-bottom-color: var(--warn-line); color: var(--warn-text); }
+.update-line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.update-icon { color: var(--working); font-size: 15px; flex: none; }
+.updatebar.warn .update-icon { color: var(--warn-text); }
+.update-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.update-text small { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.update-line .btn { flex: none; }
+.update-error { color: var(--warn-text); font-size: 12px; margin-left: 8px; }
+.update-list { margin: 0 0 2px 25px; padding: 0; list-style: none; color: var(--muted); font-size: 12px; max-height: 140px; overflow: auto; }
+.update-list code { color: var(--accent-text); margin-right: 8px; }
+.update-controls { display: flex; align-items: center; gap: 10px; }
+.update-info { color: var(--muted); font-size: 11px; line-height: 1.35; }
+.update-info.error { color: var(--warn-text); }
+.update-controls :disabled, .update-controls label:has(:disabled) { opacity: .5; cursor: default; }
 
 /* ops alerts: banner under the top bar on every tab */
 .alertbar {

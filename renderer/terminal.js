@@ -324,6 +324,6 @@
   function layoutChanged() { clearTimeout(resizeTimer); resizeTimer = setTimeout(applyFit, 60); }
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(applyFit, 60); });
 
-  window.officeTerminal = { open, close, update, layoutChanged, isOpenFor: (paneId) => current?.paneId === paneId };
+  window.officeTerminal = { open, close, update, layoutChanged, isOpenFor: (paneId) => current?.paneId === paneId, openPane: () => current?.paneId || null };
   window.__term = () => term; // for test/fixtures/term-panel
 })();

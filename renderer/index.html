@@ -139,6 +139,17 @@
             <span class="settings-check-text">Start herdr<small>When herdr is not running as the app opens, start it in the background. It keeps running after the app quits.</small></span>
             <input id="set-herdr-autostart" type="checkbox">
           </label>
+          <div id="set-updates-row" class="settings-row settings-text">
+            <span class="settings-check-text">Updates<small>Ask shows what is new first. Automatic puts changes to the office in right away. A restart is always asked first.</small></span>
+            <div class="update-controls">
+              <div class="seg seg-inline">
+                <label><input type="radio" name="updateMode" value="ask"> Ask</label>
+                <label><input type="radio" name="updateMode" value="auto"> Automatic</label>
+              </div>
+              <button id="set-update-check" class="btn small" type="button">Check now</button>
+            </div>
+            <small id="set-updates-info" class="update-info"></small>
+          </div>
           <div class="settings-row settings-check">
             <span class="settings-check-text">Welcome tour<small>The short tour from the first launch: the boss, the team and the helpers.</small></span>
             <button id="set-welcome" class="btn small" type="button">Show</button>
@@ -148,6 +159,7 @@
     </div>
   </div>
 
+  <div id="updatebar" class="updatebar" role="status" hidden></div>
   <div id="alertbar" class="alertbar" role="alert" hidden></div>
   <div id="taskbar" class="taskbar" hidden></div>
   <div id="workspace" class="workspace">
@@ -295,6 +307,7 @@
   <script src="tab-order.js"></script>
   <script src="tabs.js"></script>
   <script src="settings.js"></script>
+  <script src="updates.js"></script>
   <script src="scenes.js"></script>
   <script src="welcome.js"></script>
 </body>

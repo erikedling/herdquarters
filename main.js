@@ -16,6 +16,7 @@ const { coalesce } = require('./coalesce');
 const { isRealDataFolder } = require('./data-folder');
 const { createFolderPicker } = require('./folder-picker');
 const { peekClipboard } = require('./clipboard-peek');
+const { Updater } = require('./updater');
 app.setName(APP_NAME); // the menu bar and dock label come from the bundle: see scripts/brand.js
 // Electron derives the data directory from the product name; keep the one the
 // app has always used so settings and orchestrators stay where they are.
@@ -51,6 +52,8 @@ let win = null;
 const toRenderer = (channel, payload) => { if (win && !win.isDestroyed()) win.webContents.send(channel, payload); };
 const terminals = new StreamManager(toRenderer);
 const worktreeLister = createWorktreeLister(client);
+// Set by shell/bootstrap.js when the Dock app runs this checkout; absent under npm start.
+const updater = new Updater({ shell: global.herdquartersShell || null, send: (state) => toRenderer('update-state', state) });
 
 // Orchestrators (boss + workers). Folders live under userData; in fixture
 // mode the prototype's fixture/orchestrators so the fixture can ship one.
@@ -282,6 +285,7 @@ function createWindow() {
     if (process.env.OFFICE_DEBUG) console.log('[debug] did-finish-load +%dms', Date.now() - t0);
     refresh();
     assistantClock();
+    updater.loaded();
     // OFFICE_SCREENSHOT=/path/out.png captures the window and quits. Timed from
     // page load: a cold start can take seconds before the renderer exists.
     if (process.env.OFFICE_SCREENSHOT) {
@@ -500,6 +504,18 @@ ipcMain.handle('pane-process-info', async (_e, { pane_id }) => {
 ipcMain.handle('agent-start', (_e, { pane_id, name, kind }) =>
   wt(() => client.request('agent.start', { pane_id, name, kind: AGENT_KINDS.includes(kind) ? kind : 'claude', timeout_ms: 60000 })));
 
+ipcMain.handle('update-get', () => updater.view());
+ipcMain.handle('update-check', () => updater.check());
+ipcMain.handle('update-apply', async (_e, { target }) => {
+  const result = await updater.apply(target);
+  // The renderer reopens its terminal after the reload; the old streams would be orphaned.
+  if (result.reload && win && !win.isDestroyed()) { terminals.closeAll(); win.webContents.reloadIgnoringCache(); }
+  return result;
+});
+ipcMain.handle('update-restart', () => { app.relaunch(); app.quit(); });
+ipcMain.handle('update-later', () => updater.later());
+ipcMain.handle('update-dismiss', () => updater.dismissNotice());
+
 ipcMain.handle('term-open', (_e, opts) => terminals.open(opts));
 ipcMain.on('term-input', (_e, { id, data }) => terminals.input(id, data));
 ipcMain.on('term-resize', (_e, { id, cols, rows }) => terminals.resize(id, cols, rows));
@@ -515,6 +531,7 @@ app.whenReady().then(() => {
   setInterval(refresh, 3000);
   // The assistant's clock: reminders, the morning brief and dreaming.
   setInterval(assistantClock, 30_000);
+  updater.start();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
