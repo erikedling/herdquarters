@@ -2,7 +2,7 @@
 const { execFile } = require('node:child_process');
 const { electronMajor } = require('./shell/rebuild');
 
-const LIVE = /^(renderer\/|docs\/|test\/|\.github\/|\.pr-media\/|README\.md$|CONTRIBUTING\.md$|LICENSE$|SECURITY\.md$|\.gitignore$)/;
+const LIVE = /^(renderer\/|docs\/|test\/|\.github\/|README\.md$|CONTRIBUTING\.md$|LICENSE$|SECURITY\.md$|\.gitignore$)/;
 // Under renderer/ but also required by the main process; test/main-graph.test.js keeps this list complete.
 const MAIN_LOADS = new Set(['renderer/note-rows.js']);
 const isLive = (f) => LIVE.test(f) && !MAIN_LOADS.has(f);

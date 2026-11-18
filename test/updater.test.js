@@ -11,7 +11,7 @@ const { repos } = require('./helpers/git-repos');
 test('renderer-only changes apply with a reload', () => {
   assert.strictEqual(classify(['renderer/app.js', 'renderer/style.css']), 'live');
   assert.strictEqual(classify(['renderer/index.html', 'docs/GUIDE.md', 'test/view.test.js', 'README.md', '.github/workflows/ci.yml']), 'live');
-  assert.strictEqual(classify(['docs/images/app.png', '.pr-media/x/shot.png', 'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore']), 'live');
+  assert.strictEqual(classify(['docs/images/app.png', 'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore']), 'live');
 });
 
 test('anything main.js or preload.js loads needs a restart, also when it lives under renderer/', () => {
