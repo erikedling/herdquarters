@@ -95,22 +95,26 @@
   const { move, target, inside, press } = window.tabOrder;
   const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   const domOrder = () => [...$tabs.querySelectorAll('.tab.orch')].map(($t) => $t.dataset.tab);
+  const slots = () => [...$tabs.querySelectorAll('.tab.orch:not(.dragging), .tab-slot')];
 
   function saveOrder(order) {
     if (order.join('\n') === orchestrators.map((o) => o.slug).join('\n')) return;
     window.officeSettings?.set({ tabOrder: order });
   }
 
-  // Layout boxes in the strip's own coordinates: getBoundingClientRect would
-  // include the slide animations and make the target flicker.
+  // Offsets are relative to the strip, since .tabs is positioned. Unlike
+  // getBoundingClientRect they skip the slide animations, so the target doesn't flicker.
   function layoutRect($el) { return { left: $el.offsetLeft, top: $el.offsetTop, right: $el.offsetLeft + $el.offsetWidth, bottom: $el.offsetTop + $el.offsetHeight }; }
   function stripPoint(x, y) {
     const r = $tabs.getBoundingClientRect();
     return { x: x - r.left - $tabs.clientLeft + $tabs.scrollLeft, y: y - r.top - $tabs.clientTop + $tabs.scrollTop };
   }
 
+  // A refresh during the press may have redrawn the strip, so find the card again.
   function beginDrag() {
-    const { $t } = drag;
+    const $t = $tabs.querySelector(`.tab.orch[data-tab="${CSS.escape(drag.slug)}"]`);
+    if (!$t) { release(); return false; }
+    drag.$t = $t;
     const r = $t.getBoundingClientRect();
     drag.started = true;
     drag.$slot = document.createElement('div');
@@ -121,8 +125,10 @@
     Object.assign($t.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: '0' });
     $t.classList.add('dragging');
     document.body.classList.add('tab-dragging');
+    // Keeps hover effects elsewhere (the whiteboard card) quiet during the drag.
+    try { $tabs.setPointerCapture(drag.id); } catch { /* the window listeners still see the pointer */ }
+    return true;
   }
-  const slots = () => [...$tabs.querySelectorAll('.tab.orch:not(.dragging), .tab-slot')];
 
   function placeSlot(to) {
     const list = slots(), from = list.indexOf(drag.$slot);
@@ -142,7 +148,7 @@
 
   function onDragMove(e) {
     if (e.pointerId !== drag.id || drag.ended) return;
-    if (!drag.started) { if (!drag.press.moved(e.clientX, e.clientY)) return; beginDrag(); }
+    if (!drag.started && (!drag.press.moved(e.clientX, e.clientY) || !beginDrag())) return;
     drag.$t.style.transform = `translate(${e.clientX - drag.x}px, ${e.clientY - drag.y}px)`;
     const over = inside($tabs.getBoundingClientRect(), e.clientX, e.clientY, 8);
     drag.$t.classList.toggle('off-strip', !over);
@@ -188,7 +194,7 @@
   function onDragCancel() { endDrag(false); release(); }
   // Escape puts the card back; the pointer is still down, so the press ends on release.
   function onDragKey(e) {
-    if (e.key !== 'Escape' || !drag?.started) return;
+    if (e.key !== 'Escape' || !drag?.started || drag.ended) return;
     e.preventDefault(); e.stopPropagation();
     endDrag(false);
   }
@@ -197,7 +203,7 @@
     if (e.button !== 0 || drag) return;
     const $t = e.target.closest('.tab.orch');
     if (!$t || e.target.closest('.tab-close, .tab-rename')) return;
-    drag = { $t, id: e.pointerId, x: e.clientX, y: e.clientY, press: press(e.clientX, e.clientY), started: false };
+    drag = { slug: $t.dataset.tab, id: e.pointerId, x: e.clientX, y: e.clientY, press: press(e.clientX, e.clientY), started: false };
     window.addEventListener('pointermove', onDragMove);
     window.addEventListener('pointerup', onDragUp);
     window.addEventListener('pointercancel', onDragCancel);

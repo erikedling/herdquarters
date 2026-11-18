@@ -32,7 +32,6 @@
     return nearest(rects, x, y);
   }
 
-  // Index of the rect nearest the point (0 distance inside it), or -1 for none.
   function nearest(rects, x, y) {
     let best = -1, bestD = Infinity;
     rects.forEach((r, i) => {
