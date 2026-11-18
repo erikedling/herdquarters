@@ -510,7 +510,11 @@ ipcMain.handle('update-check', () => updater.check());
 ipcMain.handle('update-apply', async (_e, { target }) => {
   const result = await updater.apply(target);
   // The renderer reopens its terminal after the reload; the old streams would be orphaned.
-  if (result.reload && win && !win.isDestroyed()) { terminals.closeAll(); win.webContents.reloadIgnoringCache(); }
+  if (result.reload && win && !win.isDestroyed()) {
+    const reload = () => { terminals.closeAll(); win.webContents.reloadIgnoringCache(); };
+    updater.watchReload(reload);
+    reload();
+  }
   return result;
 });
 ipcMain.handle('update-restart', () => { app.relaunch(); app.quit(); });

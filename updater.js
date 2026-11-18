@@ -8,6 +8,7 @@ const MAIN_LOADS = new Set(['renderer/note-rows.js']);
 const isLive = (f) => LIVE.test(f) && !MAIN_LOADS.has(f);
 const FIRST_CHECK_MS = 30_000;
 const CHECK_EVERY_MS = 60 * 60_000;
+const READY_TIMEOUT_MS = 30_000;
 
 function classify(files, { electronNow = null, electronNext = null } = {}) {
   if (electronNow !== null && electronNext !== null && electronNow !== electronNext) return 'shell';
@@ -55,7 +56,7 @@ class Updater {
     this.timers.push(setInterval(() => this.check(), everyMs));
   }
 
-  stop() { for (const t of this.timers) clearTimeout(t); this.timers = []; }
+  stop() { for (const t of this.timers) clearTimeout(t); clearTimeout(this.reloadTimer); this.timers = []; }
 
   async describe(rev) {
     const [sha, date, subject] = (await this.git(['log', '-1', '--format=%h%x09%cI%x09%s', rev])).split('\t');
@@ -114,6 +115,7 @@ class Updater {
       if (!(await this.git(['merge-base', '--is-ancestor', 'HEAD', target]).then(() => true, () => false))) {
         throw new Error(`the app's checkout has commits that ${target.slice(0, 7)} does not; npm run install-app -- --reset starts it over`);
       }
+      this.previous = await this.git(['rev-parse', 'HEAD']);
       await this.git(['checkout', '-q', '-B', branch, target]);
     } catch (err) {
       this.set({ status: 'available', applyError: this.launch.shortError(err) });
@@ -123,7 +125,26 @@ class Updater {
     return { ok: true, reload: true };
   }
 
+  // After a live update's reload: no ready message in time puts the previous commit back and reloads again.
+  watchReload(reload, ms = READY_TIMEOUT_MS) {
+    clearTimeout(this.reloadTimer);
+    this.reloadTimer = setTimeout(() => this.revertLive(reload).catch(() => {}), ms);
+  }
+
+  async revertLive(reload) {
+    const target = this.awaitingLoad;
+    if (!this.shell || !target) return;
+    const { root, branch = 'main' } = this.shell;
+    this.awaitingLoad = null;
+    await this.git(['checkout', '-q', '-B', branch, this.previous]);
+    const notice = { kind: 'rolledBack', from: target, to: this.previous, error: 'the window did not come up after the update', at: this.now() };
+    this.launch.updateState(root, { bad: target, notice });
+    this.set({ status: 'current', kind: null, target: null, commits: [], notice });
+    reload();
+  }
+
   async loaded() {
+    clearTimeout(this.reloadTimer);
     if (!this.shell || !this.awaitingLoad) return;
     this.launch.markGood(this.shell.root, this.awaitingLoad);
     this.awaitingLoad = null;

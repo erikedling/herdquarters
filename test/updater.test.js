@@ -69,6 +69,38 @@ test('a renderer change is offered, then applied by checking it out', async () =
   assert.strictEqual(u.view().status, 'current');
 });
 
+test('a live update whose window never says it is ready is put back and reloaded again', async () => {
+  const r = repos();
+  const broken = r.commit({ 'renderer/app.js': 'throw\n' });
+  const u = updater(r);
+  await u.check();
+  await u.apply(broken);
+  assert.strictEqual(r.head(), broken);
+  let reloads = 0;
+  await new Promise((resolve) => { u.watchReload(() => { reloads += 1; resolve(); }, 20); });
+  assert.strictEqual(reloads, 1);
+  assert.strictEqual(r.head(), r.first);
+  const state = launch.readState(r.root);
+  assert.strictEqual(state.bad, broken);
+  assert.strictEqual(state.notice.kind, 'rolledBack');
+  assert.strictEqual(u.view().notice.to, r.first);
+  assert.strictEqual((await u.check()).status, 'current', 'not offered again');
+});
+
+test('a ready message in time keeps the live update', async () => {
+  const r = repos();
+  const next = r.commit({ 'renderer/app.js': 'two\n' });
+  const u = updater(r);
+  await u.check();
+  await u.apply(next);
+  let reloads = 0;
+  u.watchReload(() => { reloads += 1; }, 30);
+  await u.loaded();
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.strictEqual(reloads, 0);
+  assert.strictEqual(r.head(), next);
+});
+
 test('a main-process change is only recorded for the next launch', async () => {
   const r = repos();
   const next = r.commit({ 'renderer/app.js': 'two\n' });
