@@ -24,6 +24,7 @@ test('the orchestrator wizard offers Codex, restores its saved selection and sen
       onProgress: () => () => {},
       create: async (spec) => { created = spec; return { ok: true, orchestrator: { slug: 'codex-team', boss: { status: 'started' } } }; },
     } },
+    tabOrder: require('../renderer/tab-order'),
   };
   vm.runInNewContext(source('tabs.js'), {
     window,

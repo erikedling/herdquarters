@@ -267,7 +267,10 @@ with the sidebar and reception filtered the same way. Give the boss tasks in
 its terminal. Each tab remembers the terminal you last opened on it and brings it back
 when you return, if that pane still exists; an orchestrator's tab with
 nothing remembered opens the boss. With many orchestrators the cards
-wrap onto a second row, then the top bar scrolls. The
+wrap onto a second row, then the top bar scrolls. Drag a card to reorder the
+orchestrators (Office stays first, **+** last; Escape or a drop outside the
+strip cancels), or move the focused card with Option+←/→. The order is kept per
+machine in settings (`tabOrder`); new orchestrators go at the end. The
 boss room has a whiteboard: hover for the board (tasks with owners,
 blockers) and the live state of each worker. On a long board, units with
 work ahead (a `###` group or a ticket key such as `ABC-2801`) list their open

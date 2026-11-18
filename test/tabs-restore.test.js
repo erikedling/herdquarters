@@ -21,6 +21,7 @@ function load({ activeTab, desks, tabPanes = {} }) {
     officeTerminal: { isOpenFor: () => false },
     officeOpenDesk: (id) => opened.push(id),
     officeView: { activeAlerts: () => [], ticketCard: () => ({ state: 'idle', done: 0, total: 0, flag: null }) },
+    tabOrder: require('../renderer/tab-order'),
   };
   const elements = { tabs: el(), taskbar: el() };
   const store = { 'agent-office.tabPanes': JSON.stringify(tabPanes) };

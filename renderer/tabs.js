@@ -9,6 +9,8 @@
   let progressOff = null;
   let openBossPane = null; // pane id of a boss just created: open its terminal when it shows up
   let restoreTerminal = true; // on launch the saved tab is already active, so setActive never opens its terminal
+  let drag = null;       // a press on an orchestrator's card, a drag once it moves
+  let lastRender = null; // render's arguments, to draw what came in during a drag
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const active = () => window.officeSettings?.get().activeTab || 'office';
@@ -49,7 +51,9 @@
   // ---- tab strip ----
 
   function render(list, allFloors) {
-    orchestrators = list || [];
+    lastRender = [list, allFloors];
+    const bySlug = new Map((list || []).map((o) => [o.slug, o]));
+    orchestrators = window.tabOrder.applyOrder([...bySlug.keys()], window.officeSettings?.get().tabOrder).map((s) => bySlug.get(s));
     floors = allFloors || [];
     if (!$tabs) return;
     let cur = active();
@@ -68,7 +72,7 @@
       ...orchestrators.map((o) => {
         const c = window.officeView.ticketCard(o, desks.filter((d) => d.orch?.slug === o.slug));
         const pct = c.total ? Math.round((c.done / c.total) * 100) : 0;
-        return `<button class="tab orch ${cur === o.slug ? 'active' : ''}" data-tab="${esc(o.slug)}" style="--orch:${esc(o.color)}" title="${esc(o.name)} · runs ${agentLabel(o)}${c.total ? ` · ${c.done}/${c.total} tasks` : ''}">
+        return `<button class="tab orch ${cur === o.slug ? 'active' : ''}" data-tab="${esc(o.slug)}" style="--orch:${esc(o.color)}" title="${esc(o.name)} · runs ${agentLabel(o)}${c.total ? ` · ${c.done}/${c.total} tasks` : ''} · drag to reorder">
           ${c.flag ? `<span class="tab-flag ${c.flag.kind}">${esc(c.flag.text)}</span>` : ''}
           <span class="tab-name">${esc(o.name)}</span>
           <span class="tab-status"><span class="tab-pill ${c.state}">${c.state}</span><span class="tab-bar"><i style="width:${pct}%"></i></span>${c.total ? `<span class="tab-count">${c.done}/${c.total}</span>` : ''}</span>
@@ -77,10 +81,140 @@
       }),
       `<button class="tab add" data-tab="+" title="New orchestrator (right-click for archived ones)">+</button>`,
     ].join('');
-    // Redraw only on change, so a hovered card keeps its ✕.
-    if ($tabs._html !== html) { $tabs._html = html; $tabs.innerHTML = html; }
+    // Redraw only on change, so a hovered card keeps its ✕. A drag owns the
+    // cards until it ends, then draws the latest data.
+    if (!drag?.started && $tabs._html !== html) { $tabs._html = html; $tabs.innerHTML = html; }
     renderTaskbar(cur);
   }
+
+  // ---- reordering ----
+  // Drag an orchestrator's card among the others; Office and + stay put. The
+  // card follows the pointer and a dashed slot shows where it will land.
+  // Option+←/→ moves the focused card. The order is saved in settings.tabOrder.
+
+  const { move, target, inside, press } = window.tabOrder;
+  const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const domOrder = () => [...$tabs.querySelectorAll('.tab.orch')].map(($t) => $t.dataset.tab);
+
+  function saveOrder(order) {
+    if (order.join('\n') === orchestrators.map((o) => o.slug).join('\n')) return;
+    window.officeSettings?.set({ tabOrder: order });
+  }
+
+  // Layout boxes in the strip's own coordinates: getBoundingClientRect would
+  // include the slide animations and make the target flicker.
+  function layoutRect($el) { return { left: $el.offsetLeft, top: $el.offsetTop, right: $el.offsetLeft + $el.offsetWidth, bottom: $el.offsetTop + $el.offsetHeight }; }
+  function stripPoint(x, y) {
+    const r = $tabs.getBoundingClientRect();
+    return { x: x - r.left - $tabs.clientLeft + $tabs.scrollLeft, y: y - r.top - $tabs.clientTop + $tabs.scrollTop };
+  }
+
+  function beginDrag() {
+    const { $t } = drag;
+    const r = $t.getBoundingClientRect();
+    drag.started = true;
+    drag.$slot = document.createElement('div');
+    drag.$slot.className = 'tab-slot';
+    drag.$slot.style.setProperty('--orch', $t.style.getPropertyValue('--orch'));
+    $t.before(drag.$slot);
+    drag.home = slots().indexOf(drag.$slot);
+    Object.assign($t.style, { position: 'fixed', left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, margin: '0' });
+    $t.classList.add('dragging');
+    document.body.classList.add('tab-dragging');
+  }
+  const slots = () => [...$tabs.querySelectorAll('.tab.orch:not(.dragging), .tab-slot')];
+
+  function placeSlot(to) {
+    const list = slots(), from = list.indexOf(drag.$slot);
+    if (to === from) return;
+    const others = list.filter(($el) => $el !== drag.$slot);
+    const before = reducedMotion() ? null : new Map(others.map(($el) => [$el, $el.getBoundingClientRect()]));
+    const next = move(list, from, to);
+    const after = next[next.indexOf(drag.$slot) + 1];
+    if (after) after.before(drag.$slot); else next[next.length - 2].after(drag.$slot);
+    if (!before) return;
+    for (const $el of others) {
+      const a = before.get($el), b = $el.getBoundingClientRect();
+      const dx = a.left - b.left, dy = a.top - b.top;
+      if (dx || dy) $el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }], { duration: 140, easing: 'ease-out', composite: 'add' });
+    }
+  }
+
+  function onDragMove(e) {
+    if (e.pointerId !== drag.id || drag.ended) return;
+    if (!drag.started) { if (!drag.press.moved(e.clientX, e.clientY)) return; beginDrag(); }
+    drag.$t.style.transform = `translate(${e.clientX - drag.x}px, ${e.clientY - drag.y}px)`;
+    const over = inside($tabs.getBoundingClientRect(), e.clientX, e.clientY, 8);
+    drag.$t.classList.toggle('off-strip', !over);
+    if (!over) return placeSlot(drag.home);
+    const p = stripPoint(e.clientX, e.clientY);
+    const $office = $tabs.querySelector('.tab.office'), $add = $tabs.querySelector('.tab.add');
+    placeSlot(target(slots().map(layoutRect), p.x, p.y, $office && layoutRect($office), $add && layoutRect($add)));
+  }
+
+  // keep: the card lands where its slot is; otherwise it goes back home.
+  function endDrag(keep) {
+    const d = drag;
+    if (!d?.started || d.ended) return;
+    d.ended = true;
+    if (!keep) placeSlot(d.home);
+    d.$slot.replaceWith(d.$t);
+    d.$t.classList.remove('dragging', 'off-strip');
+    for (const k of ['position', 'left', 'top', 'width', 'height', 'margin', 'transform']) d.$t.style.removeProperty(k);
+    document.body.classList.remove('tab-dragging');
+    if (keep) saveOrder(domOrder());
+  }
+
+  // The press is over: stop listening, and swallow the click a drag ends with.
+  function release() {
+    const d = drag; drag = null;
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragUp);
+    window.removeEventListener('pointercancel', onDragCancel);
+    window.removeEventListener('keydown', onDragKey, true);
+    window.removeEventListener('blur', onDragCancel);
+    if (d?.started) {
+      const swallow = (e) => { e.stopPropagation(); e.preventDefault(); };
+      $tabs.addEventListener('click', swallow, true);
+      setTimeout(() => $tabs.removeEventListener('click', swallow, true), 0);
+      if (lastRender) render(...lastRender);
+    }
+  }
+  function onDragUp(e) {
+    if (e.pointerId !== drag.id) return;
+    endDrag(inside($tabs.getBoundingClientRect(), e.clientX, e.clientY, 8));
+    release();
+  }
+  function onDragCancel() { endDrag(false); release(); }
+  // Escape puts the card back; the pointer is still down, so the press ends on release.
+  function onDragKey(e) {
+    if (e.key !== 'Escape' || !drag?.started) return;
+    e.preventDefault(); e.stopPropagation();
+    endDrag(false);
+  }
+
+  $tabs?.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || drag) return;
+    const $t = e.target.closest('.tab.orch');
+    if (!$t || e.target.closest('.tab-close, .tab-rename')) return;
+    drag = { $t, id: e.pointerId, x: e.clientX, y: e.clientY, press: press(e.clientX, e.clientY), started: false };
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragUp);
+    window.addEventListener('pointercancel', onDragCancel);
+    window.addEventListener('keydown', onDragKey, true);
+    window.addEventListener('blur', onDragCancel);
+  });
+
+  $tabs?.addEventListener('keydown', (e) => {
+    if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    const $t = e.target.closest('.tab.orch'); if (!$t || drag) return;
+    e.preventDefault();
+    const order = orchestrators.map((o) => o.slug), from = order.indexOf($t.dataset.tab);
+    const to = from + (e.key === 'ArrowLeft' ? -1 : 1);
+    if (from < 0 || to < 0 || to >= order.length) return;
+    saveOrder(move(order, from, to));
+    $tabs.querySelector(`.tab.orch[data-tab="${CSS.escape($t.dataset.tab)}"]`)?.focus();
+  });
 
   $tabs?.addEventListener('click', (e) => {
     const $t = e.target.closest('.tab'); if (!$t) return;
