@@ -3,7 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { execFileSync, execFile } = require('node:child_process');
+const { execFileSync, spawn: spawnChild } = require('node:child_process');
 
 const NPM_TIMEOUT_MS = 5 * 60_000;
 const gitEnv = () => ({ ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' });
@@ -44,10 +44,28 @@ function modulesReady(root, checkout) {
 }
 
 // Only the xterm packages are needed at run time; Electron comes from the .app.
-function npmCi(checkout, { args = ['--omit=dev'], run = execFile, signal } = {}) {
+// Settles only once npm has exited, also when stopped, so nothing it writes lands after the old modules are back.
+function npmCi(checkout, { args = ['--omit=dev'], spawn = spawnChild, signal, timeoutMs = NPM_TIMEOUT_MS } = {}) {
   return new Promise((resolve, reject) => {
-    run('npm', ['ci', ...args, '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: checkout, encoding: 'utf8', timeout: NPM_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024, signal }, (err, stdout, stderr) => {
-      if (err) { err.stderr = stderr; reject(err); } else resolve();
+    const child = spawn('npm', ['ci', ...args, '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: checkout, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    let stopped = null;
+    child.stdout.resume();
+    child.stderr.on('data', (d) => { stderr = (stderr + d).slice(-64 * 1024); });
+    const stop = (why) => { if (!stopped) { stopped = why; child.kill('SIGTERM'); } };
+    const onAbort = () => stop('aborted');
+    const timer = setTimeout(() => stop(`timed out after ${timeoutMs / 1000} s`), timeoutMs);
+    if (signal?.aborted) onAbort(); else signal?.addEventListener('abort', onAbort, { once: true });
+    let spawnError = null;
+    child.on('error', (err) => { spawnError = err; });
+    child.on('close', (code, sig) => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      if (stopped === 'aborted') return reject(Object.assign(new Error('npm ci aborted'), { name: 'AbortError', code: 'ABORT_ERR', stderr }));
+      if (spawnError) return reject(Object.assign(spawnError, { stderr }));
+      if (stopped) return reject(Object.assign(new Error(`npm ci ${stopped}`), { stderr }));
+      if (code === 0) return resolve();
+      return reject(Object.assign(new Error(`npm ci exited with ${code ?? sig}`), { stderr }));
     });
   });
 }

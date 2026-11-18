@@ -39,8 +39,10 @@ const runAsync = (cmd, args, opts) => new Promise((resolve, reject) => {
 async function rebuild({ root, checkout, bundle, current, execPath = process.execPath, run = runAsync, npm, signal }) {
   launch.updateState(root, { rebuildTried: rebuildKey(current, wantedMajor(checkout)) });
   await launch.installModules(root, checkout, { npm: npm || ((dir, opts) => launch.npmCi(dir, { ...opts, args: [] })), signal });
-  const asNode = { cwd: checkout, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, signal };
-  await run(execPath, [path.join(checkout, 'node_modules', 'electron', 'install.js')], asNode);
+  const asNode = { cwd: checkout, env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } };
+  await run(execPath, [path.join(checkout, 'node_modules', 'electron', 'install.js')], { ...asNode, signal });
+  signal?.throwIfAborted();
+  // No signal: stopped between its two renames, make-app would leave no app at all.
   await run(execPath, [path.join(checkout, 'scripts', 'make-app.js'), '--out', bundle, '--root', root, '--checkout', checkout,
     '--electron', path.join(checkout, 'node_modules', 'electron', 'dist', 'Electron.app')], asNode);
 }

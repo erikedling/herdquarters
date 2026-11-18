@@ -40,6 +40,31 @@ test('another major is rebuilt for once; if it still does not match, the plan is
   assert.strictEqual(rebuild.rebuildPlan({ root, checkout, current: 'def', running: '45.0.0' }), 'rebuild');
 });
 
+test('a stop reaches npm and the Electron download, but never make-app, which must not leave the app half-swapped', async () => {
+  const { root, checkout } = checkoutWithElectron('46.0.0');
+  const controller = new AbortController();
+  const seen = [];
+  await rebuild.rebuild({
+    root, checkout, bundle: '/x.app', current: 'abc', signal: controller.signal,
+    npm: async (dir, opts) => { seen.push(['npm', !!opts.signal]); fs.mkdirSync(path.join(dir, 'node_modules'), { recursive: true }); },
+    run: async (cmd, args, opts) => { seen.push([path.basename(args[0]), 'signal' in opts && !!opts.signal]); },
+  });
+  assert.deepStrictEqual(seen, [['npm', true], ['install.js', true], ['make-app.js', false]]);
+});
+
+test('a stop that lands before make-app starts skips it', async () => {
+  const { root, checkout } = checkoutWithElectron('46.0.0');
+  const controller = new AbortController();
+  const ran = [];
+  const result = rebuild.rebuild({
+    root, checkout, bundle: '/x.app', current: 'abc', signal: controller.signal,
+    npm: async (dir) => { fs.mkdirSync(path.join(dir, 'node_modules'), { recursive: true }); },
+    run: async (cmd, args) => { ran.push(path.basename(args[0])); if (ran.length === 1) controller.abort(); },
+  });
+  await assert.rejects(result, { name: 'AbortError' });
+  assert.deepStrictEqual(ran, ['install.js']);
+});
+
 test('a failed rebuild is still counted, so it is not retried at every launch', async () => {
   const { root, checkout } = checkoutWithElectron('46.0.0');
   await assert.rejects(rebuild.rebuild({ root, checkout, bundle: '/x.app', current: 'abc', npm: async () => { throw new Error('offline'); }, run: async () => {} }), /offline/);
