@@ -9,7 +9,8 @@
 // D belly shadow, W wing, X wing dark, Y beak, Z beak dark, L legs,
 // K eye, G eye glint, P cheek. A species look (pipi-species.js) can also
 // use A cap, a cap shadow, E breast, e breast shadow, M mask, N collar,
-// Q cheek patch, V wing mark, T tail, U tail dark, I and J beak marks.
+// Q cheek patch, q cheek shadow, V wing mark, T tail, U tail dark, I and J
+// beak marks, F eye star, R chest mark.
 (function () {
   const N = 40;      // room around the bird for jumps, squash and stretch
   const GROUND = 37; // the row the feet stand on
@@ -67,6 +68,13 @@
       if (ny > 0.5 && nx > 0.15) return 'C';
       return fur(nx, ny, shade);
     });
+    // A puffed cheek bulges past the head's outline.
+    if (look.cheek) {
+      const ch = look.cheek;
+      blob(hx + ch.dx, hy + ch.dy, ch.rx, ch.ry, (nx, ny, shade) => (shade > 0.55 ? 'q' : 'Q'));
+    }
+    const chest = CHESTS[look.chest];
+    if (chest) map(Math.round(cx + chest[0]), Math.round(cy + chest[1]), chest[2]);
     // Crest on top of the head. A bird without one ruffles its head
     // feathers when it bobs.
     const crx = Math.round(hx - 1), cry = Math.round(hy - hr + 1 - p.crest);
@@ -94,7 +102,9 @@
       happy: ['.K.', 'K.K', '...'],
       wide: ['GGG', 'GKG', 'GKG', 'GGG'],
     };
-    map(p.eye === 'wide' ? ex - 1 : ex, p.eye === 'wide' ? ey - 1 : ey, EYES[p.eye] || EYES.open);
+    const own = EYE_SETS[look.eyes]?.[p.eye];
+    if (own) map(ex + own[0], ey + own[1], own[2]);
+    else map(p.eye === 'wide' ? ex - 1 : ex, p.eye === 'wide' ? ey - 1 : ey, EYES[p.eye] || EYES.open);
     if (p.blush || p.eye === 'happy') map(ex - 1, ey + 4, ['PP']);
 
     // Beak on the front of the head.
@@ -150,7 +160,22 @@
     hook: { at: [-1, -2], closed: ['YYY.', 'YYYY', 'ZZ.Y', 'ZZ..'], open: ['YYY.', 'YYYY', 'KK.Y', 'ZZZ.'], wide: ['YYY.', 'YYYY', 'KK.Y', 'KK..', 'ZZZ.'] },
     dagger: { at: [-1, -1], closed: ['YYYYYY.', 'ZZZZZZZ'], open: ['YYYYYYY', 'K......', 'ZZZZZZ.'], wide: ['YYYYYYY', 'KK.....', 'KK.....', 'ZZZZZZ.'] },
     toucan: { at: [-2, -3], closed: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'JJJZZYYI', '.JJJJJI.'], open: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'KKK....I', 'JJJJJI..'], wide: ['.YYYY...', 'YYYYYYY.', 'YZZZZYYY', 'KKK....I', 'KKK.....', 'JJJJJI..'] },
+    chunky: { at: [-1, -3], closed: ['.IIY..', 'YYYYY.', 'YYYYYY', 'ZZZZZ.', '.ZZZ..'], open: ['.IIY..', 'YYYYY.', 'YYYYYY', 'KKK...', 'ZZZZ..', '.ZZ...'], wide: ['.IIY..', 'YYYYY.', 'YYYYYY', 'KKK...', 'KKK...', 'ZZZZ..', '.ZZ...'] },
     puffin: { at: [-1, -3], closed: ['JYZ..', 'JYZZ.', 'JYZZZ', 'JYZZ.', 'JYZ..'], open: ['JYZ..', 'JYZZ.', 'JYZZZ', 'KK...', 'JYZZ.', 'JYZ..'], wide: ['JYZ..', 'JYZZ.', 'JYZZZ', 'KK...', 'KK...', 'JYZZ.'] },
+  };
+
+  // Eyes a species can have instead of the usual ones, per eye pose: [dx, dy,
+  // rows] from the eye's spot; poses not listed keep the usual eye.
+  const EYE_SETS = {
+    star: {
+      open: [-2, -1, ['.KKK.', 'KKFKK', 'KFFFK', 'KKFKK', '.KKK.']],
+      blink: [-2, 1, ['KKKKK']],
+      closed: [-2, 1, ['.....', 'KKKKK']],
+    },
+  };
+  // A mark on the breast, [dx, dy, rows] from the body's centre.
+  const CHESTS = {
+    star: [1, -1, ['...R...', '..RRR..', 'RRRRRRR', '.RRRRR.', '.RR.RR.', '.R...R.']],
   };
 
   // Marks on the wing's feathers, worked out from each wing pose's rows:
@@ -194,6 +219,6 @@
     celebrate: { ms: 90, frames: [{ eye: 'happy', wing: 'up', lift: 3, blush: true }, { eye: 'happy', wing: 'mid', lift: 6, blush: true }, { eye: 'happy', wing: 'down', lift: 4, blush: true }, { eye: 'happy', wing: 'mid', lift: 1, blush: true }] },
   };
 
-  const api = { pipiFrame, ANIM, SIZE: N, GROUND, TAILS, CRESTS, BEAKS };
+  const api = { pipiFrame, ANIM, SIZE: N, GROUND, TAILS, CRESTS, BEAKS, EYE_SETS, CHESTS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.pipiSprite = api;
 })();

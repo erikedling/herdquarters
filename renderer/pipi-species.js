@@ -317,6 +317,26 @@
         Y: '#566782', Z: '#f2552a', J: '#f6c92a', L: '#ff7a1a', K: '#08080c', G: '#ffffff', P: '#ff8fa3',
       },
     },
+    {
+      id: 'star-sage', name: 'Star sage (Java sparrow)', latin: 'Padda oryzivora',
+      note: 'Soft grey with puffed white cheeks, a star in each eye and on the chest, a beige belly and a coral beak',
+      look: {
+        crest: 'none', beak: 'chunky', eyes: 'star', chest: 'star', tailKeys: { W: 'T', X: 'U' },
+        cheek: { dx: -0.5, dy: 3, rx: 5.2, ry: 3.4 },
+        head: (nx, ny) => ((nx / 0.62) ** 2 + ((ny - 0.38) / 0.36) ** 2 < 1 ? 'Q' : ny > 0.5 && nx > 0.15 ? 'E' : null),
+        body: (nx, ny, belly) => {
+          if (ny > 0.58) return 'C';
+          if (ny > 0.46) return 'D';
+          return (belly && ny < 0.8) || (nx > 0.35 && ny < 0.3) ? 'E' : null;
+        },
+      },
+      palette: {
+        O: '#2a2a30', B: '#b4b4ba', S: '#98989f', H: '#cdcdd2', C: '#e8d3c0', D: '#d2b7a1',
+        E: '#adadb3', e: '#9a9aa1', Q: '#ffffff', q: '#b9b9c1', R: '#ffffff', F: '#ffe98a',
+        W: '#a6a6ad', X: '#86868e', T: '#6f6f77', U: '#55555c',
+        Y: '#f2705f', Z: '#c9474c', I: '#ffa898', L: '#ea625c', K: '#16151c', G: '#ffffff', P: '#ff8fa3',
+      },
+    },
   ];
 
   const byId = (id) => SPECIES.find((s) => s.id === id) || SPECIES[0];

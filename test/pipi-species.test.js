@@ -25,9 +25,9 @@ test('the theme bird is the default and draws every frame exactly as before spec
   }
 });
 
-test('sixteen species plus the theme bird, each named after a real bird', () => {
-  assert.strictEqual(SPECIES.length, 17);
-  assert.strictEqual(new Set(SPECIES.map((s) => s.id)).size, 17);
+test('seventeen species plus the theme bird, each named after a real bird', () => {
+  assert.strictEqual(SPECIES.length, 18);
+  assert.strictEqual(new Set(SPECIES.map((s) => s.id)).size, 18);
   for (const sp of SPECIES.slice(1)) {
     assert.ok(sp.name && sp.latin && sp.note, sp.id);
     assert.ok(sp.palette, sp.id);
@@ -70,6 +70,7 @@ test('the dart tip is at the front of every beak, further out on a long one', ()
   for (const sp of SPECIES) assert.ok(tip(sp.id).x > 10, sp.id);
   assert.ok(tip('keel-billed-toucan').x > tip('theme').x);
   assert.ok(tip('kingfisher').x > tip('theme').x);
+  assert.ok(tip('star-sage').x > tip('theme').x);
 });
 
 test('the accent comes as hex or rgb()', () => {

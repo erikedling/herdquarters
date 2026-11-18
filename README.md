@@ -82,7 +82,7 @@ Click the bird to chat, and paste or drop a screenshot in when words aren't
 enough. It flies over to a ticket that needs you, celebrates
 when one is done, and naps at night. Don't like the name? Call it whatever
 you want in **Settings → PiPi**, and make it a robin, a puffin, a scarlet
-macaw or one of 13 other real birds.
+macaw or one of 14 other real birds.
 
 ### 6. Pin your todos on the corkboard
 
