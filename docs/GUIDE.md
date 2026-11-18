@@ -349,11 +349,10 @@ color, or as a real bird. Pick one under **Settings → PiPi → Bird**: Theme
 (the default), European robin, blue tit, European goldfinch, common
 kingfisher, Eurasian bullfinch, northern cardinal, blue jay, scarlet macaw,
 rainbow lorikeet, Gouldian finch, budgerigar, cockatiel, painted bunting,
-lilac-breasted roller, keel-billed toucan, Atlantic puffin or star sage (a
-Java sparrow with stars in its eyes and on its chest). Each species
-(`renderer/pipi-species.js`) is a palette in its real plumage plus its own
-crest, tail, beak, eyes, wing marks, chest mark, puffed cheeks and head and
-body markings; a bird without a crest ruffles its head feathers instead.
+lilac-breasted roller, keel-billed toucan, Atlantic puffin or Java sparrow.
+Each species (`renderer/pipi-species.js`) is a palette in its real plumage
+plus its own crest, tail, beak, eyes, wing marks, chest mark, puffed cheeks
+and head and body markings; a bird without a crest ruffles its head feathers instead.
 Every species does everything below,
 and the feathers it drops are its own colors. A saved species that no longer
 exists falls back to Theme. `npx electron scripts/pipi-previews.js <folder>`

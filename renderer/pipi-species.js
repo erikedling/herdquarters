@@ -318,21 +318,21 @@
       },
     },
     {
-      id: 'star-sage', name: 'Star sage (Java sparrow)', latin: 'Padda oryzivora',
-      note: 'Soft grey with puffed white cheeks, a star in each eye and on the chest, a beige belly and a coral beak',
+      id: 'java-sparrow', name: 'Java sparrow', latin: 'Padda oryzivora',
+      note: 'Grey, with white cheeks, a coral beak, a white star mark on the chest and a yellow glint in the eye',
       look: {
-        crest: 'none', beak: 'chunky', eyes: 'star', chest: 'star', tailKeys: { W: 'T', X: 'U' },
-        cheek: { dx: -0.5, dy: 3, rx: 5.2, ry: 3.4 },
-        head: (nx, ny) => ((nx / 0.62) ** 2 + ((ny - 0.38) / 0.36) ** 2 < 1 ? 'Q' : ny > 0.5 && nx > 0.15 ? 'E' : null),
+        crest: 'none', beak: 'chunky', eyes: 'spark', chest: 'star', tailKeys: { W: 'T', X: 'U' },
+        cheek: { dx: 2.6, dy: 2.2, rx: 4.4, ry: 2.4 },
+        head: (nx, ny) => (((nx - 0.2) / 0.62) ** 2 + ((ny - 0.08) / 0.52) ** 2 < 1 ? 'Q' : ny > 0.42 && nx > -0.2 ? 'E' : null),
         body: (nx, ny, belly) => {
-          if (ny > 0.58) return 'C';
-          if (ny > 0.46) return 'D';
-          return (belly && ny < 0.8) || (nx > 0.35 && ny < 0.3) ? 'E' : null;
+          if (ny > 0.7) return 'C';
+          if (ny > 0.6) return 'D';
+          return belly || (nx > 0.3 && ny < 0.3) ? 'E' : null;
         },
       },
       palette: {
         O: '#2a2a30', B: '#b4b4ba', S: '#98989f', H: '#cdcdd2', C: '#e8d3c0', D: '#d2b7a1',
-        E: '#adadb3', e: '#9a9aa1', Q: '#ffffff', q: '#b9b9c1', R: '#ffffff', F: '#ffe98a',
+        E: '#adadb3', e: '#9a9aa1', Q: '#ffffff', R: '#ffffff', F: '#ffe98a',
         W: '#a6a6ad', X: '#86868e', T: '#6f6f77', U: '#55555c',
         Y: '#f2705f', Z: '#c9474c', I: '#ffa898', L: '#ea625c', K: '#16151c', G: '#ffffff', P: '#ff8fa3',
       },

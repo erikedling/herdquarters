@@ -70,7 +70,7 @@ test('the dart tip is at the front of every beak, further out on a long one', ()
   for (const sp of SPECIES) assert.ok(tip(sp.id).x > 10, sp.id);
   assert.ok(tip('keel-billed-toucan').x > tip('theme').x);
   assert.ok(tip('kingfisher').x > tip('theme').x);
-  assert.ok(tip('star-sage').x > tip('theme').x);
+  assert.ok(tip('java-sparrow').x > tip('theme').x);
 });
 
 test('the accent comes as hex or rgb()', () => {

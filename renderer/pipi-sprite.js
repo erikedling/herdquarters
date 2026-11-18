@@ -9,7 +9,7 @@
 // D belly shadow, W wing, X wing dark, Y beak, Z beak dark, L legs,
 // K eye, G eye glint, P cheek. A species look (pipi-species.js) can also
 // use A cap, a cap shadow, E breast, e breast shadow, M mask, N collar,
-// Q cheek patch, q cheek shadow, V wing mark, T tail, U tail dark, I and J
+// Q cheek patch, V wing mark, T tail, U tail dark, I and J
 // beak marks, F eye star, R chest mark.
 (function () {
   const N = 40;      // room around the bird for jumps, squash and stretch
@@ -71,7 +71,7 @@
     // A puffed cheek bulges past the head's outline.
     if (look.cheek) {
       const ch = look.cheek;
-      blob(hx + ch.dx, hy + ch.dy, ch.rx, ch.ry, (nx, ny, shade) => (shade > 0.55 ? 'q' : 'Q'));
+      blob(hx + ch.dx, hy + ch.dy, ch.rx, ch.ry, () => 'Q');
     }
     const chest = CHESTS[look.chest];
     if (chest) map(Math.round(cx + chest[0]), Math.round(cy + chest[1]), chest[2]);
@@ -167,15 +167,15 @@
   // Eyes a species can have instead of the usual ones, per eye pose: [dx, dy,
   // rows] from the eye's spot; poses not listed keep the usual eye.
   const EYE_SETS = {
-    star: {
-      open: [-2, -1, ['.KKK.', 'KKFKK', 'KFFFK', 'KKFKK', '.KKK.']],
-      blink: [-2, 1, ['KKKKK']],
-      closed: [-2, 1, ['.....', 'KKKKK']],
+    spark: {
+      open: [-1, -1, ['KFK', 'FFF', 'KFK', 'KKK']],
+      blink: [-1, 1, ['KKK']],
+      closed: [-1, 1, ['KKK']],
     },
   };
   // A mark on the breast, [dx, dy, rows] from the body's centre.
   const CHESTS = {
-    star: [1, -1, ['...R...', '..RRR..', 'RRRRRRR', '.RRRRR.', '.RR.RR.', '.R...R.']],
+    star: [2, -2, ['..R..', '.RRR.', 'RRRRR', '.RRR.', '.R.R.']],
   };
 
   // Marks on the wing's feathers, worked out from each wing pose's rows:
