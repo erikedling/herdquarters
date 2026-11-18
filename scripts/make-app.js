@@ -8,15 +8,27 @@ const BUNDLE_ID = 'com.github.erikedling.herdquarters';
 
 function args(argv) {
   const out = {};
-  for (let i = 0; i < argv.length; i += 2) {
+  for (let i = 0; i < argv.length; i += 1) {
     if (!argv[i].startsWith('--')) throw new Error(`unexpected argument ${argv[i]}`);
-    out[argv[i].slice(2)] = argv[i + 1];
+    const value = argv[i + 1];
+    if (value === undefined || value.startsWith('--')) out[argv[i].slice(2)] = true;
+    else { out[argv[i].slice(2)] = value; i += 1; }
   }
   return out;
 }
 
+// The old bundle is renamed away and deleted, so only ever a .app this script made.
+function checkTarget(out) {
+  if (path.extname(path.resolve(out)) !== '.app') throw new Error(`--out must name a .app bundle, not ${out}`);
+  if (fs.existsSync(out) && !fs.existsSync(path.join(out, 'Contents', 'Resources', 'app', 'shell.json'))) {
+    throw new Error(`${out} exists and was not built by make-app.js; move it away first`);
+  }
+}
+
 function makeApp({ out, root, checkout, electron = path.join(repo, 'node_modules', 'electron', 'dist', 'Electron.app'), shellSrc = path.join(repo, 'shell'), icon = path.join(repo, 'assets', 'icon.icns') }) {
   if (!out || !root || !checkout) throw new Error('--out, --root and --checkout are required');
+  out = path.resolve(out);
+  checkTarget(out);
   if (!fs.existsSync(electron)) throw new Error(`no Electron at ${electron}: run npm install first`);
   const { productName, version } = require(path.join(repo, 'package.json'));
   const building = `${out}.building`;
@@ -61,4 +73,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { makeApp, args, BUNDLE_ID };
+module.exports = { makeApp, checkTarget, args, BUNDLE_ID };

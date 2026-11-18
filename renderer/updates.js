@@ -15,9 +15,15 @@
   let lastHTML = '';
   let checking = false;
 
+  const QUIET_MS = 60_000;
+  let lastKey = 0;
+  document.addEventListener('keydown', () => { lastKey = Date.now(); }, true);
+
   const auto = () => window.officeSettings?.get().updateMode === 'auto';
 
-  function idle() {
+  function idle(now = Date.now()) {
+    if (now - lastKey < QUIET_MS) return false;
+    if (document.activeElement?.closest?.('.xterm')) return false;
     if (document.getElementById('settings')?.hidden === false) return false;
     if (document.getElementById('modal')?.hidden === false) return false;
     if (document.querySelector('.bigboard:not([hidden])')) return false;
@@ -135,5 +141,5 @@
   api.get().then(update);
   reopen();
   setInterval(autoApply, 30_000);
-  window.officeUpdates = { modeChanged: () => { renderBar(); autoApply(); } };
+  window.officeUpdates = { modeChanged: () => { renderBar(); autoApply(); }, idle };
 })();

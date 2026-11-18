@@ -14,10 +14,16 @@ test('renderer-only changes apply with a reload', () => {
   assert.strictEqual(classify(['docs/images/app.png', '.pr-media/x/shot.png', 'LICENSE', 'SECURITY.md', 'CONTRIBUTING.md', '.gitignore']), 'live');
 });
 
-test('anything main.js or preload.js loads needs a restart', () => {
-  for (const f of ['main.js', 'preload.js', 'orchestrators.js', 'orchestrator-brief.md', 'assistant-brief.md', 'fixture/orchestrators/x/orchestrator.json', 'shell/launch.js', 'scripts/brand.js', 'package.json']) {
+test('anything main.js or preload.js loads needs a restart, also when it lives under renderer/', () => {
+  for (const f of ['main.js', 'preload.js', 'orchestrators.js', 'orchestrator-brief.md', 'assistant-brief.md', 'fixture/orchestrators/x/orchestrator.json', 'scripts/brand.js', 'package.json', 'renderer/note-rows.js']) {
     assert.strictEqual(classify(['renderer/app.js', f]), 'restart', f);
   }
+});
+
+test('a change to shell/ is its own kind: the bundle has to take the new files', () => {
+  assert.strictEqual(classify(['shell/bootstrap.js']), 'bootstrap');
+  assert.strictEqual(classify(['renderer/app.js', 'main.js', 'shell/launch.js']), 'bootstrap');
+  assert.strictEqual(classify(['shell/launch.js', 'package-lock.json']), 'deps', 'npm ci at launch, which syncs shell/ too');
 });
 
 test('a lockfile change needs npm ci, and another Electron major needs a new app', () => {
@@ -119,6 +125,32 @@ test('local changes in the checkout stop a live update', async () => {
   assert.match(res.error, /local changes/);
   assert.strictEqual(u.view().status, 'available');
   assert.strictEqual(r.head(), r.first);
+});
+
+test('a live update refuses to drop commits that only the checkout has', async () => {
+  const r = repos();
+  fs.writeFileSync(path.join(r.checkout, 'renderer', 'local.js'), 'mine\n');
+  r.git(r.checkout, 'add', 'renderer/local.js');
+  r.git(r.checkout, 'commit', '-q', '-m', 'local');
+  const local = r.head();
+  const next = r.commit({ 'renderer/app.js': 'two\n' });
+  const u = updater(r);
+  assert.strictEqual((await u.check()).kind, 'live');
+  const res = await u.apply(next);
+  assert.strictEqual(res.ok, false);
+  assert.match(res.error, /has commits that .* does not.*--reset/);
+  assert.strictEqual(r.head(), local);
+});
+
+test('state goes through the launch module the bundle passes in', async () => {
+  const r = repos();
+  const calls = [];
+  const fake = { ...launch, readState: (root) => { calls.push('read'); return launch.readState(root); }, updateState: (root, patch) => { calls.push(Object.keys(patch).join()); return launch.updateState(root, patch); } };
+  const later = r.commit({ 'main.js': 'two\n' });
+  const u = new Updater({ shell: { root: r.root, checkout: r.checkout, branch: 'main', launch: fake }, electronVersion: '45.0.0' });
+  await u.check();
+  await u.apply(later);
+  assert.deepStrictEqual(calls, ['read', 'pending']);
 });
 
 test('a notice from the last launch is shown until dismissed', async () => {

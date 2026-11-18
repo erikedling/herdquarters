@@ -480,7 +480,8 @@ you no longer need `npm start`. It clones the repo into a checkout the app owns,
 from), installs its packages there, and builds `~/Applications/Herdquarters.app`
 around it (`--out`, `--root` and `--remote` change those). Quit `npm start`,
 open the app and drag it to the Dock. Run it again to rebuild the app; the
-checkout and its update state are kept.
+checkout and its update state are kept. `--out` must name a `.app`, and an
+existing one is only replaced if this script built it.
 
 The app is a copy of Electron's own bundle with the name and icon, signed ad
 hoc (`scripts/make-app.js`). An app built on your Mac is not quarantined, so it
@@ -501,27 +502,55 @@ hour, and sorts what came in by what applying it takes (`updater.js`):
 - Only `renderer/`, docs, tests and other files the app never loads: checked out
   and applied with a window reload. The terminal that was open opens again.
   Agents, herdr and PiPi carry on; only an open dialog or unsent text is lost.
+  A `renderer/` file the main process also requires (`note-rows.js`) is listed in
+  `MAIN_LOADS` in `updater.js`; `test/main-graph.test.js` walks main's requires
+  and fails when a new one is missing.
 - Anything `main.js` or `preload.js` loads (the main-process modules, the briefs,
   scripts): needs a restart. It is checked out at the next launch, before
   `main.js` loads, so a running app never mixes old and new files.
-- `package-lock.json` changed: as above, with `npm ci` at that launch.
+- `shell/` changed: as above. The app runs its own copy of `shell/`, so at that
+  launch it copies the new files into the bundle, signs it again and starts over.
+- `package-lock.json` changed: as above, with `npm ci` at that launch. The old
+  `node_modules` is moved aside first and put back if the install fails, and
+  `state.json` records which lockfile it was installed from, so an install that
+  was cut short is done again at the next launch.
 - Another Electron major: as above, and the app downloads that Electron and
-  rebuilds itself first, which can take a few minutes.
+  rebuilds itself first, which can take a few minutes. It tries once per commit;
+  if the app still does not match after that, it goes back to the last good one.
+
+A launch that has to install or rebuild shows a small *Updating Herdquarters…*
+window while it works, then starts again.
 
 Settings > General > Updates picks **Ask** (the default) or **Automatic**. Ask
 shows a bar under the top bar: *Update available* with the changes (the PR
 titles), **Update now** and **Later** (hidden until something newer comes).
-Automatic applies reload-only updates by itself as soon as no dialog is open and
-nothing is being typed. An update that needs a restart always asks, in both
+Automatic applies reload-only updates by itself once nothing is going on: no
+dialog or settings open, no half-typed text, no terminal focused and no key
+pressed in the last minute. An update that needs a restart always asks, in both
 modes: **Restart now** (a few seconds, agents keep running) or **On next
 launch**. **Check now** in settings checks at once. A check that fails (offline)
 stays quiet and is tried again in an hour; settings shows the error.
 
-If a new commit throws while `main.js` loads, or its window has not loaded
-within 30 s, the bootstrap checks out the last commit that did start, starts
-again and says so in the bar. That commit is not offered again; the next one
-is. The checkout belongs to the app: if it has local changes, updates stop and
-say why instead of overwriting them. Its state is in `state.json` next to it.
+A version counts as started when the window says so: `renderer/ready.js`, the
+last script, checks that every part set itself up without an error and sends
+`renderer-ready`. If a new commit throws while `main.js` loads, or the window
+has not said it is ready within 30 s, the bootstrap checks out the last commit
+that did start, starts again and says so in the bar. That commit is not offered
+again; the next one is. The checkout belongs to the app: if it has local changes,
+or commits that `origin/main` does not have, updates stop and say why instead of
+dropping them. Its state is in `state.json` next to it.
+
+If the app cannot get itself going again (a bad commit was marked good, the
+checkout has local changes or a history of its own, or a broken `shell/` was
+copied into the bundle), reset it from any source checkout:
+
+```sh
+npm run install-app -- --reset
+```
+
+That fetches, puts the app's checkout back on `origin/main` (local changes and
+commits there are dropped), clears the update state, installs the packages and
+builds the app again. The data folder is not touched.
 
 Contributors keep using `npm start`; the updater only runs inside the app.
 

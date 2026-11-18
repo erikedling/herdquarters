@@ -1,12 +1,12 @@
 // Copied into Herdquarters.app by scripts/make-app.js; see "The Dock app" in docs/GUIDE.md.
 const fs = require('node:fs');
 const path = require('node:path');
-const { app, dialog } = require('electron');
+const { app, dialog, ipcMain, BrowserWindow } = require('electron');
 const { importLoginPath } = require('./login-path');
 const launch = require('./launch');
 const rebuild = require('./rebuild');
 
-const BOOT_TIMEOUT_MS = 30_000;
+const READY_TIMEOUT_MS = 30_000;
 const { root, checkout, branch = 'main' } = JSON.parse(fs.readFileSync(path.join(__dirname, 'shell.json'), 'utf8'));
 const bundle = path.resolve(process.execPath, '..', '..', '..');
 const opts = { root, checkout, branch };
@@ -27,36 +27,57 @@ if (!primary) {
 
 function start() {
   importLoginPath();
-  let current;
+  let current, needsModules;
   try {
-    current = launch.prepareLaunch(opts);
+    ({ current, needsModules } = launch.prepareLaunch(opts));
   } catch (err) {
     return fail(`Herdquarters could not read its checkout at ${checkout}`, err);
   }
-  if (rebuild.needsRebuild(checkout, process.versions.electron)) {
-    try {
-      rebuild.rebuild({ checkout, root, bundle });
-      return relaunch();
-    } catch (err) {
-      const back = launch.rollBack({ ...opts, error: `could not build the app for a new Electron: ${launch.shortError(err)}` });
-      return back !== current ? relaunch() : fail('Herdquarters could not build itself for a new Electron', err);
-    }
+  try {
+    if (rebuild.syncShell({ checkout, appDir: __dirname, bundle })) return relaunch();
+  } catch (err) {
+    console.error(`could not update the app's own files: ${launch.shortError(err)}`);
   }
+  const plan = rebuild.rebuildPlan({ root, checkout, current, running: process.versions.electron });
+  if (plan === 'gaveUp') {
+    const back = launch.rollBack({ ...opts, error: `still not on Electron ${rebuild.wantedMajor(checkout)} after building for it` });
+    return back !== current ? relaunch() : fail('Herdquarters could not build itself for a new Electron', `wanted Electron ${rebuild.wantedMajor(checkout)}`);
+  }
+  if (plan === 'rebuild' || needsModules) return installFirst(current, plan === 'rebuild');
+  run(current);
+}
 
-  global.herdquartersShell = { root, checkout, branch, bundle };
-  let loaded = false;
+// Slow work runs after ready behind a small window, so the app is not just a bouncing icon; then it starts again.
+function installFirst(current, newElectron) {
+  app.whenReady().then(async () => {
+    const text = newElectron
+      ? 'Downloading a new Electron and building the app again. This can take a few minutes.'
+      : 'Installing packages for the new version.';
+    const win = new BrowserWindow({ width: 440, height: 130, resizable: false, minimizable: false, maximizable: false, title: 'Herdquarters', backgroundColor: '#1b1e2b' });
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`<body style="margin:0;padding:22px 26px;font:14px -apple-system,sans-serif;color:#e6e9f5;background:#1b1e2b"><b>Updating Herdquarters…</b><p style="color:#9aa3c0;margin:8px 0 0">${text}</p></body>`)}`);
+    try {
+      if (newElectron) await rebuild.rebuild({ root, checkout, bundle, current });
+      else await launch.installModules(root, checkout);
+      relaunch();
+    } catch (err) {
+      const back = launch.rollBack({ ...opts, error: launch.shortError(err) });
+      if (back !== current) relaunch();
+      else fail('Herdquarters could not install its packages. Check the network and open it again.', err);
+    }
+  });
+}
+
+function run(current) {
+  global.herdquartersShell = { root, checkout, branch, bundle, launch };
+  launch.markBooting(root, current);
   const watchdog = setTimeout(() => {
-    if (loaded) return;
-    const back = launch.rollBack({ ...opts, error: `the window did not load within ${BOOT_TIMEOUT_MS / 1000} s` });
+    const back = launch.rollBack({ ...opts, error: `the window did not come up within ${READY_TIMEOUT_MS / 1000} s` });
     if (back !== current) relaunch();
-  }, BOOT_TIMEOUT_MS);
-  app.on('web-contents-created', (_e, wc) => wc.once('did-finish-load', () => {
-    if (loaded) return;
-    loaded = true;
+  }, READY_TIMEOUT_MS);
+  ipcMain.once('renderer-ready', () => {
     clearTimeout(watchdog);
     launch.markGood(root, current);
-  }));
-
+  });
   try {
     require(path.join(checkout, 'main.js'));
   } catch (err) {

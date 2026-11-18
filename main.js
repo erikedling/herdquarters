@@ -285,7 +285,6 @@ function createWindow() {
     if (process.env.OFFICE_DEBUG) console.log('[debug] did-finish-load +%dms', Date.now() - t0);
     refresh();
     assistantClock();
-    updater.loaded();
     // OFFICE_SCREENSHOT=/path/out.png captures the window and quits. Timed from
     // page load: a cold start can take seconds before the renderer exists.
     if (process.env.OFFICE_SCREENSHOT) {
@@ -504,6 +503,8 @@ ipcMain.handle('pane-process-info', async (_e, { pane_id }) => {
 ipcMain.handle('agent-start', (_e, { pane_id, name, kind }) =>
   wt(() => client.request('agent.start', { pane_id, name, kind: AGENT_KINDS.includes(kind) ? kind : 'claude', timeout_ms: 60000 })));
 
+// Sent by renderer/ready.js once every part of the window has set itself up.
+ipcMain.on('renderer-ready', () => updater.loaded());
 ipcMain.handle('update-get', () => updater.view());
 ipcMain.handle('update-check', () => updater.check());
 ipcMain.handle('update-apply', async (_e, { target }) => {
@@ -536,4 +537,4 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { terminals.closeAll(); session?.stop(); });
+app.on('before-quit', () => { terminals.closeAll(); session?.stop(); updater.stop(); });

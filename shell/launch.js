@@ -1,13 +1,16 @@
-// state.json: lastGood (window loaded), booting (started, not loaded yet), pending (for the next launch), bad, notice.
+// state.json: lastGood (window came up), booting (main.js loading), pending (for the next launch), bad, notice,
+// modulesFor (hash of the lockfile node_modules was installed from), rebuildTried.
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const crypto = require('node:crypto');
+const { execFileSync, execFile } = require('node:child_process');
 
 const NPM_TIMEOUT_MS = 5 * 60_000;
+const gitEnv = () => ({ ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' });
 
 function git(cwd, args, { run = execFileSync } = {}) {
   return String(run('git', ['-C', cwd, ...args], {
-    encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'], env: gitEnv(),
   })).trim();
 }
 
@@ -28,62 +31,96 @@ function updateState(root, patch) {
 
 const head = (checkout) => git(checkout, ['rev-parse', 'HEAD']);
 
-function lockfileDiffers(checkout, from, to) {
-  return git(checkout, ['diff', '--name-only', from, to, '--', 'package-lock.json']) !== '';
+function lockHash(checkout) {
+  try { return crypto.createHash('sha256').update(fs.readFileSync(path.join(checkout, 'package-lock.json'))).digest('hex'); } catch { return ''; }
+}
+
+const modulesDir = (checkout) => path.join(checkout, 'node_modules');
+const stagedDir = (checkout) => path.join(checkout, 'node_modules.prev');
+
+function modulesReady(root, checkout) {
+  if (fs.existsSync(stagedDir(checkout)) || !fs.existsSync(modulesDir(checkout))) return false;
+  return readState(root).modulesFor === lockHash(checkout);
 }
 
 // Only the xterm packages are needed at run time; Electron comes from the .app.
-function npmCi(checkout, { run = execFileSync } = {}) {
-  run('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'], {
-    cwd: checkout, encoding: 'utf8', timeout: NPM_TIMEOUT_MS, stdio: ['ignore', 'pipe', 'pipe'],
+function npmCi(checkout, { args = ['--omit=dev'], run = execFile } = {}) {
+  return new Promise((resolve, reject) => {
+    run('npm', ['ci', ...args, '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: checkout, encoding: 'utf8', timeout: NPM_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) { err.stderr = stderr; reject(err); } else resolve();
+    });
   });
 }
 
-function assertClean(checkout) {
-  const dirty = git(checkout, ['status', '--porcelain', '--untracked-files=no']);
-  if (dirty) throw new Error(`the app's checkout at ${checkout} has local changes`);
-}
-
-function moveTo(checkout, sha, { branch = 'main', npm = npmCi } = {}) {
-  const from = head(checkout);
-  if (from === sha) return;
-  assertClean(checkout);
-  git(checkout, ['checkout', '-q', '-B', branch, sha]);
-  if (!lockfileDiffers(checkout, from, sha)) return;
+// npm ci deletes node_modules before it installs, so the old one is moved aside
+// and put back if the install fails or is cut short.
+async function installModules(root, checkout, { npm = npmCi } = {}) {
+  const live = modulesDir(checkout);
+  const staged = stagedDir(checkout);
+  if (fs.existsSync(staged)) {
+    fs.rmSync(live, { recursive: true, force: true });
+    fs.renameSync(staged, live);
+  }
+  if (modulesReady(root, checkout)) return false;
+  if (fs.existsSync(live)) fs.renameSync(live, staged);
   try {
-    npm(checkout);
+    await npm(checkout);
   } catch (err) {
-    git(checkout, ['checkout', '-q', '-B', branch, from]);
-    try { npm(checkout); } catch { /* the old modules may still be there */ }
+    fs.rmSync(live, { recursive: true, force: true });
+    if (fs.existsSync(staged)) fs.renameSync(staged, live);
     throw err;
   }
+  updateState(root, { modulesFor: lockHash(checkout) });
+  fs.rmSync(staged, { recursive: true, force: true });
+  return true;
+}
+
+function assertClean(checkout) {
+  if (git(checkout, ['status', '--porcelain', '--untracked-files=no'])) {
+    throw new Error(`the app's checkout at ${checkout} has local changes; npm run install-app -- --reset starts it over`);
+  }
+}
+
+function isAncestor(checkout, a, b) {
+  try { git(checkout, ['merge-base', '--is-ancestor', a, b]); return true; } catch { return false; }
+}
+
+// forward: an update, which must not drop commits that only the checkout has.
+function checkoutTo(checkout, sha, { branch = 'main', forward = false } = {}) {
+  if (head(checkout) === sha) return;
+  assertClean(checkout);
+  if (forward && !isAncestor(checkout, 'HEAD', sha)) {
+    throw new Error(`the app's checkout has commits that ${sha.slice(0, 7)} does not; npm run install-app -- --reset starts it over`);
+  }
+  git(checkout, ['checkout', '-q', '-B', branch, sha]);
 }
 
 const shortError = (err) => String(err?.stderr || err?.message || err).trim().split('\n').filter(Boolean).pop() || 'unknown error';
 
-function prepareLaunch({ root, checkout, branch = 'main', npm = npmCi, now = Date.now() }) {
-  let state = readState(root);
+// Git only, so it is quick; installing packages is left to the caller, which can show progress.
+function prepareLaunch({ root, checkout, branch = 'main', now = Date.now() }) {
+  const state = readState(root);
   let current = head(checkout);
   if (state.booting && state.booting === current && state.lastGood && state.lastGood !== current) {
-    current = rollBack({ root, checkout, branch, npm, now, error: 'the window never finished loading' });
+    current = rollBack({ root, checkout, branch, now, error: 'the window never came up' });
   } else if (state.pending && state.pending !== current) {
     try {
-      moveTo(checkout, state.pending, { branch, npm });
+      checkoutTo(checkout, state.pending, { branch, forward: true });
       current = head(checkout);
     } catch (err) {
-      state = updateState(root, { notice: { kind: 'applyFailed', to: state.pending, error: shortError(err), at: now } });
+      updateState(root, { notice: { kind: 'applyFailed', to: state.pending, error: shortError(err), at: now } });
     }
   }
-  updateState(root, { pending: null, booting: current });
-  return current;
+  updateState(root, { pending: null });
+  return { current, needsModules: !modulesReady(root, checkout) };
 }
 
-function rollBack({ root, checkout, branch = 'main', npm = npmCi, now = Date.now(), error }) {
+function rollBack({ root, checkout, branch = 'main', now = Date.now(), error }) {
   const state = readState(root);
   const from = head(checkout);
   if (!state.lastGood || state.lastGood === from) return from;
   try {
-    moveTo(checkout, state.lastGood, { branch, npm });
+    checkoutTo(checkout, state.lastGood, { branch });
   } catch (err) {
     updateState(root, { booting: null, notice: { kind: 'rollbackFailed', from, to: state.lastGood, error: shortError(err), at: now } });
     return head(checkout);
@@ -92,8 +129,10 @@ function rollBack({ root, checkout, branch = 'main', npm = npmCi, now = Date.now
   return state.lastGood;
 }
 
-function markGood(root, sha) {
-  return updateState(root, { lastGood: sha, booting: null });
-}
+const markBooting = (root, sha) => updateState(root, { booting: sha });
+const markGood = (root, sha) => updateState(root, { lastGood: sha, booting: null });
 
-module.exports = { git, readState, updateState, head, lockfileDiffers, npmCi, moveTo, prepareLaunch, rollBack, markGood, shortError };
+module.exports = {
+  git, gitEnv, readState, updateState, head, lockHash, modulesReady, npmCi, installModules,
+  assertClean, isAncestor, checkoutTo, prepareLaunch, rollBack, markBooting, markGood, shortError,
+};

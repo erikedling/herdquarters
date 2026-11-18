@@ -87,6 +87,7 @@ contextBridge.exposeInMainWorld('office', {
     processInfo: (args) => ipcRenderer.invoke('pane-process-info', args),
     startAgent: (args) => ipcRenderer.invoke('agent-start', args),
   },
+  ready: () => ipcRenderer.send('renderer-ready'),
   updates: {
     get: () => ipcRenderer.invoke('update-get'),
     check: () => ipcRenderer.invoke('update-check'),

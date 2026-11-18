@@ -10,8 +10,9 @@ const split = (p) => String(p || '').split(':').filter(Boolean);
 
 function loginShellPath({ shell = process.env.SHELL || '/bin/zsh', run = execFileSync, timeoutMs = 5000, env = process.env } = {}) {
   try {
-    // Markers, since an interactive shell may print a greeting or a prompt first.
-    const out = run(shell, ['-ilc', `printf '%s%s%s' ${MARK} "$PATH" ${MARK}`], {
+    // Markers skip any greeting; fish keeps PATH as a list, which "$PATH" would join with spaces.
+    const value = path.basename(shell) === 'fish' ? '(string join : $PATH)' : '"$PATH"';
+    const out = run(shell, ['-ilc', `printf '%s%s%s' ${MARK} ${value} ${MARK}`], {
       encoding: 'utf8', timeout: timeoutMs, stdio: ['ignore', 'pipe', 'ignore'], env,
     });
     const m = String(out).match(new RegExp(`${MARK}([^\\n]*?)${MARK}`));

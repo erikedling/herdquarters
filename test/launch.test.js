@@ -1,5 +1,5 @@
-// shell/launch.js: what the Dock app checks out before main.js loads, and the
-// way back when a commit never gets its window up. Real git repos in a temp folder.
+// shell/launch.js: what the Dock app checks out before main.js loads, its
+// packages, and the way back when a commit never comes up. Real git repos in a temp folder.
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
@@ -9,84 +9,152 @@ const { repos } = require('./helpers/git-repos');
 
 function setup() {
   const r = repos();
-  const npmCalls = [];
-  const npm = (dir) => { npmCalls.push(dir); };
   const fetch = () => r.git(r.checkout, 'fetch', '-q', 'origin');
-  return { ...r, npm, npmCalls, fetch };
+  const modules = path.join(r.checkout, 'node_modules');
+  const marker = () => { try { return fs.readFileSync(path.join(modules, 'marker'), 'utf8'); } catch { return null; } };
+  const npmCalls = [];
+  const npm = async (dir) => {
+    npmCalls.push(dir);
+    fs.mkdirSync(path.join(dir, 'node_modules'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'node_modules', 'marker'), `for ${launch.lockHash(dir).slice(0, 8)}`);
+  };
+  return { ...r, fetch, modules, marker, npm, npmCalls };
 }
 
-test('a first launch runs what is checked out and records it as booting', () => {
+async function installed(r) {
+  await launch.installModules(r.root, r.checkout, { npm: r.npm });
+  r.npmCalls.length = 0;
+}
+
+test('a first launch needs its packages; once installed they are recorded against the lockfile', async () => {
   const r = setup();
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm }), r.first);
-  assert.deepStrictEqual(launch.readState(r.root), { pending: null, booting: r.first });
-  launch.markGood(r.root, r.first);
-  assert.deepStrictEqual(launch.readState(r.root), { pending: null, booting: null, lastGood: r.first });
+  assert.deepStrictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }), { current: r.first, needsModules: true });
+  assert.strictEqual(await launch.installModules(r.root, r.checkout, { npm: r.npm }), true);
+  assert.strictEqual(launch.readState(r.root).modulesFor, launch.lockHash(r.checkout));
+  assert.deepStrictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }), { current: r.first, needsModules: false });
+  assert.strictEqual(await launch.installModules(r.root, r.checkout, { npm: r.npm }), false, 'nothing to do');
+  assert.strictEqual(r.npmCalls.length, 1);
 });
 
-test('a pending update is checked out at launch, without npm when the lockfile is the same', () => {
+test('a pending update is checked out at launch and needs no packages when the lockfile is the same', async () => {
   const r = setup();
+  await installed(r);
   launch.markGood(r.root, r.first);
   const next = r.commit({ 'main.js': 'two\n' });
   r.fetch();
   launch.updateState(r.root, { pending: next });
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm }), next);
+  assert.deepStrictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }), { current: next, needsModules: false });
   assert.strictEqual(r.head(), next);
   assert.strictEqual(r.git(r.checkout, 'rev-parse', '--abbrev-ref', 'HEAD'), 'main');
-  assert.deepStrictEqual(r.npmCalls, []);
-  const state = launch.readState(r.root);
-  assert.strictEqual(state.pending, null);
-  assert.strictEqual(state.booting, next);
-});
-
-test('a pending update that changes the lockfile runs npm ci', () => {
-  const r = setup();
-  const next = r.commit({ 'package-lock.json': '{"packages":{"node_modules/electron":{"version":"45.1.0"}}}\n' });
-  r.fetch();
-  launch.updateState(r.root, { pending: next });
-  launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm });
-  assert.deepStrictEqual(r.npmCalls, [r.checkout]);
-});
-
-test('a failed npm ci leaves the old commit checked out and says why', () => {
-  const r = setup();
-  const next = r.commit({ 'package-lock.json': '{}\n' });
-  r.fetch();
-  launch.updateState(r.root, { pending: next });
-  let calls = 0;
-  const npm = () => { calls += 1; if (calls === 1) throw Object.assign(new Error('npm failed'), { stderr: 'npm ERR! network\nnpm ERR! offline\n' }); };
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm, now: 5 }), r.first);
-  assert.strictEqual(r.head(), r.first);
-  assert.strictEqual(calls, 2, 'installs the old lockfile again');
-  assert.deepStrictEqual(launch.readState(r.root).notice, { kind: 'applyFailed', to: next, error: 'npm ERR! offline', at: 5 });
   assert.strictEqual(launch.readState(r.root).pending, null);
 });
 
-test('local changes in the checkout block an update instead of being overwritten', () => {
+test('a lockfile change needs packages, installed over the old ones only when npm succeeds', async () => {
+  const r = setup();
+  await installed(r);
+  const before = r.marker();
+  const next = r.commit({ 'package-lock.json': '{"packages":{"node_modules/electron":{"version":"45.1.0"}}}\n' });
+  r.fetch();
+  launch.updateState(r.root, { pending: next });
+  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }).needsModules, true);
+  await launch.installModules(r.root, r.checkout, { npm: r.npm });
+  assert.notStrictEqual(r.marker(), before);
+  assert.strictEqual(fs.existsSync(`${r.modules}.prev`), false);
+  assert.strictEqual(launch.modulesReady(r.root, r.checkout), true);
+});
+
+test('a failing npm ci leaves the previous node_modules in place', async () => {
+  const r = setup();
+  await installed(r);
+  const before = r.marker();
+  const recorded = launch.readState(r.root).modulesFor;
+  r.commit({ 'package-lock.json': '{}\n' });
+  r.fetch();
+  r.git(r.checkout, 'checkout', '-q', '-B', 'main', 'origin/main');
+  const failing = async (dir) => {
+    fs.mkdirSync(path.join(dir, 'node_modules', 'half'), { recursive: true });
+    throw Object.assign(new Error('npm failed'), { stderr: 'npm ERR! network\nnpm ERR! offline\n' });
+  };
+  await assert.rejects(launch.installModules(r.root, r.checkout, { npm: failing }), /npm failed/);
+  assert.strictEqual(r.marker(), before);
+  assert.strictEqual(fs.existsSync(path.join(r.modules, 'half')), false);
+  assert.strictEqual(fs.existsSync(`${r.modules}.prev`), false);
+  assert.strictEqual(launch.readState(r.root).modulesFor, recorded);
+  assert.strictEqual(launch.modulesReady(r.root, r.checkout), false, 'the new lockfile still needs its install');
+});
+
+test('an install that was cut short is redone at the next launch, starting from the old modules', async () => {
+  const r = setup();
+  await installed(r);
+  const before = r.marker();
+  const next = r.commit({ 'package-lock.json': '{"v":2}\n' });
+  r.fetch();
+  launch.updateState(r.root, { pending: next });
+  launch.prepareLaunch({ root: r.root, checkout: r.checkout });
+  // A force quit in the middle of npm ci: the old modules aside, a half-made new folder.
+  fs.renameSync(r.modules, `${r.modules}.prev`);
+  fs.mkdirSync(path.join(r.modules, 'half'), { recursive: true });
+  const again = launch.prepareLaunch({ root: r.root, checkout: r.checkout });
+  assert.deepStrictEqual(again, { current: next, needsModules: true }, 'no rollback: the window never got a chance');
+  await launch.installModules(r.root, r.checkout, { npm: r.npm });
+  assert.strictEqual(r.npmCalls.length, 1);
+  assert.notStrictEqual(r.marker(), before);
+  assert.strictEqual(fs.existsSync(`${r.modules}.prev`), false);
+});
+
+test('a cut-short install with the lockfile back where it was just restores the old modules', async () => {
+  const r = setup();
+  await installed(r);
+  const before = r.marker();
+  fs.renameSync(r.modules, `${r.modules}.prev`);
+  fs.mkdirSync(path.join(r.modules, 'half'), { recursive: true });
+  assert.strictEqual(launch.modulesReady(r.root, r.checkout), false);
+  assert.strictEqual(await launch.installModules(r.root, r.checkout, { npm: r.npm }), false);
+  assert.strictEqual(r.npmCalls.length, 0);
+  assert.strictEqual(r.marker(), before);
+});
+
+test('local changes in the checkout block an update instead of being overwritten', async () => {
   const r = setup();
   const next = r.commit({ 'main.js': 'two\n' });
   r.fetch();
   fs.writeFileSync(path.join(r.checkout, 'main.js'), 'edited by hand\n');
   launch.updateState(r.root, { pending: next });
-  launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm });
+  launch.prepareLaunch({ root: r.root, checkout: r.checkout });
   assert.strictEqual(r.head(), r.first);
-  assert.match(launch.readState(r.root).notice.error, /local changes/);
+  assert.match(launch.readState(r.root).notice.error, /local changes.*--reset/);
   assert.strictEqual(fs.readFileSync(path.join(r.checkout, 'main.js'), 'utf8'), 'edited by hand\n');
 });
 
-test('a commit whose window never loaded is rolled back at the next launch and marked bad', () => {
+test('an update refuses to drop commits that only the checkout has', () => {
   const r = setup();
+  fs.writeFileSync(path.join(r.checkout, 'local.txt'), 'mine\n');
+  r.git(r.checkout, 'add', 'local.txt');
+  r.git(r.checkout, 'commit', '-q', '-m', 'local');
+  const local = r.head();
+  const next = r.commit({ 'main.js': 'two\n' });
+  r.fetch();
+  launch.updateState(r.root, { pending: next });
+  launch.prepareLaunch({ root: r.root, checkout: r.checkout });
+  assert.strictEqual(r.head(), local);
+  assert.match(launch.readState(r.root).notice.error, /has commits that .* does not.*--reset/);
+});
+
+test('a commit whose window never came up is rolled back at the next launch and marked bad', async () => {
+  const r = setup();
+  await installed(r);
   launch.markGood(r.root, r.first);
   const broken = r.commit({ 'main.js': 'throw\n' });
   r.fetch();
   launch.updateState(r.root, { pending: broken });
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm }), broken);
-  // That launch died before its window loaded, so booting is still set.
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm, now: 9 }), r.first);
+  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }).current, broken);
+  launch.markBooting(r.root, broken);
+  // That launch died before the renderer said it was ready, so booting is still set.
+  assert.deepStrictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, now: 9 }), { current: r.first, needsModules: false });
   assert.strictEqual(r.head(), r.first);
   const state = launch.readState(r.root);
   assert.strictEqual(state.bad, broken);
-  assert.strictEqual(state.booting, r.first);
-  assert.deepStrictEqual(state.notice, { kind: 'rolledBack', from: broken, to: r.first, error: 'the window never finished loading', at: 9 });
+  assert.deepStrictEqual(state.notice, { kind: 'rolledBack', from: broken, to: r.first, error: 'the window never came up', at: 9 });
 });
 
 test('rollBack() goes to the last good commit right away, as the bootstrap does when main.js throws', () => {
@@ -94,17 +162,18 @@ test('rollBack() goes to the last good commit right away, as the bootstrap does 
   launch.markGood(r.root, r.first);
   const broken = r.commit({ 'main.js': 'throw\n' });
   r.fetch();
-  launch.moveTo(r.checkout, broken, { npm: r.npm });
-  assert.strictEqual(launch.rollBack({ root: r.root, checkout: r.checkout, npm: r.npm, error: 'boom', now: 1 }), r.first);
+  launch.checkoutTo(r.checkout, broken, { forward: true });
+  assert.strictEqual(launch.rollBack({ root: r.root, checkout: r.checkout, error: 'boom', now: 1 }), r.first);
   assert.strictEqual(r.head(), r.first);
   assert.strictEqual(launch.readState(r.root).notice.error, 'boom');
 });
 
 test('with no good commit yet there is nothing to roll back to', () => {
   const r = setup();
-  launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm });
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm }), r.first);
-  assert.strictEqual(launch.rollBack({ root: r.root, checkout: r.checkout, npm: r.npm, error: 'x' }), r.first);
+  launch.prepareLaunch({ root: r.root, checkout: r.checkout });
+  launch.markBooting(r.root, r.first);
+  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }).current, r.first);
+  assert.strictEqual(launch.rollBack({ root: r.root, checkout: r.checkout, error: 'x' }), r.first);
   assert.strictEqual(launch.readState(r.root).notice, undefined);
 });
 
@@ -114,8 +183,9 @@ test('a launch after a good one does not roll anything back', () => {
   const next = r.commit({ 'main.js': 'two\n' });
   r.fetch();
   launch.updateState(r.root, { pending: next });
-  launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm });
+  launch.prepareLaunch({ root: r.root, checkout: r.checkout });
+  launch.markBooting(r.root, next);
   launch.markGood(r.root, next);
-  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout, npm: r.npm }), next);
+  assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }).current, next);
   assert.strictEqual(launch.readState(r.root).bad, undefined);
 });

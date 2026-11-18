@@ -48,3 +48,12 @@ test('importLoginPath() sets PATH on the env it is given and keeps the fallbacks
   assert.strictEqual(ok.fromShell, true);
   assert.strictEqual(env.PATH.split(':')[0], '/x/bin');
 });
+
+test('under fish, PATH is joined with colons; "$PATH" would join its list with spaces', () => {
+  const seen = [];
+  const run = (shell, argv) => { seen.push(argv[1]); return '__HQ_PATH__/a:/b__HQ_PATH__'; };
+  assert.strictEqual(loginShellPath({ shell: '/opt/homebrew/bin/fish', run }), '/a:/b');
+  assert.match(seen[0], /\(string join : \$PATH\)/);
+  loginShellPath({ shell: '/bin/zsh', run });
+  assert.match(seen[1], /"\$PATH"/);
+});
