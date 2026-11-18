@@ -16,6 +16,7 @@ const { coalesce } = require('./coalesce');
 const { isRealDataFolder } = require('./data-folder');
 const { createFolderPicker } = require('./folder-picker');
 const { peekClipboard } = require('./clipboard-peek');
+const { UsageMonitor, readClaude, readCodex, probeDir } = require('./usage');
 app.setName(APP_NAME); // the menu bar and dock label come from the bundle: see scripts/brand.js
 // Electron derives the data directory from the product name; keep the one the
 // app has always used so settings and orchestrators stay where they are.
@@ -269,6 +270,7 @@ function createWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.on('focus', () => usage?.focus());
   // Nothing web-shaped opens inside the app: new windows and navigations away
   // from index.html go to the user's browser (web URLs only) and are dropped here.
   const toBrowser = (url) => { if (/^https?:\/\//i.test(url)) shell.openExternal(url).catch(() => {}); };
@@ -293,7 +295,7 @@ function createWindow() {
         const img = await win.webContents.capturePage();
         require('node:fs').writeFileSync(process.env.OFFICE_SCREENSHOT, img.toPNG());
         app.quit();
-      }, process.env.OFFICE_OPEN || process.env.OFFICE_TOOLTIP ? 4000 : (process.env.OFFICE_MODAL || process.env.OFFICE_DEBUG) ? 2500 : 1500);
+      }, process.env.OFFICE_USAGE_LIVE ? 8000 : process.env.OFFICE_OPEN || process.env.OFFICE_TOOLTIP ? 4000 : (process.env.OFFICE_MODAL || process.env.OFFICE_DEBUG) ? 2500 : 1500);
     }
   });
   win.webContents.on('console-message', ({ level, message, sourceId, lineNumber }) => {
@@ -313,6 +315,25 @@ function createWindow() {
 }
 
 ipcMain.handle('refresh', () => refresh());
+// Plan limits for the status bar (usage.js). Fixture runs show made-up numbers and start no CLI,
+// unless OFFICE_USAGE_LIVE=1 asks for the real ones.
+let usage = null;
+function ensureUsage() {
+  if (usage) return usage;
+  const fixture = process.env.OFFICE_FIXTURE && !process.env.OFFICE_USAGE_LIVE ? require('./fixture') : null;
+  const dir = fixture ? null : probeDir(app.getPath('userData'));
+  const read = (id, real) => (fixture ? async () => fixture.usage()[id] : real);
+  usage = new UsageMonitor({
+    providers: [
+      { id: 'claude', name: 'Claude', read: read('claude', () => readClaude({ dir })) },
+      { id: 'codex', name: 'Codex', read: read('codex', () => readCodex({ dir, version: app.getVersion() })) },
+    ],
+    send: (view) => toRenderer('usage', view),
+  });
+  return usage;
+}
+ipcMain.handle('usage-configure', (_e, patch) => ensureUsage().configure(patch || {}));
+ipcMain.handle('usage-refresh', () => ensureUsage().refresh({ force: true }));
 // The assistant: settings from the renderer, a reminder seen, the chat.
 const assistantCall = (fn) => {
   if (process.env.OFFICE_FIXTURE) return { ok: true };
@@ -372,14 +393,16 @@ ipcMain.handle('herdr-autostart-set', (_e, { enabled }) => {
 // Dev aids, pulled by the renderer at startup (pushing on a timer raced the page load):
 // OFFICE_DEV_SETTINGS='{"theme":"ocean"}' settings patch; OFFICE_MODAL=<create|closed|remove|orchestrator|archived>
 // opens that dialog; OFFICE_OPEN=<pane_id> opens a desk's terminal; OFFICE_TOOLTIP=<pane_id> shows
-// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window; OFFICE_CHAT=1 the assistant's chat;
+// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window (or =general, =agents… on that section); OFFICE_CHAT=1 the assistant's chat;
 // OFFICE_WELCOME=<step> opens the welcome tour at that step (screenshot runs skip it otherwise).
+// OFFICE_USAGE_OPEN=1 opens the plan usage popover.
 ipcMain.handle('dev-settings-get', () => (process.env.OFFICE_DEV_SETTINGS ? JSON.parse(process.env.OFFICE_DEV_SETTINGS) : null));
 ipcMain.handle('dev-triggers-get', () => ({
   modal: process.env.OFFICE_MODAL || null, open: process.env.OFFICE_OPEN || null,
-  tooltip: process.env.OFFICE_TOOLTIP || null, settingsOpen: !!process.env.OFFICE_SETTINGS_OPEN, chatOpen: !!process.env.OFFICE_CHAT,
+  tooltip: process.env.OFFICE_TOOLTIP || null, settingsOpen: process.env.OFFICE_SETTINGS_OPEN || null, chatOpen: !!process.env.OFFICE_CHAT,
   welcome: process.env.OFFICE_WELCOME || null, screenshot: !!process.env.OFFICE_SCREENSHOT,
   corkboard: process.env.OFFICE_CORKBOARD || null,
+  usageOpen: !!process.env.OFFICE_USAGE_OPEN,
 }));
 ipcMain.handle('focus-pane', (_e, paneId) => client.request('pane.focus', { pane_id: paneId }));
 ipcMain.handle('read-pane', async (_e, paneId, lines = 8) => {
@@ -519,4 +542,4 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { terminals.closeAll(); session?.stop(); });
+app.on('before-quit', () => { terminals.closeAll(); session?.stop(); usage?.stop(); });

@@ -72,6 +72,11 @@ contextBridge.exposeInMainWorld('office', {
     remove: (args) => ipcRenderer.invoke('worktree-remove', args),
     removePath: (args) => ipcRenderer.invoke('worktree-remove-path', args),
   },
+  usage: {
+    configure: (patch) => ipcRenderer.invoke('usage-configure', patch),
+    refresh: () => ipcRenderer.invoke('usage-refresh'),
+    onChange: (cb) => { const h = (_e, view) => cb(view); ipcRenderer.on('usage', h); return () => ipcRenderer.removeListener('usage', h); },
+  },
   devSettings: () => ipcRenderer.invoke('dev-settings-get'),
   devTriggers: () => ipcRenderer.invoke('dev-triggers-get'),
   clipboardPeek: () => ipcRenderer.invoke('clipboard-peek'),

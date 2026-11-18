@@ -112,3 +112,16 @@ test('a fresh install opens in the Toybox style', () => {
   const { settings } = load();
   assert.strictEqual(settings.get().style, 'toybox');
 });
+
+test('plan usage is on at 10 minutes, and main hears it at startup and on change', () => {
+  const calls = [];
+  // JSON: objects made inside the vm context have another Object prototype.
+  const { settings } = load(undefined, { usage: { configure: (p) => calls.push(JSON.parse(JSON.stringify(p))) } });
+  assert.strictEqual(settings.get().usageMeter, true);
+  assert.strictEqual(settings.get().usageInterval, 10);
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 10 });
+  settings.set({ usageInterval: 30 });
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 30 });
+  settings.set({ usageMeter: false });
+  assert.deepStrictEqual(calls.at(-1), { enabled: false, interval: 30 });
+});

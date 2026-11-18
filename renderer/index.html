@@ -135,6 +135,18 @@
             <span class="settings-check-text">Alert sound<small>A short chime when an ops agent raises an alert about a deploy.</small></span>
             <input id="set-alert-sound" type="checkbox">
           </label>
+          <div class="settings-row settings-check">
+            <label class="settings-check-text" for="set-usage">Usage limits<small>Claude and Codex plan usage in the status bar: how much of the 5-hour and weekly limits is used, and when they reset. Read from the claude and codex CLIs, so nothing shows for one that is not installed.</small></label>
+            <span class="settings-pair">
+              <select id="set-usage-interval" title="How often to check">
+                <option value="5">every 5 min</option>
+                <option value="10">every 10 min</option>
+                <option value="15">every 15 min</option>
+                <option value="30">every 30 min</option>
+              </select>
+              <input id="set-usage" type="checkbox">
+            </span>
+          </div>
           <label class="settings-row settings-check">
             <span class="settings-check-text">Start herdr<small>When herdr is not running as the app opens, start it in the background. It keeps running after the app quits.</small></span>
             <input id="set-herdr-autostart" type="checkbox">
@@ -204,9 +216,11 @@
       <span class="legend-item"><i class="dot done"></i>done</span>
       <span class="legend-item"><i class="dot idle"></i>idle</span>
     </div>
+    <button id="usage" class="usage" type="button" title="Plan usage: click for details" hidden></button>
     <div id="conn" class="conn">connecting…</div>
   </footer>
 
+  <div id="usage-pop" class="usage-pop" role="dialog" aria-label="Plan usage" hidden></div>
   <canvas id="bird-canvas" class="bird-canvas" aria-hidden="true"></canvas>
   <div id="bird" class="bird" title="Your assistant: click to chat, hold to pet, drag to move, fling to throw, double-click for a flip" hidden></div>
   <div id="bird-bubble" class="bird-bubble" hidden></div>
@@ -294,6 +308,7 @@
   <script src="app.js"></script>
   <script src="tab-order.js"></script>
   <script src="tabs.js"></script>
+  <script src="usage.js"></script>
   <script src="settings.js"></script>
   <script src="scenes.js"></script>
   <script src="welcome.js"></script>
