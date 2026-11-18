@@ -95,7 +95,15 @@ function checkoutTo(checkout, sha, { branch = 'main', forward = false } = {}) {
   git(checkout, ['checkout', '-q', '-B', branch, sha]);
 }
 
-const shortError = (err) => String(err?.stderr || err?.message || err).trim().split('\n').filter(Boolean).pop() || 'unknown error';
+// npm ends with the path of its log, so its first real message is the useful one; git's is its last line.
+function shortError(err) {
+  const lines = String(err?.stderr || err?.message || err).split('\n').map((l) => l.trim()).filter(Boolean);
+  const npm = lines.filter((l) => /^npm (error|ERR!)/.test(l))
+    .map((l) => l.replace(/^npm (error|ERR!)\s*/, ''))
+    .filter((l) => l && !/^code\b|complete log of this run/.test(l))
+    .map((l) => l.replace(/^[a-z]+\s+(?=[A-Z])/, ''));
+  return npm[0] || lines.pop() || 'unknown error';
+}
 
 // Git only, so it is quick; installing packages is left to the caller, which can show progress.
 function prepareLaunch({ root, checkout, branch = 'main', now = Date.now() }) {

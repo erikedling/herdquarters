@@ -189,3 +189,15 @@ test('a launch after a good one does not roll anything back', () => {
   assert.strictEqual(launch.prepareLaunch({ root: r.root, checkout: r.checkout }).current, next);
   assert.strictEqual(launch.readState(r.root).bad, undefined);
 });
+
+test('shortError() gives npm’s actual complaint, not the path of its log', () => {
+  const stderr = [
+    'npm error code ETARGET',
+    'npm error notarget No matching version found for @xterm/addon-fit@^0.99.0.',
+    "npm error notarget In most cases you or one of your dependencies are requesting a package version that doesn't exist.",
+    'npm error A complete log of this run can be found in: /Users/me/.npm/_logs/x-debug-0.log',
+  ].join('\n');
+  assert.strictEqual(launch.shortError({ stderr }), 'No matching version found for @xterm/addon-fit@^0.99.0.');
+  assert.strictEqual(launch.shortError({ stderr: 'hint: x\nfatal: not a git repository\n' }), 'fatal: not a git repository');
+  assert.strictEqual(launch.shortError(new Error('boom')), 'boom');
+});
