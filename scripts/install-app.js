@@ -14,7 +14,7 @@ const { npmCi } = require('../shell/launch');
 const { electronMajor } = require('../shell/rebuild');
 
 const repo = path.join(__dirname, '..');
-const run = (cmd, argv, opts = {}) => execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }).trim();
+const run = (cmd, argv, opts = {}) => String(execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }) ?? '').trim();
 
 function main() {
   const a = args(process.argv.slice(2));

@@ -229,6 +229,7 @@
   // must not start two attachments (herdr refuses the second and the first
   // would be orphaned, holding the pane).
   let queue = Promise.resolve();
+  let shown = null; // the desk in the panel, even after its stream has ended
   function open(desk) {
     const run = queue.then(() => openNow(desk));
     queue = run.catch(() => {});
@@ -241,6 +242,7 @@
     await detach();
     $panel.hidden = false;
     document.body.classList.add('panel-open');
+    shown = desk.paneId;
     $title.textContent = desk.title;
     $sub.textContent = `${desk.floor} · ${desk.room} · ${desk.paneId}`;
     setPose(desk.pose);
@@ -264,6 +266,7 @@
 
   async function close() {
     await detach();
+    shown = null;
     $panel.hidden = true;
     document.body.classList.remove('panel-open');
     window.officeSidebar?.refresh();
@@ -324,6 +327,6 @@
   function layoutChanged() { clearTimeout(resizeTimer); resizeTimer = setTimeout(applyFit, 60); }
   window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(applyFit, 60); });
 
-  window.officeTerminal = { open, close, update, layoutChanged, isOpenFor: (paneId) => current?.paneId === paneId, openPane: () => current?.paneId || null };
+  window.officeTerminal = { open, close, update, layoutChanged, isOpenFor: (paneId) => current?.paneId === paneId, openPane: () => ($panel.hidden ? null : shown) };
   window.__term = () => term; // for test/fixtures/term-panel
 })();
