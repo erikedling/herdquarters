@@ -86,16 +86,18 @@ function claudeWindow(label, body, now) {
   return { ...win, usedPercent: Math.max(0, Math.min(100, used)), resetsAt: parseReset(body, now) };
 }
 
-// The text `claude -p /usage` prints → its windows, in order. The tips after
-// "What's contributing" are not limits.
+// The text `claude -p /usage` prints → its windows, in order. A block ends at
+// a blank line, so a later section's "resets" or "%" is never read as a limit's.
 function parseClaudeUsage(text, now = Date.now()) {
   const head = String(text || '').split(/what's contributing/i)[0];
   const blocks = [];
+  let open = null;
   for (const line of head.split('\n')) {
     const t = line.trim();
     const label = t.match(/^Current\s+\w+(?:\s*\([^)]*\))?/i);
-    if (label) blocks.push({ label: label[0], body: t.slice(label[0].length) });
-    else if (blocks.length && t) blocks[blocks.length - 1].body += ` ${t}`;
+    if (label) blocks.push(open = { label: label[0], body: t.slice(label[0].length) });
+    else if (!t) open = null;
+    else if (open) open.body += ` ${t}`;
   }
   return blocks.map((b) => claudeWindow(b.label, b.body, now)).filter(Boolean);
 }
@@ -175,13 +177,29 @@ function codexResult(res) {
 // PATH for the CLIs: a Dock launch has almost none, and a CLI may start helpers.
 const cliEnv = (bin, extra = {}) => ({ ...process.env, PATH: [path.dirname(bin), String(process.env.PATH || ''), '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin'].filter(Boolean).join(':'), ...extra });
 
-function run(bin, args, { cwd, env, timeoutMs = 30_000 } = {}) {
+const KILL_GRACE_MS = 2000;
+
+// SIGTERM, then SIGKILL if it is still there after a grace period.
+function end(proc, graceMs = KILL_GRACE_MS) {
+  if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
+  try { proc.kill('SIGTERM'); } catch { return; }
+  const t = setTimeout(() => { if (proc.exitCode === null && proc.signalCode === null) try { proc.kill('SIGKILL'); } catch { /* gone */ } }, graceMs);
+  t.unref?.();
+  proc.once('exit', () => clearTimeout(t));
+}
+
+// Runs a CLI to the end. `signal` (the monitor's stop) ends it early.
+function run(bin, args, { cwd, env, timeoutMs = 30_000, signal, graceMs } = {}) {
   return new Promise((resolve) => {
-    let stdout = '', stderr = '', done = false;
-    const finish = (r) => { if (!done) { done = true; clearTimeout(timer); resolve(r); } };
-    let proc;
+    let stdout = '', stderr = '', done = false, timer, proc;
+    const onAbort = () => { end(proc, graceMs); finish({ code: -1, stdout, stderr: 'stopped' }); };
+    const finish = (r) => { if (!done) { done = true; clearTimeout(timer); signal?.removeEventListener('abort', onAbort); resolve(r); } };
+    if (signal?.aborted) return finish({ code: -1, stdout, stderr: 'stopped' });
     try { proc = spawn(bin, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] }); } catch (err) { return finish({ code: -1, stdout, stderr: String(err.message) }); }
-    const timer = setTimeout(() => { proc.kill('SIGKILL'); finish({ code: -1, stdout, stderr: `${path.basename(bin)} took longer than ${timeoutMs / 1000} s` }); }, timeoutMs);
+    timer = setTimeout(() => { end(proc, graceMs); finish({ code: -1, stdout, stderr: `${path.basename(bin)} took longer than ${timeoutMs / 1000} s` }); }, timeoutMs);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    proc.stdout.setEncoding('utf8');
+    proc.stderr.setEncoding('utf8');
     proc.stdout.on('data', (d) => { stdout += d; });
     proc.stderr.on('data', (d) => { stderr += d; });
     proc.on('error', (err) => finish({ code: -1, stdout, stderr: String(err.message) }));
@@ -189,33 +207,44 @@ function run(bin, args, { cwd, env, timeoutMs = 30_000 } = {}) {
   });
 }
 
-// Hooks, MCP servers and project settings stay off: a usage check should not
-// chime, start servers or leave a session behind.
-const CLAUDE_ARGS = ['-p', '/usage', '--output-format', 'json', '--no-session-persistence', '--setting-sources', 'project', '--strict-mcp-config', '--settings', '{"disableAllHooks":true}'];
+// Safe mode keeps hooks, MCP servers, plugins and CLAUDE.md off: a usage check
+// should not chime, start servers or read a project. It also saves no session.
+const CLAUDE_ARGS = ['-p', '/usage', '--output-format', 'json', '--no-session-persistence', '--safe-mode'];
 
-async function readClaude({ dir, find = findBin, exec = run, now = Date.now } = {}) {
+async function readClaude({ dir, find = findBin, exec = run, now = Date.now, signal } = {}) {
   const bin = find('claude');
   if (!bin) return { status: 'missing' };
-  return claudeResult(await exec(bin, CLAUDE_ARGS, { cwd: dir, env: cliEnv(bin, { CLAUDE_CODE_ENTRYPOINT: 'herdquarters-usage' }) }), now());
+  return claudeResult(await exec(bin, CLAUDE_ARGS, { cwd: dir, signal, env: cliEnv(bin, { CLAUDE_CODE_ENTRYPOINT: 'herdquarters-usage' }) }), now());
 }
+
+// No sandbox flags: app-server ignores the root -s/-a, and only
+// account/rateLimits/read is asked, so no thread starts and no tool runs.
+const CODEX_ARGS = ['app-server'];
 
 // One app-server conversation: initialize, then account/rateLimits/read, then
 // stop it. Newline-delimited JSON-RPC without the "jsonrpc" field, as Codex speaks it.
-function codexRpc(bin, { cwd, env, timeoutMs = 15_000, version = '0' } = {}) {
+function codexRpc(bin, { cwd, env, timeoutMs = 15_000, version = '0', signal, graceMs } = {}) {
   return new Promise((resolve) => {
-    let proc, buf = '', stderr = '', done = false;
+    let proc, timer, buf = '', stderr = '', done = false;
+    const onAbort = () => finish({ error: { message: 'stopped' } });
     const finish = (r) => {
       if (done) return;
       done = true; clearTimeout(timer);
-      try { proc.stdin.end(); proc.kill('SIGTERM'); } catch { /* gone */ }
+      signal?.removeEventListener('abort', onAbort);
+      try { proc?.stdin.end(); } catch { /* gone */ }
+      end(proc, graceMs);
       resolve(r);
     };
-    const timer = setTimeout(() => finish({ error: { message: firstLine(stderr) || `codex app-server took longer than ${timeoutMs / 1000} s` } }), timeoutMs);
-    try { proc = spawn(bin, ['-s', 'read-only', '-a', 'never', 'app-server'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (err) { return finish({ error: { message: err.message } }); }
+    if (signal?.aborted) return finish({ error: { message: 'stopped' } });
+    timer = setTimeout(() => finish({ error: { message: firstLine(stderr) || `codex app-server took longer than ${timeoutMs / 1000} s` } }), timeoutMs);
+    try { proc = spawn(bin, CODEX_ARGS, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] }); } catch (err) { return finish({ error: { message: err.message } }); }
+    signal?.addEventListener('abort', onAbort, { once: true });
     const send = (o) => { try { proc.stdin.write(`${JSON.stringify(o)}\n`); } catch { /* closed */ } };
     proc.on('error', (err) => finish({ error: { message: err.message } }));
     proc.on('close', (code) => finish({ error: { message: firstLine(stderr) || `codex app-server exited ${code}` } }));
     proc.stdin.on('error', () => {});
+    proc.stdout.setEncoding('utf8');
+    proc.stderr.setEncoding('utf8');
     proc.stderr.on('data', (d) => { stderr += d; });
     proc.stdout.on('data', (d) => {
       buf += d;
@@ -234,10 +263,10 @@ function codexRpc(bin, { cwd, env, timeoutMs = 15_000, version = '0' } = {}) {
   });
 }
 
-async function readCodex({ dir, find = findBin, rpc = codexRpc, version } = {}) {
+async function readCodex({ dir, find = findBin, rpc = codexRpc, version, signal } = {}) {
   const bin = find('codex');
   if (!bin) return { status: 'missing' };
-  return codexResult(await rpc(bin, { cwd: dir, env: cliEnv(bin), version }));
+  return codexResult(await rpc(bin, { cwd: dir, env: cliEnv(bin), version, signal }));
 }
 
 const cleanInterval = (n) => (INTERVALS.includes(Number(n)) ? Number(n) : DEFAULT_INTERVAL);
@@ -248,7 +277,7 @@ const cleanInterval = (n) => (INTERVALS.includes(Number(n)) ? Number(n) : DEFAUL
 // signed out or not installed clears them.
 class UsageMonitor {
   constructor({ providers, send, now = Date.now, timers = { set: setTimeout, clear: clearTimeout } }) {
-    this.providers = providers; // [{ id, name, read: async () => result }]
+    this.providers = providers; // [{ id, name, read: async ({ signal }) => result }]
     this.send = send;
     this.now = now;
     this.timers = timers;
@@ -257,6 +286,7 @@ class UsageMonitor {
     this.state = {};
     this.lastRun = 0;
     this.running = null;
+    this.ctl = null;
     this.timer = null;
   }
 
@@ -266,46 +296,72 @@ class UsageMonitor {
     if (interval !== undefined) this.interval = cleanInterval(interval);
     if (!this.enabled) { this.stop(); this.publish(); return this.view(); }
     if (!was) this.refresh();
-    else if (wasInterval !== this.interval) this.schedule();
+    else if (wasInterval !== this.interval && !this.running) this.schedule();
     this.publish();
     return this.view();
   }
 
-  stop() { if (this.timer) this.timers.clear(this.timer); this.timer = null; }
+  // The timer, and any CLI still running.
+  stop() {
+    this.clearTimer();
+    this.ctl?.abort();
+    this.ctl = null;
+    this.running = null;
+  }
+
+  clearTimer() { if (this.timer) this.timers.clear(this.timer); this.timer = null; }
+
+  // When a provider is next due: its backoff after a failure, else a full interval after its last check.
+  dueAt(id) {
+    const s = this.state[id];
+    if (!s) return 0;
+    return s.retryAt || s.checked + this.interval * MIN;
+  }
 
   schedule() {
-    this.stop();
-    if (this.enabled) this.timer = this.timers.set(() => this.refresh(), this.interval * MIN);
+    this.clearTimer();
+    if (!this.enabled) return;
+    const next = Math.min(...this.providers.map((p) => this.dueAt(p.id)));
+    const wait = Math.max(MIN / 2, Math.min(this.interval * MIN, next - this.now()));
+    this.timer = this.timers.set(() => this.refresh({ due: true }), wait);
   }
 
   focus() { if (this.enabled && !this.running && this.now() - this.lastRun > FOCUS_STALE_MS) this.refresh(); }
 
-  // force: the ↻ button, past any backoff.
-  refresh({ force = false } = {}) {
+  // force: the ↻ button, past any backoff. due: the timer, only the providers whose time has come.
+  refresh({ force = false, due = false } = {}) {
     if (!this.enabled) return Promise.resolve(this.view());
     if (this.running) return this.running;
-    this.running = (async () => {
+    const ctl = new AbortController();
+    this.ctl = ctl;
+    const run = (async () => {
       this.lastRun = this.now();
       for (const p of this.providers) {
         const prev = this.state[p.id];
         if (!force && prev?.retryAt && this.now() < prev.retryAt) continue;
+        // A timer a little early still counts.
+        if (due && !force && this.dueAt(p.id) - this.now() > 5000) continue;
         let res;
-        try { res = await p.read(); } catch (err) { res = { status: 'error', error: String(err.message || err) }; }
-        if (!this.enabled) break;
+        try { res = await p.read({ signal: ctl.signal }); } catch (err) { res = { status: 'error', error: String(err.message || err) }; }
+        if (!this.enabled || ctl.signal.aborted) break;
         this.state[p.id] = this.merge(prev, res);
         this.publish();
       }
-    })().finally(() => { this.running = null; this.schedule(); this.publish(); });
-    return this.running.then(() => this.view());
+    })().finally(() => {
+      if (this.ctl !== ctl) return;
+      this.ctl = null; this.running = null; this.schedule(); this.publish();
+    });
+    this.running = run.then(() => this.view());
+    return this.running;
   }
 
   merge(prev, res) {
     const at = this.now();
-    if (res.status !== 'error') return { ...res, at, failures: 0 };
+    if (res.status !== 'error') return { ...res, at, checked: at, failures: 0 };
     const failures = (prev?.failures || 0) + 1;
     const retryAt = at + BACKOFF_MIN[Math.min(failures, BACKOFF_MIN.length) - 1] * MIN;
     const keep = prev?.windows?.length ? { windows: prev.windows, plan: prev.plan, note: prev.note, signInEndsAt: prev.signInEndsAt, at: prev.at, stale: true } : {};
-    return { status: 'error', error: res.error, failures, retryAt, ...keep };
+    return { status: 'error', error: res.error, failures, retryAt, checked: at, ...keep };
   }
 
   view() {
@@ -331,5 +387,5 @@ function probeDir(userData) {
 
 module.exports = {
   UsageMonitor, readClaude, readCodex, codexRpc, parseClaudeUsage, parseReset, claudeResult, claudeSignInNote,
-  parseCodexLimits, codexResult, cleanInterval, probeDir, zonedTime, INTERVALS, DEFAULT_INTERVAL, CLAUDE_ARGS,
+  parseCodexLimits, codexResult, cleanInterval, probeDir, zonedTime, run, INTERVALS, DEFAULT_INTERVAL, CLAUDE_ARGS, CODEX_ARGS,
 };

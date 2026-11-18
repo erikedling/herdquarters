@@ -82,7 +82,8 @@
     $meter.hidden = !html;
     if ($meter._html !== html) { $meter._html = html; $meter.innerHTML = html; }
     if (!html) $pop.hidden = true;
-    if (!$pop.hidden) $pop.innerHTML = popoverHtml(view, now);
+    // Unchanged HTML is left alone so keyboard focus stays on the ↻.
+    if (!$pop.hidden) { const pop = popoverHtml(view, now); if ($pop._html !== pop) { $pop._html = pop; $pop.innerHTML = pop; } }
   }
 
   $meter.addEventListener('click', () => { $pop.hidden = !$pop.hidden; render(); });

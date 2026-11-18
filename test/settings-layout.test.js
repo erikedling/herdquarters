@@ -39,7 +39,7 @@ function load(stored, office = {}, extra = {}) {
     },
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
   });
-  return { settings: window.officeSettings, vars, classes, $width: $pop.els['#set-width'] };
+  return { settings: window.officeSettings, vars, classes, $pop, $width: $pop.els['#set-width'] };
 }
 
 test('a fresh install opens the terminal as a split panel at 46%', () => {
@@ -124,4 +124,11 @@ test('plan usage is on at 10 minutes, and main hears it at startup and on change
   assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 30 });
   settings.set({ usageMeter: false });
   assert.deepStrictEqual(calls.at(-1), { enabled: false, interval: 30 });
+});
+
+test('a saved usage interval main would not accept shows, and is sent, as 10 minutes', () => {
+  const calls = [];
+  const { $pop } = load({ usageInterval: 7 }, { usage: { configure: (p) => calls.push(JSON.parse(JSON.stringify(p))) } });
+  assert.strictEqual($pop.els['#set-usage-interval'].value, '10');
+  assert.deepStrictEqual(calls.at(-1), { enabled: true, interval: 10 });
 });

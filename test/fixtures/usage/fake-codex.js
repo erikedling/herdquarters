@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // A stand-in for `codex app-server`: answers initialize and account/rateLimits/read
 // the way Codex does, with a notification in between. FAKE_CODEX=exit dies at once,
-// FAKE_CODEX=uninit refuses requests before `initialized`.
+// FAKE_CODEX=uninit refuses requests before `initialized`, FAKE_CODEX=stuck
+// prints its pid, never answers and ignores SIGTERM. Any args but `app-server` fail.
 const mode = process.env.FAKE_CODEX || '';
+if (process.argv.slice(2).join(' ') !== 'app-server') { process.stderr.write(`unexpected args: ${process.argv.slice(2).join(' ')}\n`); process.exit(2); }
 if (mode === 'exit') { process.stderr.write('codex: not logged in\n'); process.exit(1); }
+if (mode === 'stuck') { process.on('SIGTERM', () => {}); process.stderr.write(`pid ${process.pid}\n`); setInterval(() => {}, 1000); return; }
 let initialized = false;
 let buf = '';
 const send = (o) => process.stdout.write(`${JSON.stringify(o)}\n`);

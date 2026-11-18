@@ -325,8 +325,8 @@ function ensureUsage() {
   const read = (id, real) => (fixture ? async () => fixture.usage()[id] : real);
   usage = new UsageMonitor({
     providers: [
-      { id: 'claude', name: 'Claude', read: read('claude', () => readClaude({ dir })) },
-      { id: 'codex', name: 'Codex', read: read('codex', () => readCodex({ dir, version: app.getVersion() })) },
+      { id: 'claude', name: 'Claude', read: read('claude', ({ signal }) => readClaude({ dir, signal })) },
+      { id: 'codex', name: 'Codex', read: read('codex', ({ signal }) => readCodex({ dir, signal, version: app.getVersion() })) },
     ],
     send: (view) => toRenderer('usage', view),
   });

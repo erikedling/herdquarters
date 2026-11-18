@@ -44,7 +44,9 @@
   const days = () => (Array.isArray(settings.assistantDays) ? settings.assistantDays : DEFAULTS.assistantDays);
   // The assistant's clock runs in main; it keeps its own copy of these.
   // main polls the CLIs; it only needs to know whether and how often.
-  const pushUsage = () => window.office.usage?.configure({ enabled: settings.usageMeter !== false, interval: Number(settings.usageInterval) || DEFAULTS.usageInterval });
+  // The same choices main accepts (usage.js cleanInterval), so the select never shows blank.
+  const usageInterval = () => ([5, 10, 15, 30].includes(Number(settings.usageInterval)) ? Number(settings.usageInterval) : DEFAULTS.usageInterval);
+  const pushUsage = () => window.office.usage?.configure({ enabled: settings.usageMeter !== false, interval: usageInterval() });
   const pushAssistant = () => window.office.assistant?.configure({ enabled: settings.assistant, morning: settings.morning, name: settings.assistantName, days: days() });
   // Same rule as assistantName() in assistant.js: one line, 24 characters, PiPi when empty.
   const cleanName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24).trim() || DEFAULTS.assistantName;
@@ -83,7 +85,7 @@
     const $cats = $pop.querySelector('#set-cats'); if ($cats) $cats.checked = !!settings.cats;
     const $dogs = $pop.querySelector('#set-dogs'); if ($dogs) $dogs.checked = !!settings.dogs;
     const $usage = $pop.querySelector('#set-usage'); if ($usage) $usage.checked = settings.usageMeter !== false;
-    const $ui = $pop.querySelector('#set-usage-interval'); if ($ui) { $ui.value = String(settings.usageInterval); $ui.disabled = settings.usageMeter === false; }
+    const $ui = $pop.querySelector('#set-usage-interval'); if ($ui) { $ui.value = String(usageInterval()); $ui.disabled = settings.usageMeter === false; }
     const $auto = $pop.querySelector('#set-herdr-autostart'); if ($auto) $auto.checked = settings.herdrAutostart !== false;
     const $ed = $pop.querySelector('#set-editor'); if ($ed && document.activeElement !== $ed) $ed.value = settings.editor || '';
     // Leave the box alone while it is being typed in; it is read on change.

@@ -432,9 +432,9 @@ Claude's sign-in ends within a week.
 The numbers come from the CLIs themselves, so no token is read and nothing
 is sent anywhere new (`usage.js`):
 
-- **Claude**: `claude -p /usage` with hooks, MCP servers and session saving
-  off, run in an empty `usage-probe` folder in the app's data folder. It costs
-  no tokens and takes about two seconds.
+- **Claude**: `claude -p /usage --safe-mode` (no hooks, MCP servers, plugins
+  or CLAUDE.md) with session saving off, run in an empty `usage-probe` folder
+  in the app's data folder. It costs no tokens and takes about two seconds.
 - **Codex**: `codex app-server`, asking `account/rateLimits/read` and stopping it.
 
 A CLI that is not installed is left out; with neither, nothing shows. Signed out
@@ -448,6 +448,7 @@ so a Dock launch finds them too.
 **Usage limits** in Settings > General turns it on and off (on by default)
 and sets how often it checks: every 5, 10 (the default), 15 or 30 minutes.
 It also checks when the window gets focus and the numbers are over two minutes old.
+Turning it off, or quitting, stops a check that is still running.
 
 ## Settings
 
