@@ -134,8 +134,8 @@ away: one floor per repo, one room per checkout, one desk per pane.
 ## Learn more
 
 The [guide](docs/GUIDE.md) covers everything else: terminals and worktrees,
-the board, the corkboard, boss instructions, styles and themes, pets and dev
-flags.
+the board, the corkboard, boss instructions, plan usage limits, styles and
+themes, pets and dev flags.
 
 ## Develop
 

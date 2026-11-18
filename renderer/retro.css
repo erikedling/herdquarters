@@ -28,7 +28,7 @@
 }
 
 /* things that float or can be clicked: a solid outline and a hard shadow */
-:root[data-style] :is(.tab, .btn, .chat, .settings-card, .modal-card, .tooltip, .bird-bubble, .ctxmenu, .notice, .note-pop, .msg.user, .msg.bot, .theme-card, .next-chip) {
+:root[data-style] :is(.tab, .btn, .chat, .settings-card, .modal-card, .tooltip, .bird-bubble, .ctxmenu, .usage-pop, .notice, .note-pop, .msg.user, .msg.bot, .theme-card, .next-chip) {
   border: var(--r-bw) solid var(--r-line); box-shadow: var(--r-off) var(--r-off) 0 var(--r-shadow);
 }
 :root[data-style] .ticket {
@@ -41,6 +41,7 @@
 :root[data-style] .tab.add { border-style: dashed; box-shadow: none; }
 :root[data-style] .theme-card.active { outline: 3px solid var(--accent); outline-offset: 1px; }
 :root[data-style] .tab-bar { height: 6px; border: 1px solid var(--r-line); }
+:root[data-style] .ubar { border: 1px solid var(--r-line); }
 :root[data-style] .chat { background: var(--panel); }
 :root[data-style] .msg.bot { background: color-mix(in srgb, var(--panel), var(--text) 6%); }
 :root[data-style] :is(input[type=text], input[type=time], input[type=datetime-local], textarea, select) { border-width: var(--r-bw) !important; border-color: var(--r-line) !important; }
@@ -60,7 +61,7 @@
 }
 :root[data-style="workshop"] .reception { box-shadow: inset 0 3px 0 var(--plank-hi); border-bottom: 0; }
 :root[data-style="workshop"] .statusbar { border-top: 0; box-shadow: inset 0 -3px 0 var(--plank-lo); background-position: 0 -40px, 0 0; }
-:root[data-style="workshop"] :is(.reception-title, .statusbar, .statusbar .conn, .legend, .termpanel-sub, .termpanel-title) { color: var(--plank-ink); }
+:root[data-style="workshop"] :is(.reception-title, .statusbar, .statusbar .conn, .legend, .usage, .usage-prov b, .termpanel-sub, .termpanel-title) { color: var(--plank-ink); }
 :root[data-style="workshop"] .termpanel-btn { color: var(--plank-ink); border-color: var(--plank-ink); }
 :root[data-style="workshop"] .tab.add { color: var(--plank-ink); border-color: #d8c3a0; }
 :root[data-style="workshop"] .sidebar { background: #efe0bf; border-right: 4px solid var(--plank-wood); }
