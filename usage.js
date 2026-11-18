@@ -114,6 +114,7 @@ function claudeSignInNote(stderr) {
 function claudeResult({ code, stdout, stderr }, now = Date.now()) {
   let out;
   try { out = JSON.parse(String(stdout).slice(String(stdout).indexOf('{'))); } catch { /* below */ }
+  if (/unknown option '--safe-mode'/.test(stderr)) return { status: 'error', error: 'Claude Code is too old for the usage check: run claude update.' };
   if (!out) return { status: 'error', error: firstLine(stderr) || `claude exited ${code}` };
   if (out.is_error) return { status: 'error', error: firstLine(out.result) || 'claude reported an error' };
   const windows = parseClaudeUsage(out.result, now);
@@ -179,20 +180,25 @@ const cliEnv = (bin, extra = {}) => ({ ...process.env, PATH: [path.dirname(bin),
 
 const KILL_GRACE_MS = 2000;
 
-// SIGTERM, then SIGKILL if it is still there after a grace period.
+// SIGTERM, then SIGKILL if it is still there after a grace period (none: SIGKILL now).
 function end(proc, graceMs = KILL_GRACE_MS) {
   if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
-  try { proc.kill('SIGTERM'); } catch { return; }
+  try { proc.kill(graceMs > 0 ? 'SIGTERM' : 'SIGKILL'); } catch { return; }
+  if (graceMs <= 0) return;
   const t = setTimeout(() => { if (proc.exitCode === null && proc.signalCode === null) try { proc.kill('SIGKILL'); } catch { /* gone */ } }, graceMs);
   t.unref?.();
   proc.once('exit', () => clearTimeout(t));
 }
 
+// The monitor's stop({ now: true }) aborts with this: on quit there is no time for a grace period.
+const KILL_NOW = 'kill-now';
+const graceFor = (signal, graceMs) => (signal?.reason === KILL_NOW ? 0 : graceMs);
+
 // Runs a CLI to the end. `signal` (the monitor's stop) ends it early.
 function run(bin, args, { cwd, env, timeoutMs = 30_000, signal, graceMs } = {}) {
   return new Promise((resolve) => {
     let stdout = '', stderr = '', done = false, timer, proc;
-    const onAbort = () => { end(proc, graceMs); finish({ code: -1, stdout, stderr: 'stopped' }); };
+    const onAbort = () => { end(proc, graceFor(signal, graceMs)); finish({ code: -1, stdout, stderr: 'stopped' }); };
     const finish = (r) => { if (!done) { done = true; clearTimeout(timer); signal?.removeEventListener('abort', onAbort); resolve(r); } };
     if (signal?.aborted) return finish({ code: -1, stdout, stderr: 'stopped' });
     try { proc = spawn(bin, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] }); } catch (err) { return finish({ code: -1, stdout, stderr: String(err.message) }); }
@@ -232,7 +238,7 @@ function codexRpc(bin, { cwd, env, timeoutMs = 15_000, version = '0', signal, gr
       done = true; clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);
       try { proc?.stdin.end(); } catch { /* gone */ }
-      end(proc, graceMs);
+      end(proc, graceFor(signal, graceMs));
       resolve(r);
     };
     if (signal?.aborted) return finish({ error: { message: 'stopped' } });
@@ -301,10 +307,10 @@ class UsageMonitor {
     return this.view();
   }
 
-  // The timer, and any CLI still running.
-  stop() {
+  // The timer, and any CLI still running. now: on quit, SIGKILL without a grace period.
+  stop({ now = false } = {}) {
     this.clearTimer();
-    this.ctl?.abort();
+    this.ctl?.abort(now ? KILL_NOW : undefined);
     this.ctl = null;
     this.running = null;
   }
@@ -387,5 +393,5 @@ function probeDir(userData) {
 
 module.exports = {
   UsageMonitor, readClaude, readCodex, codexRpc, parseClaudeUsage, parseReset, claudeResult, claudeSignInNote,
-  parseCodexLimits, codexResult, cleanInterval, probeDir, zonedTime, run, INTERVALS, DEFAULT_INTERVAL, CLAUDE_ARGS, CODEX_ARGS,
+  parseCodexLimits, codexResult, cleanInterval, probeDir, zonedTime, run, KILL_NOW, INTERVALS, DEFAULT_INTERVAL, CLAUDE_ARGS, CODEX_ARGS,
 };

@@ -542,4 +542,4 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('before-quit', () => { terminals.closeAll(); session?.stop(); usage?.stop(); });
+app.on('before-quit', () => { terminals.closeAll(); session?.stop(); usage?.stop({ now: true }); });

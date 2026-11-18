@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const {
   UsageMonitor, readClaude, readCodex, codexRpc, parseClaudeUsage, parseReset, claudeResult, claudeSignInNote,
-  parseCodexLimits, codexResult, cleanInterval, run, CLAUDE_ARGS, CODEX_ARGS,
+  parseCodexLimits, codexResult, cleanInterval, run, KILL_NOW, CLAUDE_ARGS, CODEX_ARGS,
 } = require('../usage');
 
 // Wed Nov 18 2026, 11:23 in Stockholm (CET, UTC+1).
@@ -104,6 +104,11 @@ test('claude result: limits, signed out, an error, and output that is not JSON',
   assert.deepStrictEqual(claudeResult(json({ is_error: true, result: 'API Error: 500\nmore' }), NOW), { status: 'error', error: 'API Error: 500' });
   assert.deepStrictEqual(claudeResult({ code: 1, stdout: '', stderr: 'boom\n' }, NOW), { status: 'error', error: 'boom' });
   assert.strictEqual(claudeResult(json({ is_error: false, result: 'Failed to load usage data' }), NOW).status, 'error');
+});
+
+test('claude result: a CLI without --safe-mode is told to update', () => {
+  assert.deepStrictEqual(claudeResult({ code: 1, stdout: '', stderr: "error: unknown option '--safe-mode'\n" }, NOW),
+    { status: 'error', error: 'Claude Code is too old for the usage check: run claude update.' });
 });
 
 test('claude result: a sign-in ending within a week is flagged', () => {
@@ -224,6 +229,16 @@ test('run: the signal ends a running CLI', async () => {
   assert.strictEqual((await run(process.execPath, ['-e', ''], { signal: ctl.signal })).stderr, 'stopped');
 });
 
+test('run: a stop on quit kills at once, with no grace period', async () => {
+  const ctl = new AbortController();
+  const cli = stuck();
+  const p = run(process.execPath, cli.args, { signal: ctl.signal, graceMs: 60_000 });
+  const pid = await cli.pid();
+  ctl.abort(KILL_NOW);
+  await p;
+  assert.ok(await gone(pid), 'SIGKILL, not a SIGTERM it ignores');
+});
+
 // A monitor with a hand-driven clock and timer.
 function monitor(results) {
   let now = NOW;
@@ -334,8 +349,10 @@ test('monitor: stop ends a running check, keeps nothing from it, and on starts a
   m.configure({ enabled: true });
   assert.ok(m.running, 'a new check, not the stopped one');
   assert.strictEqual(signals.length, 2);
-  m.stop();
+  m.stop({ now: true });
   assert.strictEqual(signals[1].aborted, true);
+  assert.strictEqual(signals[1].reason, KILL_NOW, 'quit kills without waiting');
+  assert.notStrictEqual(signals[0].reason, KILL_NOW);
 });
 
 test('monitor: one run at a time, and focus refreshes only old data', async () => {
