@@ -314,6 +314,7 @@ test('newer commits do not hide a restart that is already waiting, and applying 
   assert.strictEqual(s.newer.target, second);
   assert.strictEqual(s.newer.kind, 'restart', 'it carries the waiting main.js change too');
   assert.deepStrictEqual(s.newer.commits.map((c) => c.subject), ['Terminal: a later change (#51)', 'Main: a change (#50)']);
+  assert.strictEqual(s.newer.added, 1, 'the bar counts only what came after the waiting restart');
   assert.strictEqual(launch.readState(r.root).pending, first);
 
   u.set({ status: 'restart' });
@@ -329,4 +330,42 @@ test('newer commits do not hide a restart that is already waiting, and applying 
   assert.strictEqual(s.newer, null);
   assert.strictEqual((await u.check()).status, 'restart');
   assert.strictEqual(r.head(), r.first, 'nothing is checked out before the restart');
+});
+
+test('applying newer commits keeps the user’s On next launch, and a force-push back keeps the waiting restart', async () => {
+  const r = repos();
+  const first = r.commit({ 'main.js': 'two\n' }, 'Main: a change (#50)');
+  const u = updater(r);
+  await u.check();
+  await u.apply(first);
+  u.later();
+  const second = r.commit({ 'renderer/app.js': 'two\n' }, 'Terminal: a later change (#51)');
+  const third = r.commit({ 'renderer/app.js': 'three\n' }, 'Terminal: another (#52)');
+  let s = await u.check();
+  assert.strictEqual(s.newer.target, third);
+  assert.strictEqual(s.newer.added, 2);
+  assert.deepStrictEqual(await u.apply(third), { ok: true, restart: true });
+  s = u.view();
+  assert.strictEqual(s.status, 'pending', 'no new Restart now prompt');
+  assert.strictEqual(s.target, third);
+  assert.strictEqual(launch.readState(r.root).pending, third);
+  assert.notStrictEqual(second, third);
+
+  r.git(r.work, 'push', '-q', '-f', 'origin', `${r.first}:refs/heads/main`);
+  s = await u.check();
+  assert.strictEqual(s.status, 'pending');
+  assert.strictEqual(s.target, third);
+  u.set({ status: 'restart' });
+  launch.updateState(r.root, { bad: second });
+  r.git(r.work, 'push', '-q', '-f', 'origin', `${second}:refs/heads/main`);
+  s = await u.check();
+  assert.strictEqual(s.status, 'restart');
+  assert.strictEqual(s.target, third);
+  assert.strictEqual(s.skipped, second);
+});
+
+test('reverting starts out unset, next to the other updater state', () => {
+  const u = new Updater({ shell: null });
+  assert.strictEqual(u.reverting, null);
+  assert.strictEqual(u.awaitingLoad, null);
 });

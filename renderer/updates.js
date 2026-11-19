@@ -66,7 +66,7 @@
     }
     if (s.status === 'restart') {
       const slow = { shell: ' It downloads a new Electron first, which can take a few minutes.', deps: ' It installs new packages first.', bootstrap: ' It updates the app itself first.' }[s.kind] || '';
-      const more = s.newer ? `<button class="btn small ghost" data-act="apply-newer">Include ${changes(s.newer.commits.length)} more</button>` : '';
+      const more = s.newer ? `<button class="btn small ghost" data-act="apply-newer">Include ${changes(s.newer.added)} more</button>` : '';
       return { html: `<div class="update-line"><span class="update-icon">↻</span><span class="update-text"><b>Restart Herdquarters to finish updating</b><small>Takes a few seconds; your agents keep running.${slow}</small></span>
         ${more}<button class="btn small primary" data-act="restart">Restart now</button>
         <button class="btn small ghost" data-act="next-launch">On next launch</button></div>` };
@@ -74,7 +74,7 @@
     if (s.status === 'pending' && s.newer && s.newer.target !== laterFor) {
       const first = s.newer.commits[0]?.subject || '';
       return { html: `<div class="update-line"><span class="update-icon">⬆</span>
-        <span class="update-text"><b>Update available</b><small>${changes(s.newer.commits.length)}${first ? `: ${esc(first)}${s.newer.commits.length > 1 ? ' and more' : ''}` : ''}. An earlier update already applies at the next launch.</small></span>
+        <span class="update-text"><b>Update available</b><small>${changes(s.newer.added)}${first ? `: ${esc(first)}${s.newer.added > 1 ? ' and more' : ''}` : ''}. An earlier update already applies at the next launch.</small></span>
         <button class="btn small primary" data-act="apply-newer">Update now</button>
         <button class="btn small ghost" data-act="later-newer">Later</button></div>` };
     }
@@ -113,7 +113,7 @@
     if (state.status === 'gone') parts.push(state.error);
     else if (state.status === 'pending' || state.status === 'restart') {
       parts.push('An update is ready and applies at the next launch.');
-      if (state.newer) parts.push(`${changes(state.newer.commits.length)} newer available.`);
+      if (state.newer) parts.push(`${changes(state.newer.added)} newer available.`);
     }
     else if (state.status === 'available') parts.push(`${changes(state.commits.length)} available.`);
     else if (state.status === 'current' && state.checkedAt && !state.error) parts.push('Up to date.');

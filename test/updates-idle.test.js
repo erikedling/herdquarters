@@ -106,7 +106,7 @@ test('a failed check does not claim to be up to date', () => {
 test('a waiting restart stays on show when newer commits come in', () => {
   const { push, els } = load({ mode: 'ask' });
   const current = { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' };
-  const newer = { target: 'def5678', kind: 'restart', commits: [{ sha: 'def5678', subject: 'Terminal: a later change (#51)' }] };
+  const newer = { target: 'def5678', kind: 'restart', added: 1, commits: [{ sha: 'def5678', subject: 'Terminal: a later change (#51)' }, { sha: 'aaa1111', subject: 'Main: a change (#50)' }] };
   push.state({ enabled: true, branch: 'main', status: 'restart', kind: 'restart', target: 'aaa1111', newer, current, checkedAt: Date.now(), commits: [] });
   assert.match(els.updatebar.innerHTML, /Restart Herdquarters to finish updating/);
   assert.match(els.updatebar.innerHTML, /data-act="apply-newer">Include 1 change more/);

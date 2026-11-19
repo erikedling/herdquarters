@@ -42,6 +42,7 @@ class Updater {
     this.timers = [];
     this.busy = null;
     this.awaitingLoad = null;
+    this.reverting = null;
     this.s = { enabled: !!shell, branch: shell?.branch || 'main', status: 'idle', kind: null, target: null, commits: [], newer: null, current: null, checkedAt: null, error: null, notice: null };
   }
 
@@ -83,12 +84,16 @@ class Updater {
       const state = this.launch.readState(root);
       const current = await this.describe('HEAD');
       const base = { checking: false, checkedAt: this.now(), error: null, current, skipped: null, newer: null };
+      const waiting = state.pending && state.pending !== head ? state.pending : null;
+      const keep = this.s.status === 'pending' ? 'pending' : 'restart';
       if (target === head || target === state.bad) {
-        this.set({ ...base, status: 'current', kind: null, target: null, commits: [], skipped: target === state.bad ? state.bad : null });
+        const skipped = target === state.bad ? state.bad : null;
+        // A force-push back does not undo a restart the user already said yes to; it still applies at the next launch.
+        if (waiting) this.set({ ...base, status: keep, target: waiting, skipped });
+        else this.set({ ...base, status: 'current', kind: null, target: null, commits: [], skipped });
       } else if (target === state.pending) {
-        this.set({ ...base, status: this.s.status === 'pending' ? 'pending' : 'restart', target });
+        this.set({ ...base, status: keep, target });
       } else {
-        const waiting = state.pending && state.pending !== head ? state.pending : null;
         const commits = lines(await this.git(['log', '--format=%h%x09%s', `${head}..${target}`])).map((l) => {
           const [sha, ...rest] = l.split('\t');
           return { sha, subject: rest.join('\t') };
@@ -97,7 +102,10 @@ class Updater {
         const lock = await this.git(['show', `${target}:package-lock.json`]).catch(() => '');
         const kind = classify(files, { electronNow: this.electronNow, electronNext: electronMajor(lock) });
         // A restart the user already said yes to stays on show; the newer commits can replace it.
-        if (waiting) this.set({ ...base, status: this.s.status === 'pending' ? 'pending' : 'restart', target: waiting, newer: { target, kind, commits } });
+        if (waiting) {
+          const added = lines(await this.git(['rev-list', `${waiting}..${target}`])).length;
+          this.set({ ...base, status: keep, target: waiting, newer: { target, kind, commits, added } });
+        }
         else this.set({ ...base, status: 'available', kind, target, commits });
       }
     } catch (err) {
@@ -119,7 +127,7 @@ class Updater {
     const { newer } = this.s;
     if (newer && target === newer.target) {
       this.launch.updateState(root, { pending: target });
-      this.set({ status: 'restart', target, kind: newer.kind === 'live' ? 'restart' : newer.kind, commits: newer.commits, newer: null, applyError: null });
+      this.set({ status: this.s.status === 'pending' ? 'pending' : 'restart', target, kind: newer.kind === 'live' ? 'restart' : newer.kind, commits: newer.commits, newer: null, applyError: null });
       return { ok: true, restart: true };
     }
     if (this.s.status !== 'available' || target !== this.s.target) return { ok: false, error: 'nothing to apply' };
