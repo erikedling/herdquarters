@@ -775,8 +775,9 @@ body.tab-dragging, body.tab-dragging * { cursor: grabbing !important; user-selec
 .bird-bubble.below::after { bottom: auto; top: -8px; transform: rotate(225deg); }
 .bb-reminder { display: flex; align-items: flex-start; gap: 6px; font-weight: 600; }
 .bb-reminder span { flex: 1; }
-.bb-done { font: inherit; font-size: 11px; color: var(--done-text); background: none; border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; cursor: pointer; }
-.bb-done:hover { background: var(--hover); }
+.bb-btn { flex: none; font: inherit; font-size: 11px; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; cursor: pointer; white-space: nowrap; }
+.bb-btn:hover { background: var(--hover); }
+.bb-done { color: var(--done-text); }
 
 .chat {
   position: fixed; right: 14px; top: 120px; bottom: 44px; z-index: 25; width: min(420px, calc(100vw - 28px));
