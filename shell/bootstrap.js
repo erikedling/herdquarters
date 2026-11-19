@@ -61,7 +61,7 @@ function installFirst(current, newElectron) {
     const controller = new AbortController();
     const release = guardQuit({ app, dialog, win, controller });
     try {
-      if (newElectron) await rebuild.rebuild({ root, checkout, bundle, current, signal: controller.signal });
+      if (newElectron) await rebuild.rebuild({ root, checkout, branch, bundle, current, signal: controller.signal });
       else await launch.installModules(root, checkout, { signal: controller.signal });
       release();
       relaunch();

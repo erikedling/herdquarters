@@ -27,12 +27,13 @@ test('another major is rebuilt for once; if it still does not match, the plan is
   assert.strictEqual(rebuild.rebuildPlan({ root, checkout, current: 'abc', running: '45.0.0' }), 'rebuild');
   const calls = [];
   await rebuild.rebuild({
-    root, checkout, bundle: '/Apps/Herdquarters.app', current: 'abc', execPath: '/Apps/Herdquarters.app/Contents/MacOS/Electron',
+    root, checkout, branch: 'fregus/try-this', bundle: '/Apps/Herdquarters.app', current: 'abc', execPath: '/Apps/Herdquarters.app/Contents/MacOS/Electron',
     npm: async (dir) => { calls.push(['npm', dir]); fs.mkdirSync(path.join(dir, 'node_modules'), { recursive: true }); },
-    run: async (cmd, args, opts) => { calls.push([cmd, ...args.map((a) => path.basename(a))]); assert.strictEqual(opts.env.ELECTRON_RUN_AS_NODE, '1'); },
+    run: async (cmd, args, opts) => { calls.push([cmd, ...args.map((a) => (path.isAbsolute(a) ? path.basename(a) : a))]); assert.strictEqual(opts.env.ELECTRON_RUN_AS_NODE, '1'); },
   });
   assert.deepStrictEqual(calls.map((c) => c.slice(0, 2)), [['npm', checkout], ['/Apps/Herdquarters.app/Contents/MacOS/Electron', 'install.js'], ['/Apps/Herdquarters.app/Contents/MacOS/Electron', 'make-app.js']]);
   assert.ok(calls[2].includes('Herdquarters.app'));
+  assert.strictEqual(calls[2][calls[2].indexOf('--branch') + 1], 'fregus/try-this', 'the rebuilt app keeps tracking the same branch');
   assert.strictEqual(launch.readState(root).rebuildTried, 'abc:46');
   // Relaunched and still on 45: no second multi-minute rebuild.
   assert.strictEqual(rebuild.rebuildPlan({ root, checkout, current: 'abc', running: '45.0.0' }), 'gaveUp');

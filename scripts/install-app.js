@@ -2,7 +2,8 @@
 //   --out <path>     the app (default ~/Applications/Herdquarters.app)
 //   --root <dir>     the app's own folder (default ~/Library/Application Support/Herdquarters)
 //   --remote <url>   what the checkout tracks (default: the public repo over HTTPS)
-//   --reset          put the app's checkout back on origin/main, dropping its local changes and update state
+//   --branch <name>  the branch it tracks, to try one that is not merged yet (default: main, or the one it already tracks)
+//   --reset          put the app's checkout back on origin/main (or --branch), dropping its local changes and update state
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -15,6 +16,18 @@ const repo = path.join(__dirname, '..');
 // HTTPS, so the app's hourly fetch never needs an SSH key in the agent.
 const DEFAULT_REMOTE = 'https://github.com/erikedling/herdquarters.git';
 const remoteFor = (a) => (typeof a.remote === 'string' && a.remote) || DEFAULT_REMOTE;
+
+function branchFor(a, current) {
+  if (a.branch === true) throw new Error('--branch needs a name');
+  const asked = a.branch || null;
+  if (!current || a.reset) return asked || 'main';
+  if (asked && asked !== current) throw new Error(`the app's checkout tracks ${current}; add --reset to switch it to ${asked}`);
+  return current;
+}
+
+const currentBranch = (checkout) => {
+  try { return launch.git(checkout, ['symbolic-ref', '--short', 'HEAD']); } catch { return null; }
+};
 const run = (cmd, argv, opts = {}) => String(execFileSync(cmd, argv, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'], ...opts }) ?? '').trim();
 
 function resetCheckout({ root, checkout, branch = 'main' }) {
@@ -29,15 +42,17 @@ async function main() {
   const out = path.resolve(a.out || path.join(os.homedir(), 'Applications', 'Herdquarters.app'));
   const checkout = path.join(root, 'app');
   checkTarget(out);
+  const cloned = fs.existsSync(path.join(checkout, '.git'));
+  const branch = branchFor(a, cloned ? currentBranch(checkout) : null);
 
-  if (!fs.existsSync(path.join(checkout, '.git'))) {
+  if (!cloned) {
     const remote = remoteFor(a);
-    console.log(`cloning ${remote} into ${checkout}`);
+    console.log(`cloning ${remote} (${branch}) into ${checkout}`);
     fs.mkdirSync(root, { recursive: true });
-    run('git', ['clone', '--quiet', '--branch', 'main', remote, checkout], { stdio: 'inherit' });
+    run('git', ['clone', '--quiet', '--branch', branch, remote, checkout], { stdio: 'inherit' });
   } else if (a.reset) {
-    console.log(`resetting ${checkout} to origin/main`);
-    resetCheckout({ root, checkout });
+    console.log(`resetting ${checkout} to origin/${branch}`);
+    resetCheckout({ root, checkout, branch });
   } else {
     console.log(`keeping the checkout at ${checkout} (--reset puts it back on origin/main)`);
   }
@@ -47,7 +62,7 @@ async function main() {
   if (wantedMajor(repo) !== wantedMajor(checkout)) {
     console.warn(`warning: this checkout has Electron ${wantedMajor(repo)}, the app's checkout wants ${wantedMajor(checkout)}; the app rebuilds itself on first launch`);
   }
-  makeApp({ out, root, checkout, shellSrc: path.join(checkout, 'shell') });
+  makeApp({ out, root, checkout, branch, shellSrc: path.join(checkout, 'shell') });
   console.log(`\nbuilt ${out}\nQuit Herdquarters if it is running (npm start), open the app, and drag it to the Dock to keep it there.`);
 }
 
@@ -58,4 +73,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { resetCheckout, remoteFor, DEFAULT_REMOTE };
+module.exports = { resetCheckout, remoteFor, branchFor, DEFAULT_REMOTE };

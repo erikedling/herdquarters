@@ -6,7 +6,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { makeApp, checkTarget, args } = require('../scripts/make-app');
-const { resetCheckout, remoteFor, DEFAULT_REMOTE } = require('../scripts/install-app');
+const { resetCheckout, remoteFor, branchFor, DEFAULT_REMOTE } = require('../scripts/install-app');
+const { Updater } = require('../updater');
 const launch = require('../shell/launch');
 const { repos } = require('./helpers/git-repos');
 
@@ -68,4 +69,43 @@ test('the app’s checkout tracks the public repo over HTTPS unless --remote say
   assert.strictEqual(remoteFor(args(['--root', '/r'])), DEFAULT_REMOTE);
   assert.strictEqual(remoteFor(args(['--remote', '/tmp/origin.git'])), '/tmp/origin.git');
   assert.strictEqual(remoteFor(args(['--remote'])), DEFAULT_REMOTE, 'a bare flag is not a URL');
+});
+
+test('--branch picks the branch for a new checkout; a rerun keeps the one it tracks, and --reset goes back to main', () => {
+  assert.strictEqual(branchFor(args([]), null), 'main');
+  assert.strictEqual(branchFor(args(['--branch', 'fregus/try-this']), null), 'fregus/try-this');
+  assert.strictEqual(branchFor(args([]), 'fregus/try-this'), 'fregus/try-this', 'a plain rebuild must not move it to main');
+  assert.strictEqual(branchFor(args(['--branch', 'fregus/try-this']), 'fregus/try-this'), 'fregus/try-this');
+  assert.throws(() => branchFor(args(['--branch', 'other']), 'fregus/try-this'), /tracks fregus\/try-this; add --reset to switch it to other/);
+  assert.strictEqual(branchFor(args(['--reset']), 'fregus/try-this'), 'main');
+  assert.strictEqual(branchFor(args(['--reset', '--branch', 'other']), 'fregus/try-this'), 'other');
+  assert.throws(() => branchFor(args(['--branch']), null), /--branch needs a name/);
+});
+
+test('a checkout on an unmerged branch gets what is pushed to that branch, and --reset takes it back to main', async () => {
+  const r = repos();
+  const branch = 'fregus/try-this';
+  r.git(r.work, 'checkout', '-q', '-b', branch);
+  fs.writeFileSync(path.join(r.work, 'renderer', 'app.js'), 'branch\n');
+  r.git(r.work, 'commit', '-q', '-am', 'Try: a branch change');
+  r.git(r.work, 'push', '-q', 'origin', branch);
+  resetCheckout({ root: r.root, checkout: r.checkout, branch });
+  assert.strictEqual(r.git(r.checkout, 'symbolic-ref', '--short', 'HEAD'), branch);
+  assert.strictEqual(r.head(), r.git(r.work, 'rev-parse', 'HEAD'));
+
+  fs.writeFileSync(path.join(r.work, 'renderer', 'app.js'), 'branch two\n');
+  r.git(r.work, 'commit', '-q', '-am', 'Try: another change');
+  r.git(r.work, 'push', '-q', 'origin', branch);
+  const next = r.git(r.work, 'rev-parse', 'HEAD');
+  const u = new Updater({ shell: { root: r.root, checkout: r.checkout, branch }, send() {}, electronVersion: '45.0.0', now: () => 1000 });
+  const s = await u.check();
+  assert.strictEqual(s.status, 'available');
+  assert.strictEqual(s.target, next);
+  assert.deepStrictEqual(await u.apply(next), { ok: true, reload: true });
+  assert.strictEqual(r.git(r.checkout, 'symbolic-ref', '--short', 'HEAD'), branch);
+  assert.strictEqual(r.head(), next);
+
+  resetCheckout({ root: r.root, checkout: r.checkout });
+  assert.strictEqual(r.git(r.checkout, 'symbolic-ref', '--short', 'HEAD'), 'main');
+  assert.strictEqual(r.head(), r.first);
 });

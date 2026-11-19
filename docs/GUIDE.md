@@ -519,6 +519,17 @@ open the app and drag it to the Dock. Run it again to rebuild the app; the
 checkout and its update state are kept. `--out` must name a `.app`, and an
 existing one is only replaced if this script built it.
 
+To try a branch that is not merged yet, install with `--branch`:
+
+```sh
+npm run install-app -- --branch fregus/some-change
+```
+
+The app then runs that branch and offers what is pushed to it, the same way it
+does for `main`. A rerun keeps the branch the checkout tracks. To go back to
+`main`, run `npm run install-app -- --reset`; switching straight to another
+branch also needs `--reset`.
+
 The app is a copy of Electron's own bundle with the name and icon, signed ad
 hoc (`scripts/make-app.js`). An app built on your Mac is not quarantined, so it
 opens without an Apple Developer ID. Its code is `shell/bootstrap.js`, which
@@ -532,8 +543,8 @@ bootstrap asks your shell for its PATH (`$SHELL -ilc`, interactive so `.zshrc`
 counts, 5 s at most; it usually takes about a second) and puts it first, so
 herdr, `claude`, `codex`, `gh`, `git` and `npm` are found as in a terminal.
 
-**Updates.** The app fetches `origin/main` 30 s after launch and then every
-hour, and sorts what came in by what applying it takes (`updater.js`):
+**Updates.** The app fetches `origin/main` (or its `--branch`) 30 s after
+launch and then every hour, and sorts what came in by what applying it takes (`updater.js`):
 
 - Only `renderer/`, docs, tests and other files the app never loads: checked out
   and applied with a window reload. The terminal that was open opens again.
@@ -594,8 +605,8 @@ checkout:
 npm run install-app -- --reset
 ```
 
-That fetches, puts the app's checkout back on `origin/main` (local changes and
-commits there are dropped), clears the update state, installs the packages and
+That fetches, puts the app's checkout back on `origin/main`, or on the branch
+`--branch` names (local changes and commits there are dropped), clears the update state, installs the packages and
 builds the app again. The data folder is not touched.
 
 Contributors keep using `npm start`; the updater only runs inside the app.
