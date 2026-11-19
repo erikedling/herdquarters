@@ -1,6 +1,7 @@
 // live: reload the window; restart, deps, bootstrap, shell: applied by shell/bootstrap.js at the next launch. See docs/GUIDE.md.
 const { execFile } = require('node:child_process');
 const { electronMajor } = require('./shell/rebuild');
+const { gitEnv } = require('./shell/launch');
 
 const LIVE = /^(renderer\/|docs\/|test\/|\.github\/|README\.md$|CONTRIBUTING\.md$|LICENSE$|SECURITY\.md$|\.gitignore$)/;
 // Under renderer/ but also required by the main process; test/main-graph.test.js keeps this list complete.
@@ -19,7 +20,7 @@ function classify(files, { electronNow = null, electronNext = null } = {}) {
 
 function gitIn(cwd) {
   return (args) => new Promise((resolve, reject) => {
-    execFile('git', ['-C', cwd, ...args], { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' } }, (err, stdout, stderr) => {
+    execFile('git', ['-C', cwd, ...args], { timeout: 60_000, maxBuffer: 8 * 1024 * 1024, env: gitEnv() }, (err, stdout, stderr) => {
       if (err) { err.stderr = stderr; reject(err); } else resolve(String(stdout).trim());
     });
   });

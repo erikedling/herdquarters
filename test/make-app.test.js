@@ -146,6 +146,19 @@ test('once the tracked branch is deleted, a check says so and points to --reset,
   assert.strictEqual(r.head(), head);
   assert.strictEqual(r.git(r.checkout, 'symbolic-ref', '--short', 'HEAD'), branch);
   assert.strictEqual(launch.readState(r.root).lastGood, head);
+
+  // An update already waiting for a restart keeps its prompt; the message still says why nothing new comes.
+  u.s.status = 'restart';
+  const waiting = await u.check();
+  assert.strictEqual(waiting.status, 'restart');
+  assert.strictEqual(waiting.error, s.error);
+});
+
+test('git runs in the C locale, so its error text is the English the updater matches', () => {
+  const env = launch.gitEnv();
+  assert.strictEqual(env.LC_ALL, 'C');
+  assert.strictEqual(env.GIT_TERMINAL_PROMPT, '0');
+  assert.strictEqual(env.PATH, process.env.PATH);
 });
 
 test('a missing main is an ordinary failed check, not a gone branch', async () => {

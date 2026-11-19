@@ -6,7 +6,8 @@ const crypto = require('node:crypto');
 const { execFileSync, spawn: spawnChild } = require('node:child_process');
 
 const NPM_TIMEOUT_MS = 5 * 60_000;
-const gitEnv = () => ({ ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' });
+// LC_ALL=C: the updater matches git's English error text, and shortError shows it.
+const gitEnv = () => ({ ...process.env, LC_ALL: 'C', GIT_TERMINAL_PROMPT: '0', GIT_SSH_COMMAND: 'ssh -o BatchMode=yes' });
 
 function git(cwd, args, { run = execFileSync } = {}) {
   return String(run('git', ['-C', cwd, ...args], {
