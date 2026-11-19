@@ -8,6 +8,15 @@ const { Updater, classify } = require('../updater');
 const launch = require('../shell/launch');
 const { repos } = require('./helpers/git-repos');
 
+// The undo runs git, which can take well over 100 ms on a busy CI runner.
+async function until(cond, ms = 10_000) {
+  const end = Date.now() + ms;
+  while (!cond()) {
+    if (Date.now() > end) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 test('renderer-only changes apply with a reload', () => {
   assert.strictEqual(classify(['renderer/app.js', 'renderer/style.css']), 'live');
   assert.strictEqual(classify(['renderer/index.html', 'docs/GUIDE.md', 'test/view.test.js', 'README.md', '.github/workflows/ci.yml']), 'live');
@@ -96,7 +105,7 @@ test('when even the undone update brings no window back, the user is told to res
   await u.apply(broken);
   let reloads = 0;
   u.watchReload(() => { reloads += 1; }, 20);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await until(() => stuck > 0);
   assert.strictEqual(reloads, 1);
   assert.strictEqual(stuck, 1);
   assert.strictEqual(r.head(), r.first);
@@ -109,8 +118,11 @@ test('a window that comes back after the undo needs no restart prompt', async ()
   const u = new Updater({ shell: { root: r.root, checkout: r.checkout, branch: 'main' }, onStuck: () => { stuck += 1; }, electronVersion: '45.0.0' });
   await u.check();
   await u.apply(broken);
-  u.watchReload(() => { setTimeout(() => u.loaded(), 5); }, 20);
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  let reloads = 0;
+  u.watchReload(() => { reloads += 1; setTimeout(() => u.loaded(), 5); }, 20);
+  await until(() => reloads > 0 && r.head() === r.first);
+  assert.strictEqual(r.head(), r.first);
+  await new Promise((resolve) => setTimeout(resolve, 100));
   assert.strictEqual(stuck, 0);
 });
 
