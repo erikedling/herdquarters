@@ -95,7 +95,9 @@
   }
 
   // Eyes, blush, mouth and accessories. closed: content, eyes shut (idle).
-  function face(g, ch, x, y, closed) {
+  // worn: a Move HQ location gives everyone something to wear, which takes
+  // the place of the character's own headphones.
+  function face(g, ch, x, y, closed, worn) {
     const ex = ch.extras || [];
     if (closed) { g.p(x + 2, y + 6, 2, 1, INK); g.p(x + 8, y + 6, 2, 1, INK); }
     else { g.p(x + 3, y + 5, 1, 2, INK); g.p(x + 8, y + 5, 1, 2, INK); }
@@ -104,6 +106,7 @@
     g.p(x + 5, y + 7, 2, 1, MOUTH);
     const hc = ch.hair.color;
     for (const e of ex) {
+      if (worn && e === 'headphones') continue;
       switch (e) {
         case 'glasses': {
           const f = '#5b4636';
@@ -139,12 +142,13 @@
     g.p(x + 2, y + 19, 3, 1, INK); g.p(x + 7, y + 19, 3, 1, INK);
   }
 
-  function head(ch, x, y, closed) {
+  // wear: what everyone wears in a Move HQ location, (x, y) => SVG over the head.
+  function head(ch, x, y, closed, wear) {
     const g = new Grid();
     g.rr(x + 1, y, 10, 9, ch.skin);
     hairFront(g, ch, x, y);
-    face(g, ch, x, y, closed);
-    return `<g class="head">${g.svg()}</g>`;
+    face(g, ch, x, y, closed, !!wear);
+    return `<g class="head">${g.svg()}${wear ? wear(x, y) : ''}</g>`;
   }
 
   const armColor = (ch) => shade(ch.top.color, 0.86);
@@ -166,7 +170,7 @@
   const frames = (grids) => grids.map((g, i) => `<g class="frame f${i + 1}"${i ? ' visibility="hidden"' : ''}>${g.svg()}</g>`).join('');
 
   // A standing person. hand: 'down' | 'raise' | 'wave'.
-  function standing(ch, x, y, hand, bubbleSVG = '') {
+  function standing(ch, x, y, hand, bubbleSVG = '', wear = null) {
     const b = new Grid(); hairBack(b, ch, x, y); legs(b, ch, x, y); torso(b, ch, x, y);
     const arm = armColor(ch), skin = ch.skin;
     const l = new Grid(); l.p(x + 1, y + 10, 1, 5, arm); l.set(x + 1, y + 15, skin);
@@ -184,7 +188,7 @@
     const armR = `<g class="arm arm-r ${hand === 'wave' ? 'wave' : hand === 'raise' ? 'raise' : ''}">${r.svg()}${moves}</g>`;
     // A raised arm passes in front of hair, hats and earrings; a lowered one tucks behind them.
     return `${bubbleSVG}${b.svg()}<g class="arm arm-l">${l.svg()}</g>`
-      + (hand === 'raise' || hand === 'wave' ? head(ch, x, y, false) + armR : armR + head(ch, x, y, false));
+      + (hand === 'raise' || hand === 'wave' ? head(ch, x, y, false, wear) + armR : armR + head(ch, x, y, false, wear));
   }
 
   // A little sign over someone's head: ? (needs you), ! (alert), ✓ (done),
@@ -268,11 +272,11 @@
   // Someone sitting behind the desk, x = 16. Working types (the hands go up
   // and down), unknown rests its hands, idle leans back with its hands behind
   // its head and its eyes shut.
-  function seated(pose, ch) {
+  function seated(pose, ch, wear) {
     const x = 16, idle = pose === 'idle', y = idle ? 18 : 17;
     const b = new Grid(); hairBack(b, ch, x, y); torso(b, ch, x, y);
     const arm = armColor(ch);
-    const person = `<g class="person pose-${pose}">${b.svg()}${head(ch, x, y, idle)}`;
+    const person = `<g class="person pose-${pose}">${b.svg()}${head(ch, x, y, idle, wear)}`;
     if (idle) {
       const l = new Grid(); l.p(x, y + 3, 1, 8, arm); l.p(x - 1, y + 2, 2, 2, arm);
       const r = new Grid(); r.p(x + 11, y + 3, 1, 8, arm); r.p(x + 11, y + 2, 2, 2, arm);
@@ -308,26 +312,26 @@
     if (pose === 'done') {
       // up on the desk, waving
       return deskFront(pose, name, opts) + deskTop(pose, opts, 'none')
-        + `<g class="person pose-done">${standing(ch, 16, 13, 'wave', bubble('done', 31, 3))}</g>`;
+        + `<g class="person pose-done">${standing(ch, 16, 13, 'wave', bubble('done', 31, 3), opts.wear)}</g>`;
     }
     if (pose === 'blocked' || pose === 'alert') {
       // on their feet behind the desk, hand up; the chair pushed back
       return chair(boss, 3)
-        + `<g class="person pose-${pose}">${standing(ch, 16, 15, 'raise', bubble(pose, 32, 2))}</g>`
+        + `<g class="person pose-${pose}">${standing(ch, 16, 15, 'raise', bubble(pose, 32, 2), opts.wear)}</g>`
         + deskFront(pose, name, opts) + deskTop(pose, opts, 'none');
     }
-    const s = seated(pose, ch);
+    const s = seated(pose, ch, opts.wear);
     return chair(boss) + s.person + deskFront(pose, name, opts) + deskTop(pose, opts, 'open') + s.hands + (pose === 'working' ? code() : '');
   }
 
   // A worker standing in the boss's room with a question bubble in the
   // orchestrator's colour.
-  window.figureOfficeVisitorSVG = function figureOfficeVisitorSVG(character = 0, color = '#f2c531') {
+  window.figureOfficeVisitorSVG = function figureOfficeVisitorSVG(character = 0, color = '#f2c531', opts = {}) {
     const chars = window.CHARACTERS || [];
     const n = chars.length || 1;
     const ch = chars[((character % n) + n) % n];
     if (!ch) return '';
-    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 17, 2, color))}</g></svg>`;
+    return `<svg class="figure figure-office visitor" viewBox="0 0 27 33" width="${27 * U}" height="${33 * U}" shape-rendering="crispEdges" aria-hidden="true"><g class="person pose-asking">${standing(ch, 2, 12, 'raise', bubble('question', 17, 2, color), opts.wear)}</g></svg>`;
   };
 
   window.CHARACTER_NAMES = NAMES;

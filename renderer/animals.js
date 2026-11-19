@@ -177,21 +177,24 @@
     return out.join('');
   }
 
-  const walk = (body, coat) => `<g class="pet-pose pet-walk"><g class="pet-step a">${pixels(body.concat(LEGS[0]), coat, 1, 9)}</g><g class="pet-step b">${pixels(body.concat(LEGS[1]), coat, 1, 9)}</g></g>`;
+  const walk = (body, coat, extra = '') => `<g class="pet-pose pet-walk"><g class="pet-step a">${pixels(body.concat(LEGS[0]), coat, 1, 9)}</g><g class="pet-step b">${pixels(body.concat(LEGS[1]), coat, 1, 9)}</g>${extra}</g>`;
 
   // One SVG with every pose of the animal in it; office.css shows the one for
   // its current mode (.pet.mode-sit etc.) and flips it with .pet.left.
   const VW = 18, VH = 18;
-  function animalSVG(species, index) {
+  function animalSVG(species, index, dress) {
+    // dress(pose): SVG a Move HQ location adds to a pose (location-art.js);
+    // 'nap-under' goes beneath the napping cat.
+    const d = (pose) => (dress ? dress(pose) : '');
     const list = SPECIES[species];
     const coat = list[((index % list.length) + list.length) % list.length].coat;
     const poses = species === 'cat'
-      ? `<g class="pet-pose pet-sit">${pixels(CAT_SIT, coat, 4, 8)}</g>
-        <g class="pet-pose pet-nap">${pixels(CAT_NAP, coat, 2, 11)}<g class="pet-z">${pixels(ZZZ, coat, 14, 5)}</g></g>
-        ${walk(CAT_WALK, coat)}`
-      : `<g class="pet-pose pet-sit pet-wag">${pixels(DOG_SIT, coat, 3, 7)}<g class="pet-tail a">${pixels(DOG_TAIL[0], coat, 13, 11)}</g><g class="pet-tail b">${pixels(DOG_TAIL[1], coat, 13, 11)}</g></g>
-        <g class="pet-pose pet-lie">${pixels(DOG_LIE, coat, 1, 12)}</g>
-        ${walk(DOG_WALK, coat)}`;
+      ? `<g class="pet-pose pet-sit">${pixels(CAT_SIT, coat, 4, 8)}${d('sit')}</g>
+        <g class="pet-pose pet-nap">${d('nap-under')}${pixels(CAT_NAP, coat, 2, 11)}<g class="pet-z">${pixels(ZZZ, coat, 14, 5)}</g>${d('nap')}</g>
+        ${walk(CAT_WALK, coat, d('walk'))}`
+      : `<g class="pet-pose pet-sit pet-wag">${pixels(DOG_SIT, coat, 3, 7)}<g class="pet-tail a">${pixels(DOG_TAIL[0], coat, 13, 11)}</g><g class="pet-tail b">${pixels(DOG_TAIL[1], coat, 13, 11)}</g>${d('sit')}</g>
+        <g class="pet-pose pet-lie">${pixels(DOG_LIE, coat, 1, 12)}${d('lie')}</g>
+        ${walk(DOG_WALK, coat, d('walk'))}`;
     return `<svg class="pet-sprite" viewBox="0 0 ${VW} ${VH}" width="${VW * 3}" height="${VH * 3}" shape-rendering="crispEdges" aria-hidden="true">
       <g class="pet-heart">${pixels(HEART, coat, 10, 0)}</g>
       <g class="pet-dots">${[0, 1, 2].map((i) => `<g class="pet-dot d${i}">${pixels(DOT, coat, 9 + 2 * i, 2)}</g>`).join('')}</g>

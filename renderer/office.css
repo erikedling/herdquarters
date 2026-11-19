@@ -88,6 +88,24 @@ body.layout-office .room[data-rug="stripes"] { background-image: repeating-linea
 body.layout-office .room[data-rug="dots"] { background-image: radial-gradient(color-mix(in srgb, var(--rug-edge) 70%, transparent) 2px, transparent 2.5px); background-size: 16px 16px; }
 body.layout-office .room[data-rug="border"] { box-shadow: inset 0 0 0 6px var(--rug), inset 0 0 0 9px var(--rug-edge); }
 body.layout-office .room[data-rug="checker"] { background-image: conic-gradient(color-mix(in srgb, var(--rug-edge) 35%, transparent) 25%, transparent 0 50%, color-mix(in srgb, var(--rug-edge) 35%, transparent) 0 75%, transparent 0); background-size: 24px 24px; }
+/* Move HQ rugs (decor.js LOCATION_RUGS). --rug-accent is a third colour; a
+   fringe is a background strip at each end, since ::before/::after hold the plants. */
+body.layout-office .room[data-rug="pad"] { box-shadow: 0 0 12px color-mix(in srgb, var(--rug-edge) 70%, transparent), inset 0 0 0 5px var(--rug), inset 0 0 0 7px color-mix(in srgb, var(--rug-edge) 55%, transparent); }
+body.layout-office .room[data-rug="pad-grid"] { box-shadow: 0 0 12px color-mix(in srgb, var(--rug-edge) 70%, transparent); background-image: linear-gradient(90deg, color-mix(in srgb, var(--rug-edge) 22%, transparent) 2px, transparent 2px), linear-gradient(color-mix(in srgb, var(--rug-edge) 22%, transparent) 2px, transparent 2px); background-size: 24px 24px; }
+body.layout-office .room[data-rug="wave"] { background: radial-gradient(circle at 50% 100%, var(--rug-edge) 0 6px, transparent 6.5px) left bottom / 18px 9px repeat-x, radial-gradient(circle at 50% 0, var(--rug-edge) 0 6px, transparent 6.5px) left top / 18px 9px repeat-x, var(--rug); }
+body.layout-office .room[data-rug="ripple"] { background-image: repeating-linear-gradient(180deg, transparent 0 13px, color-mix(in srgb, var(--rug-edge) 45%, transparent) 13px 15px, transparent 15px 17px, color-mix(in srgb, var(--rug-edge) 25%, transparent) 17px 18px); }
+body.layout-office .room[data-rug="plaid"] { background-image: repeating-linear-gradient(90deg, transparent 0 22px, color-mix(in srgb, var(--rug-edge) 30%, transparent) 22px 32px, transparent 32px 36px, color-mix(in srgb, var(--rug-accent) 45%, transparent) 36px 38px), repeating-linear-gradient(180deg, transparent 0 22px, color-mix(in srgb, var(--rug-edge) 30%, transparent) 22px 32px, transparent 32px 36px, color-mix(in srgb, var(--rug-accent) 45%, transparent) 36px 38px); }
+body.layout-office .room[data-rug="knit"] { background-image: linear-gradient(135deg, transparent 70%, color-mix(in srgb, var(--rug-edge) 30%, transparent) 70%), linear-gradient(225deg, transparent 70%, color-mix(in srgb, var(--rug-edge) 30%, transparent) 70%); background-size: 12px 9px; box-shadow: inset 0 0 0 6px var(--rug), inset 0 0 0 10px color-mix(in srgb, var(--rug-edge) 60%, transparent), inset 0 0 0 12px color-mix(in srgb, var(--rug-accent) 60%, transparent); }
+body.layout-office .room[data-rug="towel"] { background: repeating-linear-gradient(180deg, #ffffff 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, #ffffff 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, repeating-linear-gradient(90deg, var(--rug) 0 30px, color-mix(in srgb, var(--rug-edge) 40%, transparent) 30px 40px, #ffffff 40px 45px, color-mix(in srgb, var(--rug-accent) 50%, transparent) 45px 50px, #ffffff 50px 55px), var(--rug); }
+body.layout-office .room[data-rug="towel-wide"] { background: repeating-linear-gradient(180deg, #ffffff 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, #ffffff 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, repeating-linear-gradient(90deg, var(--rug) 0 40px, color-mix(in srgb, var(--rug-edge) 38%, transparent) 40px 60px), var(--rug); }
+body.layout-office .room[data-rug="gingham"] { background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--rug-edge) 30%, transparent) 0 12px, transparent 12px 24px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--rug-edge) 30%, transparent) 0 12px, transparent 12px 24px); }
+body.layout-office .room[data-rug="gingham-big"] { background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--rug-edge) 28%, transparent) 0 18px, transparent 18px 36px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--rug-edge) 28%, transparent) 0 18px, transparent 18px 36px); box-shadow: inset 0 0 0 4px #ffffff; }
+body.layout-office .room[data-rug="rag"] { background: repeating-linear-gradient(180deg, #fffdf5 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, #fffdf5 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, repeating-linear-gradient(90deg, var(--rug) 0 24px, color-mix(in srgb, var(--rug-edge) 45%, transparent) 24px 29px, var(--rug) 29px 33px, color-mix(in srgb, var(--rug-accent) 35%, transparent) 33px 35px, var(--rug) 35px 39px, color-mix(in srgb, var(--rug-edge) 45%, transparent) 39px 44px), var(--rug); }
+body.layout-office .room[data-rug="rag-wide"] { background: repeating-linear-gradient(180deg, #fffdf5 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, #fffdf5 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, repeating-linear-gradient(90deg, var(--rug) 0 40px, color-mix(in srgb, var(--rug-edge) 40%, transparent) 40px 50px, color-mix(in srgb, var(--rug-accent) 35%, transparent) 50px 53px, color-mix(in srgb, var(--rug-edge) 40%, transparent) 53px 63px), var(--rug); }
+body.layout-office .room[data-rug="velvet"] { background: repeating-linear-gradient(180deg, var(--rug-accent) 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, var(--rug-accent) 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, radial-gradient(color-mix(in srgb, var(--rug-accent) 35%, transparent) 2px, transparent 2.5px) 0 0 / 20px 20px, radial-gradient(color-mix(in srgb, var(--rug-edge) 50%, transparent) 2px, transparent 2.5px) 10px 10px / 20px 20px, var(--rug); box-shadow: inset 0 0 0 8px var(--rug), inset 0 0 0 10px color-mix(in srgb, var(--rug-accent) 70%, transparent); }
+body.layout-office .room[data-rug="velvet-plain"] { background: repeating-linear-gradient(180deg, var(--rug-accent) 0 3px, transparent 3px 6px) left top / 6px 100% no-repeat, repeating-linear-gradient(180deg, var(--rug-accent) 0 3px, transparent 3px 6px) right top / 6px 100% no-repeat, linear-gradient(160deg, transparent 0 40%, color-mix(in srgb, var(--rug-edge) 30%, transparent) 60%, transparent 80%), var(--rug); box-shadow: inset 0 0 0 8px var(--rug), inset 0 0 0 10px color-mix(in srgb, var(--rug-accent) 70%, transparent); }
+body.layout-office .room[data-rug="jute"] { background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--rug-edge) 28%, transparent) 0 2px, transparent 2px 6px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--rug-edge) 20%, transparent) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 7px var(--rug), inset 0 0 0 10px color-mix(in srgb, var(--rug-edge) 60%, transparent); }
+body.layout-office .room[data-rug="checker-big"] { background-image: conic-gradient(color-mix(in srgb, var(--rug-edge) 40%, transparent) 25%, transparent 0 50%, color-mix(in srgb, var(--rug-edge) 40%, transparent) 0 75%, transparent 0); background-size: 36px 36px; }
 body.layout-office .room[data-cols="1"] { --cols: 1; }
 body.layout-office .room[data-cols="2"] { --cols: 2; }
 body.layout-office .room[data-cols="3"] { --cols: 3; }
@@ -209,6 +227,20 @@ body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinit
   body.layout-office .pose-working .code-line.l4 { transform: translateY(-9px); }
 }
 
+/* Move HQ (location-art.js): a prop beside the window and an overlay on the
+   floor, shown only where the location's CSS gives them art. */
+body.layout-office .loc-prop { display: none; flex: none; align-self: flex-end; margin-left: -6px; background-repeat: no-repeat; image-rendering: pixelated; }
+body.layout-office .loc-fx { display: none; position: absolute; left: 0; right: 0; top: 98px; bottom: 0; z-index: 0; pointer-events: none; image-rendering: pixelated; }
+body.layout-office .loc-fx::before, body.layout-office .loc-fx::after { position: absolute; background-repeat: no-repeat; }
+@keyframes loc-flutter { 0% { transform: translate(0, 0); } 25% { transform: translate(60px, -4px); } 50% { transform: translate(140px, 8px); } 75% { transform: translate(60px, 14px); } 100% { transform: translate(0, 0); } }
+@keyframes loc-rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-60px); opacity: 0; } }
+@keyframes loc-dangle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(18px); } }
+@keyframes loc-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@media (prefers-reduced-motion: reduce) {
+  body.layout-office[data-location] .floor-label::before, body.layout-office[data-location] .floor-label::after,
+  body.layout-office .loc-prop, body.layout-office .loc-fx::before, body.layout-office .loc-fx::after { animation: none !important; }
+}
+
 /* boss room: the orchestrator's colour on the wall trim, whiteboard on the wall */
 body.layout-office .floor.boss { border-color: var(--orch); }
 body.layout-office .floor.boss .floor-label { border-bottom-color: var(--orch); }
@@ -222,7 +254,7 @@ body.layout-office .floor.boss .whiteboard {
   margin: 0; align-self: flex-start; font-family: var(--round);
   background: var(--paper); color: var(--ink); border: 3px solid #9aa3bd; border-radius: 10px; box-shadow: 0 3px 0 rgba(43, 45, 66, .15);
 }
-body.layout-office .room.boss { background: #fff1c9; border: 3px solid var(--orch); }
+body.layout-office .room.boss { background-color: #fff1c9; border: 3px solid var(--orch); }
 body.layout-office .room.boss .door { background: var(--paper); border-color: var(--orch); }
 body.layout-office .room.boss .door-icon { color: #c9a227; }
 

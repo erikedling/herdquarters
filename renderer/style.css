@@ -640,6 +640,18 @@ body.tab-dragging, body.tab-dragging * { cursor: grabbing !important; user-selec
 .settings-row > span b { color: var(--text); font-weight: 600; }
 .settings-row input[type=range] { width: 100%; accent-color: var(--accent); }
 .settings-row.disabled { opacity: .45; pointer-events: none; }
+/* Move HQ: location cards with a pixel preview, a line when today's place is not the pick */
+.loc-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+.loc-card { position: relative; }
+.loc-card .theme-pv { display: block; padding: 0; image-rendering: pixelated; }
+.loc-card .theme-pv svg { display: block; width: 100%; height: 100%; }
+/* the rounded UI font even in the pixel styles: pixel C reads as O at this size */
+:root .loc-grid .loc-card .theme-name, :root[data-style] .loc-grid .loc-card .theme-name { font: 700 12px/1.25 "SF Pro Rounded", ui-rounded, Nunito, system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: 0; }
+.loc-badge { position: absolute; top: 4px; right: 4px; font: 700 10px/1 "SF Pro Rounded", ui-rounded, system-ui, sans-serif; color: #2b2d42; background: #fff3a8; border: 2px solid #2b2d42; border-radius: 4px; padding: 2px 5px; }
+.loc-today { display: flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12px; color: var(--text); background: color-mix(in srgb, var(--warn) 22%, var(--panel)); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; }
+.loc-today[hidden] { display: none; }
+.loc-today::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--done); }
+.settings-off { margin: 0 0 10px; padding: 8px 10px; font-size: 12px; color: var(--text); background: color-mix(in srgb, var(--warn) 20%, var(--panel)); border: 1px solid var(--line); border-radius: 6px; }
 .seg { display: flex; gap: 6px; }
 .seg label { flex: 1; display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 5px; cursor: pointer; }
 .seg label:has(input:checked) { border-color: var(--working); background: var(--door); }

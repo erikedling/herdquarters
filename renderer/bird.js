@@ -546,10 +546,14 @@
     if (!r || r.width < 200 || r.height < 160) return null;
     return { x: Math.round(r.right - 70), y: Math.round(r.top + r.height / 2), r: BOARD_R * SCALE };
   }
-  // Painted once: rings from RINGS, wedges like a real board, a wooden rim.
-  let boardSprite = null;
+  // Painted once per Move HQ location: rings from RINGS, wedges like a real
+  // board, a wooden rim, or the location's own paint (location-art.js).
+  let boardSprite = null, boardLocation = null;
   function boardCanvas() {
-    if (boardSprite) return boardSprite;
+    const location = window.officeLocationArt?.current() || 'office';
+    if (boardSprite && boardLocation === location) return boardSprite;
+    boardLocation = location;
+    const paint = window.officeLocationArt?.boardPaint();
     const R = BOARD_R, RIM = 3, n = (R + RIM) * 2;
     const c = document.createElement('canvas');
     c.width = c.height = n;
@@ -560,7 +564,8 @@
       const d = Math.hypot(dx, dy) / R;
       const wedge = Math.floor(((Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2)) * 20 + 0.5) % 2;
       let color = null;
-      if (d <= rings[0].r) color = '#e23b3b';
+      if (paint) color = paint({ x, y, d, a: Math.atan2(dy, dx) + Math.PI, wedge, rings, R });
+      else if (d <= rings[0].r) color = '#e23b3b';
       else if (d <= rings[1].r) color = '#2f9e4f';
       else if (d <= rings[2].r) color = wedge ? '#f3e2c0' : '#1f1a24';
       else if (d <= rings[3].r) color = wedge ? '#e23b3b' : '#2f9e4f';

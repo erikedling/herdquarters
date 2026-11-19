@@ -319,8 +319,10 @@ function applyView() {
 // Which scene to draw: always 'office' (top-down pixel open-plan) now that the
 // building (side view) is gone from settings. Its artwork is still here.
 function currentLayout() { return 'office'; }
+// The Move HQ location the office is in (location-art.js); 'office' is today's look.
+const currentLocation = () => window.officeLocationArt?.current() || 'office';
 function deskSVG(desk) {
-  const opts = { boss: desk.role === 'boss', tag: desk.role === 'worker' || desk.role === 'qa' || desk.role === 'ops' || desk.role === 'slack' ? desk.orch?.color : null };
+  const opts = { boss: desk.role === 'boss', tag: desk.role === 'worker' || desk.role === 'qa' || desk.role === 'ops' || desk.role === 'slack' ? desk.orch?.color : null, wear: window.officeLocationArt?.wear() };
   return currentLayout() === 'office' ? figureOfficeSVG(desk.pose, desk.character ?? 0, opts) : figureSVG(desk.pose, desk.character ?? 0, opts);
 }
 let lastFloors = null;
@@ -341,6 +343,7 @@ window.officeActions = {
 function renderBuilding(floors) {
   lastFloors = floors;
   const layout = currentLayout();
+  const place = currentLocation();
   // Newest floor on top, like a building being built upwards.
   const ordered = [...floors].reverse();
   const floorIds = ordered.map((f) => f.key);
@@ -358,7 +361,9 @@ function renderBuilding(floors) {
     if (!$label) {
       $label = document.createElement('div');
       $label.className = 'floor-label';
-      $floor.appendChild($label);
+      const $fx = document.createElement('div');
+      $fx.className = 'loc-fx';
+      $floor.append($fx, $label);
       const $rooms = document.createElement('div');
       $rooms.className = 'rooms';
       $floor.appendChild($rooms);
@@ -366,8 +371,8 @@ function renderBuilding(floors) {
     const n = floor.rooms.reduce((acc, r) => acc + r.desks.filter((d) => d.pose !== 'empty').length, 0);
     const c = floor.closed?.length || 0;
     const labelHTML = floor.isBoss
-      ? `<span class="floor-name" title="${escapeHtml(floor.name)}">${escapeHtml(floor.name)}</span><div class="boss-wall">${whiteboardHTML(floor.orchestrator)}${slackSignHTML(floor.orchestrator)}</div>`
-      : `<span class="floor-name">${escapeHtml(floor.name)}</span><span class="floor-count">${n} ${n === 1 ? 'agent' : 'agents'}</span>`
+      ? `<i class="loc-prop"></i><span class="floor-name" title="${escapeHtml(floor.name)}">${escapeHtml(floor.name)}</span><div class="boss-wall">${whiteboardHTML(floor.orchestrator)}${slackSignHTML(floor.orchestrator)}</div>`
+      : `<i class="loc-prop"></i><span class="floor-name">${escapeHtml(floor.name)}</span><span class="floor-count">${n} ${n === 1 ? 'agent' : 'agents'}</span>`
       + (floor.canManage ? `<div class="floor-actions">
           <button class="btn small floor-add" title="Create a new worktree on ${escapeHtml(floor.name)}">+ worktree</button>
           ${c ? `<button class="btn small ghost floor-closed" title="Worktrees on disk that are not open">${c} closed</button>` : ''}
@@ -387,11 +392,15 @@ function renderBuilding(floors) {
     for (const room of floor.rooms) {
       const $room = upsert($rooms, room.id, 'div', `room ${room.isLinked ? 'linked' : 'main'} ${room.focused ? 'focused' : ''} ${room.isBoss ? 'boss' : ''}`);
       $room._room = room; $room._floor = floor;
-      // Each room has its own rug: a color and a pattern (decor.js).
-      if (!room.isBoss && window.officeDecor) {
-        const rd = window.officeDecor.roomDecor(room.path || room.id);
-        $room.style.setProperty('--rug', rd.rug); $room.style.setProperty('--rug-edge', rd.edge);
+      // Each room has its own rug: a color and a pattern (decor.js). The
+      // boss's room keeps its yellow floor until the office moves.
+      if (window.officeDecor && (!room.isBoss || place !== 'office')) {
+        const rd = window.officeDecor.roomDecor(room.path || room.id, place);
+        $room.style.setProperty('--rug', rd.rug); $room.style.setProperty('--rug-edge', rd.edge); $room.style.setProperty('--rug-accent', rd.accent);
         $room.dataset.rug = rd.pattern;
+      } else if (room.isBoss) {
+        for (const k of ['--rug', '--rug-edge', '--rug-accent']) $room.style.removeProperty(k);
+        delete $room.dataset.rug;
       }
       // office layout sizes a pod by how many desk columns it needs (1..3)
       $room.dataset.cols = String(Math.min(3, Math.max(1, room.desks.length)));
@@ -422,10 +431,10 @@ function renderBuilding(floors) {
       for (const desk of room.desks) {
         const $desk = upsert($desks, desk.id, 'div', `desk pose-${desk.pose} ${desk.seat ? `seat seat-${desk.role}` : ''} ${desk.focused ? 'focused' : ''} ${window.officeTerminal?.isOpenFor(desk.id) ? 'open' : ''}`);
         const roleKey = `${desk.role || ''}:${desk.orch?.color || ''}`;
-        if ($desk.dataset.pose !== desk.pose || $desk.dataset.character !== String(desk.character) || $desk.dataset.layout !== layout || $desk.dataset.role !== roleKey) {
+        if ($desk.dataset.pose !== desk.pose || $desk.dataset.character !== String(desk.character) || $desk.dataset.layout !== `${layout}:${place}` || $desk.dataset.role !== roleKey) {
           $desk.dataset.pose = desk.pose;
           $desk.dataset.character = String(desk.character);
-          $desk.dataset.layout = layout;
+          $desk.dataset.layout = `${layout}:${place}`;
           $desk.dataset.role = roleKey;
           $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude, Pi or Codex) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
             + `${deskSVG(desk)}<div class="nameplate"><i class="chip"></i><span class="nameplate-text"></span></div>`;
@@ -440,11 +449,11 @@ function renderBuilding(floors) {
       let $vis = $room.querySelector(':scope > .visitors');
       if (room.visitors?.length) {
         if (!$vis) { $vis = document.createElement('div'); $vis.className = 'visitors'; $room.appendChild($vis); }
-        const key = `${layout}|${room.visitors.map((v) => v.paneId).join(',')}`;
+        const key = `${layout}:${place}|${room.visitors.map((v) => v.paneId).join(',')}`;
         if ($vis.dataset.key !== key) {
           $vis.dataset.key = key;
           const draw = layout === 'office' ? figureOfficeVisitorSVG : figureVisitorSVG;
-          $vis.innerHTML = room.visitors.map((v) => `<div class="visitor" data-pane="${escapeHtml(v.paneId)}" title="${escapeHtml(v.repo)}: ${escapeHtml(v.text)}">${draw(v.character ?? 0, v.color)}<span class="visitor-name">${escapeHtml(v.name)}</span></div>`).join('');
+          $vis.innerHTML = room.visitors.map((v) => `<div class="visitor" data-pane="${escapeHtml(v.paneId)}" title="${escapeHtml(v.repo)}: ${escapeHtml(v.text)}">${draw(v.character ?? 0, v.color, { wear: window.officeLocationArt?.wear() })}<span class="visitor-name">${escapeHtml(v.name)}</span></div>`).join('');
         }
       } else if ($vis) {
         $vis.remove();
@@ -497,13 +506,14 @@ function placeAnimals(floors) {
 }
 function placeAnimal(species, index, floor, $floor) {
   let $pet = $floor.querySelector(`:scope > .pet.${species}`);
-  if (!$pet || $pet._index !== index) {
+  const place = currentLocation();
+  if (!$pet || $pet._index !== index || $pet._place !== place) {
     $pet?.remove();
     $pet = document.createElement('div');
     $pet.className = `pet ${species} mode-stroll`;
-    $pet._species = species; $pet._index = index;
+    $pet._species = species; $pet._index = index; $pet._place = place;
     $pet.title = `${window.officeAnimals.SPECIES[species][index].name}, office ${species}`;
-    $pet.innerHTML = window.officeAnimals.animalSVG(species, index);
+    $pet.innerHTML = window.officeAnimals.animalSVG(species, index, window.officeLocationArt?.dress(species));
     $pet.addEventListener('transitionend', (e) => { if (e.propertyName === 'left') arrivePet($pet); });
     $floor.appendChild($pet);
   }

@@ -100,7 +100,12 @@ Every repo gets its own walls and floor, every room its own rug, and every
 agent their own mug and something on the desk. Pick a style under
 **Settings → Appearance**: **Toybox** (the default, shown here), **Workshop**,
 **Quest**, **Handheld**, **Workstation**, or the smooth **Modern** look in one
-of ten themes.
+of ten themes. Under **Settings → Move HQ** the office can move to a garden,
+a space station, a beach club, the North Pole and more, with something
+for everyone to wear; it visits the Haunted mansion, the North Pole and the Midsommar
+meadow by itself in season.
+
+<img src="docs/images/move-hq.png" alt="Move HQ: the same office in nine places, from the plain Office to a garden, a space station, a beach club, the North Pole, under water, a midsommar meadow, a haunted mansion and a coffeehouse, each with its own walls, rugs, dart board and something everyone wears" width="720">
 
 ## Get started
 
