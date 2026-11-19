@@ -406,7 +406,7 @@ ipcMain.handle('herdr-autostart-set', (_e, { enabled }) => {
 // Dev aids, pulled by the renderer at startup (pushing on a timer raced the page load):
 // OFFICE_DEV_SETTINGS='{"theme":"ocean"}' settings patch; OFFICE_MODAL=<create|closed|remove|orchestrator|archived>
 // opens that dialog; OFFICE_OPEN=<pane_id> opens a desk's terminal; OFFICE_TOOLTIP=<pane_id> shows
-// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window (or =general, =agents… on that section); OFFICE_CHAT=1 the assistant's chat;
+// its tooltip; OFFICE_SETTINGS_OPEN=1 opens the settings window (=<section> on that section); OFFICE_CHAT=1 the assistant's chat;
 // OFFICE_WELCOME=<step> opens the welcome tour at that step (screenshot runs skip it otherwise).
 // OFFICE_USAGE_OPEN=1 opens the plan usage popover.
 ipcMain.handle('dev-settings-get', () => (process.env.OFFICE_DEV_SETTINGS ? JSON.parse(process.env.OFFICE_DEV_SETTINGS) : null));

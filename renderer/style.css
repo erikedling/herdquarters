@@ -630,6 +630,8 @@ body.tab-dragging, body.tab-dragging * { cursor: grabbing !important; user-selec
 .theme-pv b { width: 9px; height: 9px; border-radius: 50%; }
 .theme-name { display: block; padding: 5px 8px; font-size: 11px; }
 .theme-card.active .theme-name::after { content: " ✓"; color: var(--accent); }
+.species-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+.species-pv { display: block; width: 80px; height: 80px; margin: 2px auto 0; image-rendering: pixelated; }
 .style-card .theme-name small { display: block; margin-top: 2px; font: 10px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; color: var(--muted); }
 .settings-hint { font-size: 11px; }
 .settings-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--line); color: var(--text); }

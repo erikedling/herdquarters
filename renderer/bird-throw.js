@@ -96,13 +96,14 @@
     return { t, point: { x: a.x + dx * s, y: a.y + dy * s } };
   }
 
-  // The tip of its beak in a sprite frame (rows of palette keys, beak Y/Z),
+  // The tip of its beak in a sprite frame (rows of palette keys, beak Y/Z
+  // and a species' beak marks I/J),
   // relative to its feet: the outer edge of the furthest beak pixel, in sprite
   // px, facing right and upright.
   function beakTip(frame, size, ground) {
     let x = -1, ys = [];
     frame.forEach((row, y) => row.forEach((k, i) => {
-      if (k !== 'Y' && k !== 'Z') return;
+      if (k !== 'Y' && k !== 'Z' && k !== 'I' && k !== 'J') return;
       if (i > x) { x = i; ys = []; }
       if (i === x) ys.push(y);
     }));

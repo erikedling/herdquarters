@@ -84,6 +84,10 @@
             <span class="settings-check-text">Name<small>What the bird is called, in the office and in its own words. Empty goes back to PiPi.</small></span>
             <input id="set-assistant-name" type="text" maxlength="24" spellcheck="false" placeholder="PiPi">
           </label>
+          <div class="settings-row">
+            <span>Bird<small class="settings-hint">Theme is the classic bird in your theme's accent color; the others are real species in their own plumage.</small></span>
+            <div id="set-species" class="theme-grid species-grid"></div>
+          </div>
           <label class="settings-row settings-check">
             <span class="settings-check-text">Morning brief<small>On its days from this time it greets you with what needs you today, your meetings and reminders.</small></span>
             <input id="set-morning" type="time">
@@ -313,6 +317,7 @@
   <script src="alerts.js"></script>
   <script src="slack.js"></script>
   <script src="pipi-sprite.js"></script>
+  <script src="pipi-species.js"></script>
   <script src="backflip.js"></script>
   <script src="bird-drop.js"></script>
   <script src="bird-throw.js"></script>

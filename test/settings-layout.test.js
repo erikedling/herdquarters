@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const pipiSpecies = require('../renderer/pipi-species');
 
 const src = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'settings.js'), 'utf8');
 
@@ -39,7 +40,7 @@ function load(stored, office = {}, extra = {}) {
     },
     localStorage: { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = v; } },
   });
-  return { settings: window.officeSettings, vars, classes, $pop, $width: $pop.els['#set-width'] };
+  return { settings: window.officeSettings, vars, classes, $pop, $width: $pop.els['#set-width'], saved: () => JSON.parse(store['agent-office.settings'] || '{}') };
 }
 
 test('a fresh install opens the terminal as a split panel at 46%', () => {
@@ -111,6 +112,36 @@ test('animals hidden with the old paw button come back: the button is gone', () 
 test('a fresh install opens in the Toybox style', () => {
   const { settings } = load();
   assert.strictEqual(settings.get().style, 'toybox');
+});
+
+test('PiPi is the theme bird on a fresh install; a picked species is kept and drawn', () => {
+  let shown = null;
+  const officeBird = { setSpecies: (id) => { shown = id; } };
+  const fresh = load(undefined, {}, { officeBird, pipiSpecies });
+  assert.strictEqual(fresh.settings.get().pipiSpecies, 'theme');
+  assert.strictEqual(shown, 'theme');
+  fresh.settings.set({ pipiSpecies: 'puffin' });
+  assert.strictEqual(shown, 'puffin');
+  assert.strictEqual(fresh.saved().pipiSpecies, 'puffin');
+  const again = load(fresh.saved(), {}, { officeBird, pipiSpecies });
+  assert.strictEqual(again.settings.get().pipiSpecies, 'puffin');
+  assert.strictEqual(shown, 'puffin');
+});
+
+test('Reset to defaults makes PiPi the theme bird again', () => {
+  const { settings } = load({ pipiSpecies: 'cardinal' }, {}, { pipiSpecies });
+  assert.strictEqual(settings.get().pipiSpecies, 'cardinal');
+  settings.set({ ...settings.defaults });
+  assert.strictEqual(settings.get().pipiSpecies, 'theme');
+});
+
+test('a saved species that no longer exists is the theme bird', () => {
+  let shown = null;
+  const { settings } = load({ pipiSpecies: 'dodo' }, {}, { officeBird: { setSpecies: (id) => { shown = id; } }, pipiSpecies });
+  assert.strictEqual(settings.get().pipiSpecies, 'theme');
+  assert.strictEqual(shown, 'theme');
+  settings.set({ pipiSpecies: 'moa' });
+  assert.strictEqual(settings.get().pipiSpecies, 'theme');
 });
 
 test('plan usage is on at 10 minutes, and main hears it at startup and on change', () => {
