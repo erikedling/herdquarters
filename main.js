@@ -540,8 +540,8 @@ ipcMain.handle('agent-start', (_e, { pane_id, name, kind }) =>
 ipcMain.on('renderer-ready', () => updater.loaded());
 ipcMain.handle('update-get', () => updater.view());
 ipcMain.handle('update-check', () => updater.check());
-ipcMain.handle('update-apply', async (_e, { target }) => {
-  const result = await updater.apply(target);
+ipcMain.handle('update-apply', async (_e, { target, keepPending }) => {
+  const result = await updater.apply(target, { keepPending });
   // The renderer reopens its terminal after the reload; the old streams would be orphaned.
   if (result.reload && win && !win.isDestroyed()) {
     const reload = () => { terminals.closeAll(); win.webContents.reloadIgnoringCache(); };

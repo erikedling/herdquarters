@@ -104,7 +104,8 @@ class Updater {
         // A restart the user already said yes to stays on show; the newer commits can replace it.
         if (waiting) {
           const added = lines(await this.git(['rev-list', `${waiting}..${target}`])).length;
-          this.set({ ...base, status: keep, target: waiting, newer: { target, kind, commits, added } });
+          // Zero: origin moved back to a commit the waiting one already has.
+          this.set({ ...base, status: keep, target: waiting, newer: added ? { target, kind, commits, added } : null });
         }
         else this.set({ ...base, status: 'available', kind, target, commits });
       }
@@ -121,13 +122,14 @@ class Updater {
   }
 
   // Restart kinds are not checked out yet: main.js reads some files lazily and must not see a mix.
-  async apply(target) {
+  // keepPending: Automatic taking newer commits leaves a restart the user put off as put off.
+  async apply(target, { keepPending = false } = {}) {
     if (!this.shell || this.reverting) return { ok: false, error: 'nothing to apply' };
     const { root, branch = 'main' } = this.shell;
     const { newer } = this.s;
     if (newer && target === newer.target) {
       this.launch.updateState(root, { pending: target });
-      this.set({ status: this.s.status === 'pending' ? 'pending' : 'restart', target, kind: newer.kind === 'live' ? 'restart' : newer.kind, commits: newer.commits, newer: null, applyError: null });
+      this.set({ status: keepPending && this.s.status === 'pending' ? 'pending' : 'restart', target, kind: newer.kind === 'live' ? 'restart' : newer.kind, commits: newer.commits, newer: null, applyError: null });
       return { ok: true, restart: true };
     }
     if (this.s.status !== 'available' || target !== this.s.target) return { ok: false, error: 'nothing to apply' };

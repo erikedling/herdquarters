@@ -10,7 +10,7 @@ const src = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'updates.js')
 
 function load({ mode = 'auto' } = {}) {
   const listeners = {};
-  const el = () => ({ hidden: true, innerHTML: '', textContent: '', disabled: false, classList: { toggle() {}, remove() {} }, addEventListener() {}, querySelectorAll: () => [] });
+  const el = () => ({ hidden: true, innerHTML: '', textContent: '', disabled: false, classList: { toggle() {}, remove() {} }, addEventListener(type, fn) { this[`on${type}`] = fn; }, querySelectorAll: () => [] });
   const els = { updatebar: el(), 'set-updates-row': el(), 'set-updates-info': el(), 'set-update-check': el(), settings: el(), modal: el() };
   const applied = [];
   const push = {};
@@ -22,14 +22,14 @@ function load({ mode = 'auto' } = {}) {
   };
   const window = {
     office: {
-      updates: { onState: (cb) => { push.state = cb; }, get: () => new Promise(() => {}), apply: async (t) => { applied.push(t); return { ok: true }; } },
+      updates: { onState: (cb) => { push.state = cb; }, get: () => new Promise(() => {}), apply: async (t, opts) => { applied.push({ t, keepPending: !!opts?.keepPending }); return { ok: true }; } },
       onSnapshot: () => () => {},
     },
     officeSettings: { get: () => ({ updateMode: mode }) },
     getSelection: () => '',
   };
   vm.runInNewContext(src, { window, document, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} }, setInterval() {}, setTimeout, Date });
-  return { updates: window.officeUpdates, document, listeners, els, push };
+  return { updates: window.officeUpdates, document, listeners, els, push, applied };
 }
 
 test('a quiet window counts as idle', () => {
@@ -116,4 +116,17 @@ test('a waiting restart stays on show when newer commits come in', () => {
   assert.match(els.updatebar.innerHTML, /Update available/);
   assert.match(els.updatebar.innerHTML, /An earlier update already applies at the next launch/);
   assert.match(els.updatebar.innerHTML, /data-act="apply-newer">Update now/);
+});
+
+test('a click on newer commits asks for the restart; only Automatic keeps On next launch', () => {
+  const newer = { target: 'def5678', kind: 'restart', added: 1, commits: [{ sha: 'def5678', subject: 'Terminal: a later change (#51)' }] };
+  const base = { enabled: true, branch: 'main', status: 'pending', kind: 'restart', target: 'aaa1111', newer, current: { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' }, checkedAt: Date.now(), commits: [] };
+  const ask = load({ mode: 'ask' });
+  ask.push.state(base);
+  ask.els.updatebar.onclick({ target: { closest: () => ({ dataset: { act: 'apply-newer' } }) } });
+  assert.deepStrictEqual(ask.applied, [{ t: 'def5678', keepPending: false }]);
+
+  const auto = load({ mode: 'auto' });
+  auto.push.state(base);
+  assert.deepStrictEqual(auto.applied, [{ t: 'def5678', keepPending: true }]);
 });

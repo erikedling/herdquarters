@@ -96,7 +96,7 @@ contextBridge.exposeInMainWorld('office', {
   updates: {
     get: () => ipcRenderer.invoke('update-get'),
     check: () => ipcRenderer.invoke('update-check'),
-    apply: (target) => ipcRenderer.invoke('update-apply', { target }),
+    apply: (target, opts) => ipcRenderer.invoke('update-apply', { target, keepPending: !!opts?.keepPending }),
     restart: () => ipcRenderer.invoke('update-restart'),
     later: () => ipcRenderer.invoke('update-later'),
     dismiss: () => ipcRenderer.invoke('update-dismiss'),

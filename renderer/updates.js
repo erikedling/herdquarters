@@ -44,7 +44,7 @@
   }
 
   function autoApply() {
-    if (auto() && state?.newer && (state.status === 'restart' || state.status === 'pending')) { api.apply(state.newer.target); return; }
+    if (auto() && state?.newer && (state.status === 'restart' || state.status === 'pending')) { api.apply(state.newer.target, { keepPending: true }); return; }
     if (!auto() || state?.status !== 'available') return;
     if (state.kind !== 'live' || idle()) apply();
   }

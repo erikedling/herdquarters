@@ -332,7 +332,7 @@ test('newer commits do not hide a restart that is already waiting, and applying 
   assert.strictEqual(r.head(), r.first, 'nothing is checked out before the restart');
 });
 
-test('applying newer commits keeps the user’s On next launch, and a force-push back keeps the waiting restart', async () => {
+test('Automatic taking newer commits keeps the user’s On next launch, and a force-push back keeps the waiting restart', async () => {
   const r = repos();
   const first = r.commit({ 'main.js': 'two\n' }, 'Main: a change (#50)');
   const u = updater(r);
@@ -344,7 +344,7 @@ test('applying newer commits keeps the user’s On next launch, and a force-push
   let s = await u.check();
   assert.strictEqual(s.newer.target, third);
   assert.strictEqual(s.newer.added, 2);
-  assert.deepStrictEqual(await u.apply(third), { ok: true, restart: true });
+  assert.deepStrictEqual(await u.apply(third, { keepPending: true }), { ok: true, restart: true });
   s = u.view();
   assert.strictEqual(s.status, 'pending', 'no new Restart now prompt');
   assert.strictEqual(s.target, third);
@@ -368,4 +368,34 @@ test('reverting starts out unset, next to the other updater state', () => {
   const u = new Updater({ shell: null });
   assert.strictEqual(u.reverting, null);
   assert.strictEqual(u.awaitingLoad, null);
+});
+
+test('Update now on newer commits after On next launch asks for the restart again', async () => {
+  const r = repos();
+  const first = r.commit({ 'main.js': 'two\n' }, 'Main: a change (#50)');
+  const u = updater(r);
+  await u.check();
+  await u.apply(first);
+  u.later();
+  const second = r.commit({ 'renderer/app.js': 'two\n' }, 'Terminal: a later change (#51)');
+  await u.check();
+  assert.deepStrictEqual(await u.apply(second), { ok: true, restart: true });
+  assert.strictEqual(u.view().status, 'restart');
+  assert.strictEqual(launch.readState(r.root).pending, second);
+});
+
+test('origin moving back to a commit the waiting restart already has offers nothing newer', async () => {
+  const r = repos();
+  const between = r.commit({ 'renderer/app.js': 'two\n' }, 'Terminal: a change (#50)');
+  const waiting = r.commit({ 'main.js': 'two\n' }, 'Main: a change (#51)');
+  const u = updater(r);
+  await u.check();
+  await u.apply(waiting);
+  u.later();
+  r.git(r.work, 'push', '-q', '-f', 'origin', `${between}:refs/heads/main`);
+  const s = await u.check();
+  assert.strictEqual(s.status, 'pending');
+  assert.strictEqual(s.target, waiting);
+  assert.strictEqual(s.newer, null);
+  assert.strictEqual(launch.readState(r.root).pending, waiting);
 });
