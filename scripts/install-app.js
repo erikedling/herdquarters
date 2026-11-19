@@ -17,9 +17,16 @@ const repo = path.join(__dirname, '..');
 const DEFAULT_REMOTE = 'https://github.com/erikedling/herdquarters.git';
 const remoteFor = (a) => (typeof a.remote === 'string' && a.remote) || DEFAULT_REMOTE;
 
+function checkBranchName(name) {
+  const bad = new Error(`--branch ${name} is not a valid branch name`);
+  if (name.startsWith('-')) throw bad;
+  try { execFileSync('git', ['check-ref-format', '--branch', name], { stdio: 'ignore' }); } catch { throw bad; }
+}
+
 function branchFor(a, current) {
   if (a.branch === true) throw new Error('--branch needs a name');
   const asked = a.branch || null;
+  if (asked) checkBranchName(asked);
   if (!current || a.reset) return asked || 'main';
   if (asked && asked !== current) throw new Error(`the app's checkout tracks ${current}; add --reset to switch it to ${asked}`);
   return current;

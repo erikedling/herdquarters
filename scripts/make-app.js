@@ -27,6 +27,7 @@ function checkTarget(out) {
 
 function makeApp({ out, root, checkout, branch = 'main', electron = path.join(repo, 'node_modules', 'electron', 'dist', 'Electron.app'), shellSrc = path.join(repo, 'shell'), icon = path.join(repo, 'assets', 'icon.icns') }) {
   if (!out || !root || !checkout) throw new Error('--out, --root and --checkout are required');
+  if (typeof branch !== 'string' || !branch) throw new Error('--branch needs a name');
   out = path.resolve(out);
   checkTarget(out);
   if (!fs.existsSync(electron)) throw new Error(`no Electron at ${electron}: run npm install first`);

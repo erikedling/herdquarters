@@ -41,7 +41,7 @@ class Updater {
     this.timers = [];
     this.busy = null;
     this.awaitingLoad = null;
-    this.s = { enabled: !!shell, status: 'idle', kind: null, target: null, commits: [], current: null, checkedAt: null, error: null, notice: null };
+    this.s = { enabled: !!shell, branch: shell?.branch || 'main', status: 'idle', kind: null, target: null, commits: [], current: null, checkedAt: null, error: null, notice: null };
   }
 
   view() { return { ...this.s, commits: [...this.s.commits] }; }
@@ -97,7 +97,13 @@ class Updater {
         this.set({ ...base, status: 'available', kind, target, commits });
       }
     } catch (err) {
-      this.set({ checking: false, checkedAt: this.now(), error: this.launch.shortError(err) });
+      const failed = { checking: false, checkedAt: this.now(), error: this.launch.shortError(err) };
+      // After a --branch install, the branch is usually deleted when its PR merges.
+      if (branch !== 'main' && /couldn't find remote ref/i.test(`${err?.message}\n${err?.stderr}`)) {
+        failed.error = `The branch ${branch} is gone, probably merged. Run npm run install-app -- --reset to go back to main.`;
+        if (!['pending', 'restart', 'applying'].includes(this.s.status)) Object.assign(failed, { status: 'gone', kind: null, target: null, commits: [] });
+      }
+      this.set(failed);
     }
     return this.view();
   }

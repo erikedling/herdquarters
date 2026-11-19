@@ -73,3 +73,32 @@ test('the restart bar says when the app updates itself first', () => {
   push.state({ enabled: true, status: 'restart', kind: 'restart', commits: [] });
   assert.doesNotMatch(els.updatebar.innerHTML, /updates the app itself/);
 });
+
+test('the settings line names a branch other than main', () => {
+  const { push, els } = load({ mode: 'ask' });
+  const current = { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' };
+  push.state({ enabled: true, branch: 'fregus/try-this', status: 'current', current, checkedAt: Date.now(), commits: [] });
+  assert.match(els['set-updates-info'].textContent, /^Running abc1234 on fregus\/try-this from /);
+  assert.match(els['set-updates-info'].textContent, /Up to date\./);
+  push.state({ enabled: true, branch: 'main', status: 'current', current, checkedAt: Date.now(), commits: [] });
+  assert.match(els['set-updates-info'].textContent, /^Running abc1234 from /);
+});
+
+test('a gone branch shows a warning with the way back, and never "Up to date"', () => {
+  const { push, els } = load({ mode: 'ask' });
+  const error = 'The branch fregus/try-this is gone, probably merged. Run npm run install-app -- --reset to go back to main.';
+  push.state({ enabled: true, branch: 'fregus/try-this', status: 'gone', error, current: { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' }, checkedAt: Date.now(), commits: [] });
+  assert.strictEqual(els.updatebar.hidden, false);
+  assert.match(els.updatebar.innerHTML, /No more updates from fregus\/try-this/);
+  assert.match(els.updatebar.innerHTML, /npm run install-app -- --reset/);
+  const info = els['set-updates-info'].textContent;
+  assert.ok(info.includes(error), info);
+  assert.doesNotMatch(info, /Up to date|failed:/);
+});
+
+test('a failed check does not claim to be up to date', () => {
+  const { push, els } = load({ mode: 'ask' });
+  push.state({ enabled: true, branch: 'main', status: 'current', error: 'Could not resolve host: github.com', current: { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' }, checkedAt: Date.now(), commits: [] });
+  assert.doesNotMatch(els['set-updates-info'].textContent, /Up to date/);
+  assert.match(els['set-updates-info'].textContent, /failed: Could not resolve host/);
+});

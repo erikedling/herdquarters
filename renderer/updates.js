@@ -14,6 +14,7 @@
   let expanded = false;
   let lastHTML = '';
   let checking = false;
+  let goneSeen = false;
 
   const QUIET_MS = 60_000;
   let lastKey = 0;
@@ -58,6 +59,10 @@
           : `The update to <code>${esc(short(n.to))}</code> could not be applied: ${esc(n.error)}. Herdquarters is still on the version it had.`;
       return { warn: true, html: `<div class="update-line"><span class="update-icon">⚠</span><span class="update-text">${text}</span><button class="btn small" data-act="dismiss">OK</button></div>` };
     }
+    if (s.status === 'gone') {
+      if (goneSeen) return null;
+      return { warn: true, html: `<div class="update-line"><span class="update-icon">⚠</span><span class="update-text"><b>No more updates from ${esc(s.branch)}</b><small>The branch is gone, probably merged. Run <code>npm run install-app -- --reset</code> to go back to main.</small></span><button class="btn small" data-act="gone-ok">OK</button></div>` };
+    }
     if (s.status === 'restart') {
       const slow = { shell: ' It downloads a new Electron first, which can take a few minutes.', deps: ' It installs new packages first.', bootstrap: ' It updates the app itself first.' }[s.kind] || '';
       return { html: `<div class="update-line"><span class="update-icon">↻</span><span class="update-text"><b>Restart Herdquarters to finish updating</b><small>Takes a few seconds; your agents keep running.${slow}</small></span>
@@ -94,12 +99,14 @@
     $check.textContent = checking || state?.checking ? 'Checking…' : 'Check now';
     if (!on) { $info.textContent = 'Running from source: update it with git pull.'; $info.classList.remove('error'); return; }
     const parts = [];
-    if (state.current) parts.push(`Running ${state.current.sha} from ${day(state.current.date)}.`);
-    if (state.status === 'pending' || state.status === 'restart') parts.push('An update is ready and applies at the next launch.');
+    const onBranch = state.branch && state.branch !== 'main' ? ` on ${state.branch}` : '';
+    if (state.current) parts.push(`Running ${state.current.sha}${onBranch} from ${day(state.current.date)}.`);
+    if (state.status === 'gone') parts.push(state.error);
+    else if (state.status === 'pending' || state.status === 'restart') parts.push('An update is ready and applies at the next launch.');
     else if (state.status === 'available') parts.push(`${changes(state.commits.length)} available.`);
-    else if (state.status === 'current' && state.checkedAt) parts.push('Up to date.');
+    else if (state.status === 'current' && state.checkedAt && !state.error) parts.push('Up to date.');
     if (state.skipped) parts.push(`Skipping ${short(state.skipped)}, which did not start.`);
-    if (state.checkedAt) parts.push(`Last checked ${time(state.checkedAt)}${state.error ? ` (failed: ${state.error})` : ''}.`);
+    if (state.checkedAt) parts.push(`Last checked ${time(state.checkedAt)}${state.error && state.status !== 'gone' ? ` (failed: ${state.error})` : ''}.`);
     $info.textContent = parts.join(' ');
     $info.classList.toggle('error', !!state.error);
   }
@@ -119,6 +126,7 @@
     if (act === 'restart') api.restart();
     if (act === 'next-launch') api.later();
     if (act === 'dismiss') api.dismiss();
+    if (act === 'gone-ok') { goneSeen = true; renderBar(); }
   });
   $check?.addEventListener('click', async () => {
     checking = true; laterFor = null; renderRow();

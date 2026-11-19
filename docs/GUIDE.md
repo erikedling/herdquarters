@@ -528,7 +528,9 @@ npm run install-app -- --branch fregus/some-change
 The app then runs that branch and offers what is pushed to it, the same way it
 does for `main`. A rerun keeps the branch the checkout tracks. To go back to
 `main`, run `npm run install-app -- --reset`; switching straight to another
-branch also needs `--reset`.
+branch also needs `--reset`. When the branch is merged and deleted, the app
+stops finding updates and says so; run `npm run install-app -- --reset` to go
+back to main.
 
 The app is a copy of Electron's own bundle with the name and icon, signed ad
 hoc (`scripts/make-app.js`). An app built on your Mac is not quarantined, so it
