@@ -44,6 +44,7 @@
   }
 
   function autoApply() {
+    if (auto() && state?.newer && (state.status === 'restart' || state.status === 'pending')) { api.apply(state.newer.target); return; }
     if (!auto() || state?.status !== 'available') return;
     if (state.kind !== 'live' || idle()) apply();
   }
@@ -65,9 +66,17 @@
     }
     if (s.status === 'restart') {
       const slow = { shell: ' It downloads a new Electron first, which can take a few minutes.', deps: ' It installs new packages first.', bootstrap: ' It updates the app itself first.' }[s.kind] || '';
+      const more = s.newer ? `<button class="btn small ghost" data-act="apply-newer">Include ${changes(s.newer.commits.length)} more</button>` : '';
       return { html: `<div class="update-line"><span class="update-icon">↻</span><span class="update-text"><b>Restart Herdquarters to finish updating</b><small>Takes a few seconds; your agents keep running.${slow}</small></span>
-        <button class="btn small primary" data-act="restart">Restart now</button>
+        ${more}<button class="btn small primary" data-act="restart">Restart now</button>
         <button class="btn small ghost" data-act="next-launch">On next launch</button></div>` };
+    }
+    if (s.status === 'pending' && s.newer && s.newer.target !== laterFor) {
+      const first = s.newer.commits[0]?.subject || '';
+      return { html: `<div class="update-line"><span class="update-icon">⬆</span>
+        <span class="update-text"><b>Update available</b><small>${changes(s.newer.commits.length)}${first ? `: ${esc(first)}${s.newer.commits.length > 1 ? ' and more' : ''}` : ''}. An earlier update already applies at the next launch.</small></span>
+        <button class="btn small primary" data-act="apply-newer">Update now</button>
+        <button class="btn small ghost" data-act="later-newer">Later</button></div>` };
     }
     if (s.status === 'applying') return { html: '<div class="update-line"><span class="update-icon">⬆</span><span class="update-text">Updating…</span></div>' };
     if (s.status !== 'available' || s.target === laterFor || (auto() && s.kind === 'live')) return null;
@@ -102,7 +111,10 @@
     const onBranch = state.branch && state.branch !== 'main' ? ` on ${state.branch}` : '';
     if (state.current) parts.push(`Running ${state.current.sha}${onBranch} from ${day(state.current.date)}.`);
     if (state.status === 'gone') parts.push(state.error);
-    else if (state.status === 'pending' || state.status === 'restart') parts.push('An update is ready and applies at the next launch.');
+    else if (state.status === 'pending' || state.status === 'restart') {
+      parts.push('An update is ready and applies at the next launch.');
+      if (state.newer) parts.push(`${changes(state.newer.commits.length)} newer available.`);
+    }
     else if (state.status === 'available') parts.push(`${changes(state.commits.length)} available.`);
     else if (state.status === 'current' && state.checkedAt && !state.error) parts.push('Up to date.');
     if (state.skipped) parts.push(`Skipping ${short(state.skipped)}, which did not start.`);
@@ -127,6 +139,8 @@
     if (act === 'next-launch') api.later();
     if (act === 'dismiss') api.dismiss();
     if (act === 'gone-ok') { goneSeen = true; renderBar(); }
+    if (act === 'apply-newer' && state?.newer) api.apply(state.newer.target);
+    if (act === 'later-newer') { laterFor = state?.newer?.target; renderBar(); }
   });
   $check?.addEventListener('click', async () => {
     checking = true; laterFor = null; renderRow();

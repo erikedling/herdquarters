@@ -102,3 +102,18 @@ test('a failed check does not claim to be up to date', () => {
   assert.doesNotMatch(els['set-updates-info'].textContent, /Up to date/);
   assert.match(els['set-updates-info'].textContent, /failed: Could not resolve host/);
 });
+
+test('a waiting restart stays on show when newer commits come in', () => {
+  const { push, els } = load({ mode: 'ask' });
+  const current = { sha: 'abc1234', date: '2026-11-19T10:00:00+01:00' };
+  const newer = { target: 'def5678', kind: 'restart', commits: [{ sha: 'def5678', subject: 'Terminal: a later change (#51)' }] };
+  push.state({ enabled: true, branch: 'main', status: 'restart', kind: 'restart', target: 'aaa1111', newer, current, checkedAt: Date.now(), commits: [] });
+  assert.match(els.updatebar.innerHTML, /Restart Herdquarters to finish updating/);
+  assert.match(els.updatebar.innerHTML, /data-act="apply-newer">Include 1 change more/);
+  assert.match(els['set-updates-info'].textContent, /applies at the next launch\. 1 change newer available\./);
+
+  push.state({ enabled: true, branch: 'main', status: 'pending', kind: 'restart', target: 'aaa1111', newer, current, checkedAt: Date.now(), commits: [] });
+  assert.match(els.updatebar.innerHTML, /Update available/);
+  assert.match(els.updatebar.innerHTML, /An earlier update already applies at the next launch/);
+  assert.match(els.updatebar.innerHTML, /data-act="apply-newer">Update now/);
+});

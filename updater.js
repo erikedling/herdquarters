@@ -42,7 +42,7 @@ class Updater {
     this.timers = [];
     this.busy = null;
     this.awaitingLoad = null;
-    this.s = { enabled: !!shell, branch: shell?.branch || 'main', status: 'idle', kind: null, target: null, commits: [], current: null, checkedAt: null, error: null, notice: null };
+    this.s = { enabled: !!shell, branch: shell?.branch || 'main', status: 'idle', kind: null, target: null, commits: [], newer: null, current: null, checkedAt: null, error: null, notice: null };
   }
 
   view() { return { ...this.s, commits: [...this.s.commits] }; }
@@ -68,7 +68,7 @@ class Updater {
 
   check() {
     if (!this.shell) return Promise.resolve(this.view());
-    if (this.s.status === 'applying') return Promise.resolve(this.view());
+    if (this.s.status === 'applying' || this.reverting) return Promise.resolve(this.view());
     if (!this.busy) this.busy = this.checkNow().finally(() => { this.busy = null; });
     return this.busy;
   }
@@ -82,12 +82,13 @@ class Updater {
       const target = await this.git(['rev-parse', `refs/remotes/origin/${branch}`]);
       const state = this.launch.readState(root);
       const current = await this.describe('HEAD');
-      const base = { checking: false, checkedAt: this.now(), error: null, current, skipped: null };
+      const base = { checking: false, checkedAt: this.now(), error: null, current, skipped: null, newer: null };
       if (target === head || target === state.bad) {
         this.set({ ...base, status: 'current', kind: null, target: null, commits: [], skipped: target === state.bad ? state.bad : null });
       } else if (target === state.pending) {
         this.set({ ...base, status: this.s.status === 'pending' ? 'pending' : 'restart', target });
       } else {
+        const waiting = state.pending && state.pending !== head ? state.pending : null;
         const commits = lines(await this.git(['log', '--format=%h%x09%s', `${head}..${target}`])).map((l) => {
           const [sha, ...rest] = l.split('\t');
           return { sha, subject: rest.join('\t') };
@@ -95,7 +96,9 @@ class Updater {
         const files = lines(await this.git(['diff', '--name-only', head, target]));
         const lock = await this.git(['show', `${target}:package-lock.json`]).catch(() => '');
         const kind = classify(files, { electronNow: this.electronNow, electronNext: electronMajor(lock) });
-        this.set({ ...base, status: 'available', kind, target, commits });
+        // A restart the user already said yes to stays on show; the newer commits can replace it.
+        if (waiting) this.set({ ...base, status: this.s.status === 'pending' ? 'pending' : 'restart', target: waiting, newer: { target, kind, commits } });
+        else this.set({ ...base, status: 'available', kind, target, commits });
       }
     } catch (err) {
       const failed = { checking: false, checkedAt: this.now(), error: this.launch.shortError(err) };
@@ -111,8 +114,15 @@ class Updater {
 
   // Restart kinds are not checked out yet: main.js reads some files lazily and must not see a mix.
   async apply(target) {
-    if (!this.shell || this.s.status !== 'available' || target !== this.s.target) return { ok: false, error: 'nothing to apply' };
+    if (!this.shell || this.reverting) return { ok: false, error: 'nothing to apply' };
     const { root, branch = 'main' } = this.shell;
+    const { newer } = this.s;
+    if (newer && target === newer.target) {
+      this.launch.updateState(root, { pending: target });
+      this.set({ status: 'restart', target, kind: newer.kind === 'live' ? 'restart' : newer.kind, commits: newer.commits, newer: null, applyError: null });
+      return { ok: true, restart: true };
+    }
+    if (this.s.status !== 'available' || target !== this.s.target) return { ok: false, error: 'nothing to apply' };
     if (this.s.kind !== 'live') {
       this.launch.updateState(root, { pending: target });
       this.set({ status: 'restart', applyError: null });
@@ -146,15 +156,31 @@ class Updater {
     if (!this.shell || !target) return;
     const { root, branch = 'main' } = this.shell;
     this.awaitingLoad = null;
-    await this.git(['checkout', '-q', '-B', branch, this.previous]);
+    const before = this.launch.readState(root).bad ?? null;
     const notice = { kind: 'rolledBack', from: target, to: this.previous, error: 'the window did not come up after the update', at: this.now() };
+    // Recorded before the checkout, so nothing offers or applies the target again meanwhile.
     this.launch.updateState(root, { bad: target, notice });
-    this.set({ status: 'current', kind: null, target: null, commits: [], notice });
+    this.reverting = { ready: false };
+    try {
+      await this.git(['checkout', '-q', '-B', branch, this.previous]);
+      if (this.reverting.ready) {
+        // The ready message came while the checkout ran: the update works, so keep it.
+        await this.git(['checkout', '-q', '-B', branch, target]);
+        this.launch.updateState(root, { bad: before, notice: null });
+        this.launch.markGood(root, target);
+        this.set({ status: 'current', kind: null, target: null, commits: [], newer: null, current: await this.describe('HEAD').catch(() => this.s.current) });
+        return;
+      }
+    } finally {
+      this.reverting = null;
+    }
+    this.set({ status: 'current', kind: null, target: null, commits: [], newer: null, notice });
     this.reloadTimer = setTimeout(() => this.onStuck(), this.readyMs ?? READY_TIMEOUT_MS);
     reload();
   }
 
   async loaded() {
+    if (this.reverting) { this.reverting.ready = true; return; }
     clearTimeout(this.reloadTimer);
     if (!this.shell || !this.awaitingLoad) return;
     this.launch.markGood(this.shell.root, this.awaitingLoad);

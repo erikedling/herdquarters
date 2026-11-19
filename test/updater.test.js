@@ -235,3 +235,98 @@ test('a notice from the last launch is shown until dismissed', async () => {
   assert.strictEqual(u.view().notice, null);
   assert.strictEqual(launch.readState(r.root).notice, null);
 });
+
+// Holds the git checkout that puts the previous commit back, so a test can act while the undo runs.
+function holdUndo(u, previous) {
+  const real = u.git;
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const held = { started: false, release };
+  u.git = async (args) => {
+    if (args[0] === 'checkout' && args.includes(previous) && !held.started) { held.started = true; await gate; }
+    return real(args);
+  };
+  return held;
+}
+
+test('an undone live update is marked bad before its checkout, so a check meanwhile cannot offer it again', async () => {
+  const r = repos();
+  const broken = r.commit({ 'renderer/app.js': 'throw\n' });
+  const u = updater(r);
+  await u.check();
+  await u.apply(broken);
+  const held = holdUndo(u, r.first);
+  let reloads = 0;
+  u.watchReload(() => { reloads += 1; }, 20);
+  await until(() => held.started);
+  assert.strictEqual(launch.readState(r.root).bad, broken);
+  assert.notStrictEqual((await u.check()).status, 'available');
+  assert.deepStrictEqual(await u.apply(broken), { ok: false, error: 'nothing to apply' });
+  held.release();
+  await until(() => reloads > 0);
+  assert.strictEqual(r.head(), r.first);
+  const after = await u.check();
+  assert.strictEqual(after.status, 'current');
+  assert.strictEqual(after.skipped, broken);
+  await u.loaded();
+});
+
+test('a ready message that arrives while the undo runs keeps the update and marks it good', async () => {
+  const r = repos();
+  launch.updateState(r.root, { bad: 'older-bad' });
+  const slow = r.commit({ 'renderer/app.js': 'slow but fine\n' });
+  const u = updater(r);
+  await u.check();
+  await u.apply(slow);
+  const held = holdUndo(u, r.first);
+  let reloads = 0;
+  let stuck = 0;
+  u.onStuck = () => { stuck += 1; };
+  u.watchReload(() => { reloads += 1; }, 20);
+  await until(() => held.started);
+  await u.loaded();
+  held.release();
+  await until(() => u.view().status === 'current' && !u.reverting);
+  assert.strictEqual(r.head(), slow);
+  const state = launch.readState(r.root);
+  assert.strictEqual(state.lastGood, slow);
+  assert.strictEqual(state.bad, 'older-bad');
+  assert.strictEqual(state.notice, null);
+  assert.strictEqual(u.view().notice, null);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.strictEqual(reloads, 0);
+  assert.strictEqual(stuck, 0);
+});
+
+test('newer commits do not hide a restart that is already waiting, and applying them replaces it', async () => {
+  const r = repos();
+  const first = r.commit({ 'main.js': 'two\n' }, 'Main: a change (#50)');
+  const u = updater(r);
+  await u.check();
+  await u.apply(first);
+  u.later();
+  assert.strictEqual(u.view().status, 'pending');
+
+  const second = r.commit({ 'renderer/app.js': 'two\n' }, 'Terminal: a later change (#51)');
+  let s = await u.check();
+  assert.strictEqual(s.status, 'pending', 'still on show as waiting for the next launch');
+  assert.strictEqual(s.target, first);
+  assert.strictEqual(s.newer.target, second);
+  assert.strictEqual(s.newer.kind, 'restart', 'it carries the waiting main.js change too');
+  assert.deepStrictEqual(s.newer.commits.map((c) => c.subject), ['Terminal: a later change (#51)', 'Main: a change (#50)']);
+  assert.strictEqual(launch.readState(r.root).pending, first);
+
+  u.set({ status: 'restart' });
+  s = await u.check();
+  assert.strictEqual(s.status, 'restart');
+  assert.strictEqual(s.newer.target, second);
+
+  assert.deepStrictEqual(await u.apply(second), { ok: true, restart: true });
+  assert.strictEqual(launch.readState(r.root).pending, second);
+  s = u.view();
+  assert.strictEqual(s.status, 'restart');
+  assert.strictEqual(s.target, second);
+  assert.strictEqual(s.newer, null);
+  assert.strictEqual((await u.check()).status, 'restart');
+  assert.strictEqual(r.head(), r.first, 'nothing is checked out before the restart');
+});
