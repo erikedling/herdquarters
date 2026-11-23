@@ -234,7 +234,8 @@ phone does not shake: still ring marks show instead. A permission prompt still
 puts the watcher's hand up.
 
 **Free desks and suggestions.** Every boss room shows a **QA**, an **Ops** and
-a **Slack** faded until someone sits there. Hover one for what it does; click it to
+a **Slack** desk, faded until someone sits there. Each keeps its role sign by the
+chair once someone does, so you can tell the three apart. Hover a free one for what it does; click it to
 send the boss a ready-made prompt ("Run the QA review now", "Watch the deploy
 of … to prod for 30 min") you can edit first. The boss also writes up to three
 suggestions under `## Next` on the board when one fits, such as when you say you
