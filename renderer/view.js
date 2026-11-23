@@ -71,6 +71,10 @@
     ops: { title: 'Ops', about: 'Watches CI and prod after a deploy and raises the alarm when something breaks.' },
     slack: { title: 'Slack', about: 'Keeps an eye on the Slack threads and channels you give it and tells you when someone is waiting for your answer.' },
   };
+  // Kept once someone sits down, so the QA, Ops and Slack agents stay told apart.
+  function seatSign(desk) {
+    return desk.orch && Object.hasOwn(SEATS, desk.role) ? SEATS[desk.role].title : null;
+  }
   function seatsFor(desks, o) {
     const taken = new Set(desks.filter((d) => d.role in SEATS).map((d) => d.role));
     return Object.keys(SEATS).filter((role) => !taken.has(role)).map((role) => ({
@@ -201,6 +205,6 @@
     return { slugs, seen: next };
   }
 
-  const api = { justFinished, ticketCard, waitingCount, slackOnlyWaiting, officeFloors, orchestratorFloors, needsAttention, workerPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, SEATS };
+  const api = { justFinished, ticketCard, waitingCount, slackOnlyWaiting, officeFloors, orchestratorFloors, needsAttention, workerPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, seatSign, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, SEATS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.officeView = api;
 })();
