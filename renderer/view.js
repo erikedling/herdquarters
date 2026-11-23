@@ -40,10 +40,11 @@
     return out.sort((a, b) => (a.pose === b.pose ? b.seq - a.seq : a.pose === 'blocked' ? -1 : 1));
   }
 
-  // A boss's worker (and its QA reviewer) reports to the boss, not to the user: when it finishes it
+  // A boss's worker (and its QA reviewer and Slack watcher) reports to the boss, not to the user: when it finishes it
   // sits idle instead of waving. A permission prompt still needs the user,
   // since only the worker's terminal can answer it.
   function workerPose(pose) { return pose === 'done' ? 'idle' : pose; }
+  function helperPose(role, pose) { return role === 'qa' || role === 'slack' ? workerPose(pose) : pose; }
 
   // The top-bar notice for orchestrators reconcile() archived: [{ name, reason }].
   function archivedNotice(archived) {
@@ -124,6 +125,14 @@
     return { state, count: waiting.length, newest: waiting[0] };
   }
 
+  // The Slack watcher's phone rings exactly while its reception ticket asks for the user.
+  function slackRings(o, now = Date.now()) {
+    const t = slackTicket(o, now);
+    return !!t && t.state !== 'quiet';
+  }
+  // Whether the phone on this desk rings now: not while the watcher is on a call checking.
+  function deskRings(desk) { return desk.role === 'slack' && !desk.seat && !!desk.ring && desk.pose !== 'working'; }
+
   // The orchestrator a checkout belongs to, by its branch: the orchestrator's
   // branch, `<branch>--<variant>` for another worktree in the same repo (git
   // allows one worktree per branch), such as two alternative implementations,
@@ -179,7 +188,8 @@
   function ticketCard(o, desks, now = Date.now()) {
     const tasks = o.board?.tasks || [];
     const done = tasks.filter((t) => t.done).length, total = tasks.length;
-    const state = desks.some((d) => d.pose === 'working') ? 'working' : total && done === total ? 'done' : 'idle';
+    // The Slack watcher's checks run all day; they are not the team at work.
+    const state = desks.some((d) => d.pose === 'working' && d.role !== 'slack') ? 'working' : total && done === total ? 'done' : 'idle';
     const questions = o.board?.questions?.length || 0;
     const waiting = waitingCount(o, desks, now);
     let flag = null;
@@ -201,6 +211,6 @@
     return { slugs, seen: next };
   }
 
-  const api = { justFinished, ticketCard, waitingCount, slackOnlyWaiting, officeFloors, orchestratorFloors, needsAttention, workerPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, SEATS };
+  const api = { justFinished, ticketCard, waitingCount, slackOnlyWaiting, officeFloors, orchestratorFloors, needsAttention, workerPose, helperPose, archivedNotice, orchestratorForBranch, orchestratorForRoom, fromWorker, helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts, slackWaiting, slackTicket, slackRings, deskRings, SEATS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.officeView = api;
 })();

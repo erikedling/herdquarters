@@ -147,3 +147,49 @@ test('the waving arm swings from the shoulder, not just at the wrist', () => {
   const shared = [...frames[0]].filter((p) => frames.every((f) => f.has(p)));
   assert.ok(shared.length <= 1, `pixels in every frame: ${shared}`);
 });
+
+// The Slack watcher's desk: a red rotary phone in place of the mug and item.
+const HANDSET = '#a8323f';
+const POSES = ['empty', 'idle', 'unknown', 'working', 'blocked', 'alert', 'done'];
+
+test('the Slack desk always has its phone, and no other desk does', () => {
+  const w = load();
+  for (const pose of POSES) {
+    assert.ok(pixels(w.figureOfficeSVG(pose, 3, { phone: true })).some((p) => p.fill === HANDSET), `${pose}: no phone`);
+    assert.ok(!pixels(w.figureOfficeSVG(pose, 3, {})).some((p) => p.fill === HANDSET), `${pose}: phone on a plain desk`);
+  }
+});
+
+test('a check is a call: picked up once, then the handset at the ear and a "…" bubble, no code', () => {
+  const w = load();
+  const call = w.figureOfficeSVG('working', 3, { phone: true });
+  assert.match(call, /<g class="frame f1" visibility="hidden">/);
+  assert.match(call, /<g class="frame f2" visibility="hidden">/);
+  const ear = group(call, '<g class="frame at-ear">');
+  assert.ok(ear && !/visibility="hidden"><rect/.test(ear.slice(0, 40)), 'still pose: at the ear');
+  assert.ok(pixels(ear).some((p) => p.fill === HANDSET && p.y < 27), 'handset up by the head');
+  assert.ok(group(call, '<g class="call-bubble">'));
+  assert.doesNotMatch(call, /code-line|class="glow"/);
+});
+
+test('the hang-up plays only after a call, and the ring only when asked', () => {
+  const w = load();
+  assert.match(w.figureOfficeSVG('idle', 3, { phone: true, hangUp: true }), /class="hung-up"/);
+  assert.doesNotMatch(w.figureOfficeSVG('idle', 3, { phone: true }), /hung-up|hang-up/);
+  const ringing = w.figureOfficeSVG('idle', 3, { phone: true, ring: true });
+  assert.ok(group(ringing, '<g class="ring-marks">'));
+  assert.doesNotMatch(w.figureOfficeSVG('idle', 3, { phone: true }), /class="phone ring"|ring-marks/);
+  assert.doesNotMatch(w.figureOfficeSVG('working', 3, { phone: true, ring: true }), /class="phone ring"/);
+});
+
+test('the phone, its handset and bubble leave room for the role sign above the chair', () => {
+  const w = load();
+  // The sign sits at 2..44 x 36..51 screen px: units x 0-14, y 12-17.
+  const inSign = (p) => p.x <= 14 && p.y >= 12 && p.y <= 17;
+  for (const svg of [w.figureOfficeSVG('working', 3, { phone: true }), w.figureOfficeSVG('idle', 3, { phone: true, ring: true, hangUp: true })]) {
+    for (const open of ['<g class="pick-up">', '<g class="phone ring">', '<g class="hang-up" visibility="hidden">', '<g class="call-bubble">']) {
+      const g = group(svg, open);
+      if (g) assert.deepStrictEqual(pixels(g).filter(inSign), [], open);
+    }
+  }
+});

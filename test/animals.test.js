@@ -125,3 +125,11 @@ test('each sprite has the poses its modes need', () => {
   for (const cls of ['pet-sit', 'pet-nap', 'pet-walk', 'pet-heart']) has(animalSVG('cat', 0), cls);
   for (const cls of ['pet-sit', 'pet-lie', 'pet-walk', 'pet-tail', 'pet-heart']) has(animalSVG('dog', 0), cls);
 });
+
+test('the Slack watcher checking is not work the animals settle in for; stuck, it still is', () => {
+  const desks = (...ds) => ({ rooms: [{ desks: ds.map(([pose, role], i) => ({ id: `p${i}`, pose, role })) }] });
+  assert.deepStrictEqual(target('cat', desks(['working', 'slack'])), { mode: 'stroll', deskId: null });
+  assert.deepStrictEqual(target('dog', desks(['working', 'slack'])), { mode: 'stroll', deskId: null });
+  assert.deepStrictEqual(target('dog', desks(['working', 'slack'], ['working', 'worker'])), { mode: 'lie', deskId: 'p1' });
+  assert.deepStrictEqual(target('cat', desks(['blocked', 'slack'])), { mode: 'sit', deskId: 'p0' });
+});
