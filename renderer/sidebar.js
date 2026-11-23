@@ -65,7 +65,7 @@
     const sub = d.label ? '' : d.autoTitle;
     // Orchestrator members: coloured square before the name, role in the right column.
     const orch = d.orch ? `<i class="sb-orch" style="background:${esc(d.orch.color)}" title="${esc(d.orch.name)}"></i>` : '';
-    const right = d.pose === 'away' ? 'asking' : d.role === 'boss' ? (d.escalated ? 'asks you' : 'orch') : d.role === 'worker' ? 'sub' : d.role === 'qa' ? 'QA' : d.role === 'ops' ? (d.pose === 'alert' ? 'alert' : 'ops') : (STATE[d.pose] || d.pose);
+    const right = d.pose === 'away' ? 'asking' : d.role === 'boss' ? (d.escalated ? 'asks you' : 'orch') : d.role === 'worker' ? 'sub' : d.role === 'qa' ? 'QA' : d.role === 'ops' ? (d.pose === 'alert' ? 'alert' : 'ops') : d.role === 'slack' ? 'Slack' : (STATE[d.pose] || d.pose);
     return `<div class="${cls} ${d.role ? `role-${d.role}` : ''}" data-pane="${esc(d.id)}" title="${esc(character)} · ${esc(d.autoTitle)}${d.orch ? ` · ${esc(d.orch.name)}` : ''}">
       <i class="sb-dot"></i>${orch}<span class="sb-name ${d.label ? 'named' : ''}">${esc(name)}${mark}</span><span class="sb-title">${esc(sub)}</span><span class="sb-right">${right}</span>
     </div>`;

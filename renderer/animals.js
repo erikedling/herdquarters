@@ -77,7 +77,8 @@
     if (returned) return { mode: 'greet', deskId: returned.id, until: now + GREET_MS };
     if (prev?.mode === 'greet' && now < prev.until && back(prev.deskId)) return prev;
     for (const [poses, mode] of RULES[species]) {
-      const list = desks.filter((d) => poses.includes(d.pose));
+      // The Slack watcher's checks are short calls, not work to settle in for.
+      const list = desks.filter((d) => poses.includes(d.pose) && !(d.role === 'slack' && d.pose === 'working'));
       if (!list.length) continue;
       const deskId = (prev?.mode === mode && list.find((d) => d.id === prev.deskId) || list[0]).id;
       return mode === 'wait' ? { mode, deskId, awayIds: list.map((d) => d.id) } : { mode, deskId };

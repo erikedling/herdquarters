@@ -223,6 +223,16 @@ end of reception. A reply or any emoji reaction from you, an answer from
 someone else to a room question, or **Dismiss** in the dialog clears it. The
 office has to be running for checks to happen.
 
+The Slack desk has a red rotary phone in place of the mug. A check is a quick
+call: the watcher picks up when it starts, talks with a small "…" bubble, and
+hangs up when it ends. A finished check is not news, so the watcher does not
+wave, gets no done ticket in reception, and the dog and cat do not come over;
+the tab card does not say working for it either. While the Slack ticket is
+highlighted the phone rings in short bursts, and the desk keeps its full
+colour; it stops once you have opened the dialog. With reduced motion the
+phone does not shake: still ring marks show instead. A permission prompt still
+puts the watcher's hand up.
+
 **Free desks and suggestions.** Every boss room shows a **QA**, an **Ops** and
 a **Slack** desk, faded until someone sits there. Each keeps its role sign by the
 chair once someone does, so you can tell the three apart. Hover a free one for what it does; click it to
@@ -393,7 +403,8 @@ a cat (Måns, Sixten, Majken, Smulan or Doris) and a dog (Bamse, Ludde,
 Kajsa, Tussan or Sigge). They go where they are useful. The cat sits beside
 a desk that needs you (blocked or alert), otherwise naps on a working desk.
 The dog wags and hops at a desk that just finished, otherwise sits by one
-that needs you, otherwise lies at the feet of someone working. With nothing
+that needs you, otherwise lies at the feet of someone working. Neither settles
+in at the Slack watcher's desk for a check, which is only a short call. With nothing
 to do, both stroll along the floor. They trot over when their spot changes;
 click one to pet it. **Office cats** and **Office dogs** in settings switch
 each kind on or off.

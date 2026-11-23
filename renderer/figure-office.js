@@ -244,8 +244,8 @@
     const g = new Grid();
     const mine = Number.isInteger(opts.character);
     const mug = mine ? own(MUGS, opts.character) : WHITE;
-    g.p(9, 30, 3, 3, mug); g.set(12, 31, mug); g.p(9, 30, 3, 1, '#c08a5a');
-    if (mine && !opts.boss) {
+    if (!opts.phone) { g.p(9, 30, 3, 3, mug); g.set(12, 31, mug); g.p(9, 30, 3, 1, '#c08a5a'); }
+    if (mine && !opts.boss && !opts.phone) {
       const item = own(ITEMS, opts.character);
       item.rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (item.pal[row[i]]) g.set(13 + i, 28 + j, item.pal[row[i]]); });
     }
@@ -255,9 +255,80 @@
     let glow = '';
     if (lid === 'open') {
       g.rr(18, 27, 8, 6, pose === 'empty' ? '#c9cfdc' : '#d5dbe8'); g.p(21, 29, 2, 2, WHITE);
-      if (pose === 'working') glow = '<rect class="glow" x="19" y="27" width="6" height="1" fill="#9fd3ff"/>';
+      if (pose === 'working' && !opts.phone) glow = '<rect class="glow" x="19" y="27" width="6" height="1" fill="#9fd3ff"/>';
     }
-    return g.svg() + glow + (pose === 'idle' ? steam() : '');
+    return g.svg() + glow + (pose === 'idle' && !opts.phone ? steam() : '') + (opts.phone ? phone(opts) : '');
+  }
+
+  // ---- the Slack watcher's red rotary phone, where the mug and item would be ----
+  // Picks up when a check starts, talks with a "…" bubble, hangs up when it
+  // ends; rings while a Slack message waits on the user. office.css plays the
+  // pick-up and hang-up once and the ring in bursts.
+  const ROTARY = { H: '#a8323f', h: '#c94a55', R: '#e8606b', r: '#c94a55', W: '#fff6e8', K: INK };
+  const HANDSET = ['.HHHHHHH.', 'HHh...hHH'];
+  const CRADLE = ['.........', '.R.....R.'];
+  const BASE = ['.RRRRRRR.', 'RRRWWWRRR', 'RRWWKWWRR', 'rrrWWWrrr'];
+  const HELD = ['.HH', 'HHH', '.HH', '.H.', '.H.', '.HH', 'HHH', '.HH'];
+  const PHONE_X = 7, PHONE_Y = 27;
+  const rotary = (rows, x, y) => sprite(rows, x, y, ROTARY).svg();
+
+  // opts.offHook: the handset is in someone's hand. opts.ring: it rings.
+  // .after-call only does something inside the hang-up scene, which shows it once the handset is down.
+  function phone(opts) {
+    const base = rotary(BASE, PHONE_X, PHONE_Y + 2);
+    if (opts.offHook) return base + rotary(CRADLE, PHONE_X, PHONE_Y);
+    const handset = rotary(HANDSET, PHONE_X, PHONE_Y);
+    if (!opts.ring) return base + `<g class="after-call">${handset}</g>`;
+    const marks = new Grid();
+    for (const x of [PHONE_X - 2, PHONE_X + 10]) { marks.set(x, PHONE_Y - 1, ROTARY.r); marks.set(x + (x < PHONE_X ? -1 : 1), PHONE_Y, ROTARY.r); marks.set(x, PHONE_Y + 1, ROTARY.r); }
+    return `<g class="phone ring"><g class="ring-body">${base}<g class="ring-handset"><g class="after-call">${handset}</g></g></g><g class="ring-marks">${marks.svg()}</g></g>`;
+  }
+
+  // The near (left) arm: reaching for the handset on the cradle, lifting it,
+  // or holding it to the ear. Sleeve pixels, then the hand's top-left corner.
+  const PHONE_ARM = {
+    reach: [[[17, 27], [16, 27], [15, 28], [14, 28]], [12, 27]],
+    lift: [[[17, 27], [16, 27], [15, 26], [15, 25]], [14, 23]],
+    ear: [[[17, 27], [16, 27], [15, 27], [14, 26], [13, 25], [13, 24]], [13, 22]],
+  };
+  function phoneArm(ch, pose) {
+    const [sleeve, [hx, hy]] = PHONE_ARM[pose], g = new Grid();
+    for (const [x, y] of sleeve) g.set(x, y, armColor(ch));
+    g.p(hx, hy, 2, 2, ch.skin);
+    const handset = pose === 'reach' ? rotary(HANDSET, PHONE_X, PHONE_Y) : pose === 'lift' ? rotary(HANDSET, PHONE_X + 3, PHONE_Y - 4) : rotary(HELD, 14, 19);
+    return handset + g.svg();
+  }
+  // The far hand rests on the desk beside the laptop.
+  function restingHand(ch, x, y) {
+    const g = new Grid(); g.p(x + 10, y + 10, 1, 3, armColor(ch)); g.p(x + 9, y + 13, 2, 2, ch.skin);
+    return g.svg();
+  }
+  function uprightBody(ch, x, y) {
+    const b = new Grid(); hairBack(b, ch, x, y); torso(b, ch, x, y);
+    return b.svg() + head(ch, x, y, false);
+  }
+
+  // On a call: the pick-up plays once (f1 reach, f2 lift), then the handset
+  // stays at the ear, the mouth moves and the bubble's dots fill in.
+  function onCall(ch, name, opts) {
+    const x = 16, y = 17;
+    const mouth = new Grid(); mouth.p(x + 5, y + 7, 2, 2, '#7a2f3f');
+    const bubble = new Grid(); bubble.box(29, 11, 9, 5, WHITE, '#9aa3bd'); bubble.set(31, 13, '#5a5d6e');
+    const dot = (i) => `<g class="dot d${i}"><rect x="${29 + i * 2}" y="13" width="1" height="1" fill="#5a5d6e"/></g>`;
+    return chair(false)
+      + `<g class="person pose-call on-call">${uprightBody(ch, x, y)}<g class="talk" visibility="hidden">${mouth.svg()}</g></g>`
+      + deskFront('working', name, opts) + deskTop('working', { ...opts, offHook: true }, 'open') + restingHand(ch, x, y)
+      + `<g class="pick-up"><g class="frame f1" visibility="hidden">${phoneArm(ch, 'reach')}</g><g class="frame f2" visibility="hidden">${phoneArm(ch, 'lift')}</g>`
+      + `<g class="frame at-ear">${phoneArm(ch, 'ear')}<g class="call-bubble">${bubble.svg()}${dot(2)}${dot(3)}</g></g></g>`;
+  }
+
+  // After a call the idle scene opens with the hang-up, played once: upright,
+  // the handset coming down (f1) and set on the cradle (f2).
+  function hangUp(ch, pose, name, opts) {
+    const x = 16, y = 17, s = seated(pose, ch);
+    return `<g class="hung-up">${chair(false)}<g class="after-call">${s.person}</g><g class="hang-up" visibility="hidden">${uprightBody(ch, x, y)}</g>`
+      + deskFront(pose, name, opts) + deskTop(pose, opts, 'open') + s.hands
+      + `<g class="hang-up" visibility="hidden">${restingHand(ch, x, y)}<g class="frame f1" visibility="hidden">${phoneArm(ch, 'lift')}</g><g class="frame f2" visibility="hidden">${phoneArm(ch, 'reach')}</g></g></g>`;
   }
 
   // Steam over the mug: two pixels office.css lets drift upward.
@@ -316,6 +387,8 @@
         + `<g class="person pose-${pose}">${standing(ch, 16, 15, 'raise', bubble(pose, 32, 2))}</g>`
         + deskFront(pose, name, opts) + deskTop(pose, opts, 'none');
     }
+    if (opts.phone && pose === 'working') return onCall(ch, name, opts);
+    if (opts.phone && opts.hangUp && (pose === 'idle' || pose === 'unknown')) return hangUp(ch, pose, name, opts);
     const s = seated(pose, ch);
     return chair(boss) + s.person + deskFront(pose, name, opts) + deskTop(pose, opts, 'open') + s.hands + (pose === 'working' ? code() : '');
   }

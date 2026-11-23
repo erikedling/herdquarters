@@ -239,3 +239,37 @@ test('justFinished(): tickets whose last task got ticked off since last time, no
   // a ticket with no tasks is never done
   assert.deepStrictEqual(justFinished(new Map([['d', false]]), [o('d', 0, 0)]).slugs, []);
 });
+
+const { helperPose, slackRings, deskRings } = require('../renderer/view');
+
+test('the Slack watcher finishing a check is not news: no wave, no done ticket; a prompt still needs the user', () => {
+  assert.strictEqual(helperPose('slack', 'done'), 'idle');
+  assert.strictEqual(helperPose('slack', 'blocked'), 'blocked');
+  assert.strictEqual(helperPose('slack', 'working'), 'working');
+  assert.strictEqual(helperPose('qa', 'done'), 'idle');
+  assert.strictEqual(helperPose('ops', 'done'), 'done');
+  assert.strictEqual(helperPose('boss', 'done'), 'done');
+  const floors = [{ rooms: [{ desks: [desk('slack', helperPose('slack', 'done'), { role: 'slack', orch }), desk('stuck', helperPose('slack', 'blocked'), { role: 'slack', orch })] }] }];
+  assert.deepStrictEqual(needsAttention(floors).map((d) => d.id), ['stuck']);
+});
+
+test('the phone rings exactly while the Slack ticket asks for the user', () => {
+  const waiting = [msg('a.md', '2026-10-28T10:00:00Z')];
+  assert.strictEqual(slackRings({ ...boss, slack: { waiting: [] } }, T), false);
+  assert.strictEqual(slackRings({ ...boss, slack: { waiting } }, T), true);
+  assert.strictEqual(slackRings({ ...boss, slack: { waiting, seen_at: '2026-10-28T11:00:00Z' } }, T), false);
+  assert.strictEqual(slackRings({ ...boss, slack: { waiting, seen_at: '2026-10-28T11:00:00Z' } }, T + DAY), true);
+  const at = (pose, extra = {}) => deskRings({ role: 'slack', pose, ring: true, ...extra });
+  assert.strictEqual(at('idle'), true);
+  assert.strictEqual(at('blocked'), true);
+  assert.strictEqual(at('working'), false, 'on a call, checking');
+  assert.strictEqual(at('idle', { ring: false }), false);
+  assert.strictEqual(at('empty', { seat: true }), false);
+  assert.strictEqual(deskRings({ role: 'qa', pose: 'idle', ring: true }), false);
+});
+
+test('a Slack check does not make the tab card say working', () => {
+  const o = { ...boss, board: { tasks: [{ done: false }] } };
+  assert.strictEqual(ticketCard(o, [desk('s', 'working', { role: 'slack' }), desk('b', 'idle', { role: 'boss' })], T).state, 'idle');
+  assert.strictEqual(ticketCard(o, [desk('s', 'working', { role: 'slack' }), desk('w', 'working', { role: 'worker' })], T).state, 'working');
+});

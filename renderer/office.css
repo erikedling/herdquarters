@@ -176,6 +176,32 @@ body.layout-office .pose-done .wave .f3 { animation: px-wave-3 0.9s steps(1) inf
 body.layout-office .pose-done .bubble { animation: px-pop 1.2s steps(1) infinite; }
 @keyframes px-pop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
 
+/* the Slack watcher's phone (figure-office.js): pick up, talk, hang up, ring */
+body.layout-office .pick-up .f1 { animation: px-once-first 0.5s steps(1) forwards; }
+body.layout-office .pick-up .f2 { animation: px-once-second 0.5s steps(1) forwards; }
+body.layout-office .pick-up .at-ear { animation: px-once-late 0.5s steps(1) forwards; }
+body.layout-office .on-call .talk { animation: px-talk 0.54s steps(1) 0.5s infinite; }
+body.layout-office .call-bubble .d2 { animation: px-dot-2 0.9s steps(1) 0.5s infinite; }
+body.layout-office .call-bubble .d3 { animation: px-dot-3 0.9s steps(1) 0.5s infinite; }
+body.layout-office .hung-up .hang-up { animation: px-once-all 0.6s steps(1) forwards; }
+body.layout-office .hung-up .hang-up .f1 { animation: px-once-first 0.6s steps(1) forwards; }
+body.layout-office .hung-up .hang-up .f2 { animation: px-once-second 0.6s steps(1) forwards; }
+body.layout-office .hung-up .after-call { animation: px-once-late 0.6s steps(1) forwards; }
+@keyframes px-once-all { 0% { visibility: visible; } 100% { visibility: hidden; } }
+@keyframes px-once-first { 0% { visibility: visible; } 50%, 100% { visibility: hidden; } }
+@keyframes px-once-second { 0% { visibility: hidden; } 50% { visibility: visible; } 100% { visibility: hidden; } }
+@keyframes px-once-late { 0% { visibility: hidden; } 100% { visibility: visible; } }
+@keyframes px-talk { 0% { visibility: visible; } 66.67%, 100% { visibility: hidden; } }
+@keyframes px-dot-2 { 0% { visibility: hidden; } 33.33%, 100% { visibility: visible; } }
+@keyframes px-dot-3 { 0% { visibility: hidden; } 66.67%, 100% { visibility: visible; } }
+/* ringing: a short burst of shakes every two seconds, with the handset hopping */
+body.layout-office .ring .ring-body { animation: px-ring 2s steps(1) infinite; }
+body.layout-office .ring .ring-handset { animation: px-ring-hop 2s steps(1) infinite; }
+body.layout-office .ring .ring-marks { animation: px-ring-marks 2s steps(1) infinite; }
+@keyframes px-ring { 0%, 6%, 12%, 18%, 24%, 30%, 36%, 42% { transform: translateX(-1px); } 3%, 9%, 15%, 21%, 27%, 33%, 39% { transform: translateX(1px); } 45%, 100% { transform: none; } }
+@keyframes px-ring-hop { 0%, 12%, 24%, 36% { transform: translateY(-1px); } 6%, 18%, 30%, 42%, 100% { transform: none; } }
+@keyframes px-ring-marks { 0% { visibility: visible; } 45%, 100% { visibility: hidden; } }
+
 body.layout-office .pose-blocked .person { animation: px-hop 0.8s steps(1) infinite; }
 body.layout-office .pose-alert .person { animation: px-hop 0.5s steps(1) infinite; }
 @keyframes px-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
@@ -195,6 +221,9 @@ body.layout-office .pose-working .glow { animation: px-glow 1.2s steps(1) infini
    scanning a room; the mug steams */
 body.layout-office .desk.pose-idle .figure, body.layout-office .desk.pose-unknown .figure { opacity: .68; filter: saturate(.55); }
 body.layout-office .desk.pose-idle.focused .figure, body.layout-office .desk.pose-unknown.focused .figure { opacity: 1; filter: saturate(.55) drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 90%, transparent)); }
+/* a ringing phone needs the user: its desk drops the idle fade */
+body.layout-office .desk.ringing .figure { opacity: 1; filter: none; }
+body.layout-office .desk.ringing.focused .figure { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 90%, transparent)); }
 body.layout-office .desk.pose-idle:hover .figure, body.layout-office .desk.pose-unknown:hover .figure { opacity: 1; }
 body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinite; }
 @keyframes px-steam { 0% { transform: translate(0, 0); } 33% { transform: translate(1px, -1px); } 66% { transform: translate(0, -2px); } 100% { transform: translate(0, 0); } }
@@ -209,6 +238,9 @@ body.layout-office .pose-idle .steam { animation: px-steam 1.8s steps(1) infinit
   body.layout-office .pose-working .code-line.l2 { transform: translateY(-3px); }
   body.layout-office .pose-working .code-line.l3 { transform: translateY(-6px); }
   body.layout-office .pose-working .code-line.l4 { transform: translateY(-9px); }
+  /* the phone: straight to the ear or the cradle, all three dots, and a ring
+     that shows as still marks instead of a shake */
+  body.layout-office :is(.pick-up, .hung-up, .call-bubble, .ring) *, body.layout-office .on-call .talk { animation: none !important; }
 }
 
 /* boss room: the orchestrator's colour on the wall trim, whiteboard on the wall */
