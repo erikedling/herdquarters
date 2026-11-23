@@ -170,6 +170,7 @@ test('a check is a call: picked up once, then the handset at the ear and a "…"
   assert.ok(pixels(ear).some((p) => p.fill === HANDSET && p.y < 27), 'handset up by the head');
   assert.ok(group(call, '<g class="call-bubble">'));
   assert.doesNotMatch(call, /code-line|class="glow"/);
+  assert.doesNotMatch(call, /class="person pose-working/, 'the typing bob and sway would pull the face from under the handset');
 });
 
 test('the hang-up plays only after a call, and the ring only when asked', () => {
@@ -184,7 +185,8 @@ test('the hang-up plays only after a call, and the ring only when asked', () => 
 
 test('the phone, its handset and bubble leave room for the role sign above the chair', () => {
   const w = load();
-  // The sign sits at 2..44 x 36..51 screen px: units x 0-14, y 12-17.
+  // Guards the space the role sign takes above the chair on an occupied Slack
+  // desk: 2..44 x 36..51 screen px, units x 0-14, y 12-17.
   const inSign = (p) => p.x <= 14 && p.y >= 12 && p.y <= 17;
   for (const svg of [w.figureOfficeSVG('working', 3, { phone: true }), w.figureOfficeSVG('idle', 3, { phone: true, ring: true, hangUp: true })]) {
     for (const open of ['<g class="pick-up">', '<g class="phone ring">', '<g class="hang-up" visibility="hidden">', '<g class="call-bubble">']) {

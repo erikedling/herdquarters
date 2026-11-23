@@ -268,7 +268,7 @@ function annotateOrchestrators(floors) {
           // The boss's own pane is the boss; any other agent in its room is the QA reviewer or the ops agent it opened.
           d.role = d.id === boss.boss?.pane_id ? 'boss' : window.officeView.helperRole(d, boss);
           d.orch = { slug: boss.slug, color: boss.color, name: boss.name };
-          // The QA reviewer and the Slack watcher report to the boss, like a worker: no done ticket in reception.
+          // The QA reviewer reports to the boss, and a finished Slack check is not news: neither waves or gets a done ticket.
           d.pose = window.officeView.helperPose(d.role, d.pose);
           if (d.role === 'slack') d.ring = window.officeView.slackRings(boss);
           // Questions on the board are waiting on the user: the boss puts a hand up.
@@ -320,11 +320,10 @@ function applyView() {
 // Which scene to draw: always 'office' (top-down pixel open-plan) now that the
 // building (side view) is gone from settings. Its artwork is still here.
 function currentLayout() { return 'office'; }
-const ringing = (desk) => window.officeView.deskRings(desk);
 // hangUp: the desk was on a call (working) until now, so the idle scene opens with the hang-up.
-function deskSVG(desk, hangUp = false) {
+function deskSVG(desk, { hangUp = false, ring = false } = {}) {
   const phone = desk.role === 'slack';
-  const opts = { boss: desk.role === 'boss', tag: desk.role === 'worker' || desk.role === 'qa' || desk.role === 'ops' || phone ? desk.orch?.color : null, phone, ring: ringing(desk), hangUp };
+  const opts = { boss: desk.role === 'boss', tag: desk.role === 'worker' || desk.role === 'qa' || desk.role === 'ops' || phone ? desk.orch?.color : null, phone, ring, hangUp };
   return currentLayout() === 'office' ? figureOfficeSVG(desk.pose, desk.character ?? 0, opts) : figureSVG(desk.pose, desk.character ?? 0, opts);
 }
 let lastFloors = null;
@@ -424,17 +423,18 @@ function renderBuilding(floors) {
       const deskIds = room.desks.map((d) => d.id);
       pruneChildren($desks, new Set(deskIds));
       for (const desk of room.desks) {
-        const $desk = upsert($desks, desk.id, 'div', `desk pose-${desk.pose} ${desk.seat ? `seat seat-${desk.role}` : ''} ${desk.focused ? 'focused' : ''} ${window.officeTerminal?.isOpenFor(desk.id) ? 'open' : ''} ${ringing(desk) ? 'ringing' : ''}`);
+        const ring = window.officeView.deskRings(desk);
+        const $desk = upsert($desks, desk.id, 'div', `desk pose-${desk.pose} ${desk.seat ? `seat seat-${desk.role}` : ''} ${desk.focused ? 'focused' : ''} ${window.officeTerminal?.isOpenFor(desk.id) ? 'open' : ''} ${ring ? 'ringing' : ''}`);
         const roleKey = `${desk.role || ''}:${desk.orch?.color || ''}`;
-        if ($desk.dataset.pose !== desk.pose || $desk.dataset.character !== String(desk.character) || $desk.dataset.layout !== layout || $desk.dataset.role !== roleKey || $desk.dataset.ring !== String(ringing(desk))) {
+        if ($desk.dataset.pose !== desk.pose || $desk.dataset.character !== String(desk.character) || $desk.dataset.layout !== layout || $desk.dataset.role !== roleKey || $desk.dataset.ring !== String(ring)) {
           const hangUp = desk.role === 'slack' && $desk.dataset.pose === 'working' && desk.pose !== 'working';
           $desk.dataset.pose = desk.pose;
-          $desk.dataset.ring = String(ringing(desk));
+          $desk.dataset.ring = String(ring);
           $desk.dataset.character = String(desk.character);
           $desk.dataset.layout = layout;
           $desk.dataset.role = roleKey;
           $desk.innerHTML = (desk.seat ? `<span class="seat-sign">${escapeHtml(desk.title)}</span>` : `<div class="desk-actions">${desk.kind === 'shell' ? '<button class="icon-btn desk-hire" title="Start an agent (Claude, Pi or Codex) at this desk">✦</button>' : ''}<button class="icon-btn danger desk-close" title="Close this terminal">✕</button></div>`)
-            + `${deskSVG(desk, hangUp)}<div class="nameplate"><i class="chip"></i><span class="nameplate-text"></span></div>`;
+            + `${deskSVG(desk, { hangUp, ring })}<div class="nameplate"><i class="chip"></i><span class="nameplate-text"></span></div>`;
         }
         $desk.querySelector('.nameplate-text').textContent = desk.seat ? `${desk.title} · free desk` : desk.pose === 'empty' ? (desk.label || 'terminal') : desk.pose === 'away' ? `at the boss · ${desk.title}` : desk.title;
         if (desk.orch) $desk.style.setProperty('--orch', desk.orch.color); else $desk.style.removeProperty('--orch');

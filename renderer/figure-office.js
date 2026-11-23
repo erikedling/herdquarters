@@ -273,6 +273,7 @@
   const rotary = (rows, x, y) => sprite(rows, x, y, ROTARY).svg();
 
   // opts.offHook: the handset is in someone's hand. opts.ring: it rings.
+  // .after-call only does something inside the hang-up scene, which shows it once the handset is down.
   function phone(opts) {
     const base = rotary(BASE, PHONE_X, PHONE_Y + 2);
     if (opts.offHook) return base + rotary(CRADLE, PHONE_X, PHONE_Y);
@@ -315,7 +316,7 @@
     const bubble = new Grid(); bubble.box(29, 11, 9, 5, WHITE, '#9aa3bd'); bubble.set(31, 13, '#5a5d6e');
     const dot = (i) => `<g class="dot d${i}"><rect x="${29 + i * 2}" y="13" width="1" height="1" fill="#5a5d6e"/></g>`;
     return chair(false)
-      + `<g class="person pose-working on-call">${uprightBody(ch, x, y)}<g class="talk" visibility="hidden">${mouth.svg()}</g></g>`
+      + `<g class="person pose-call on-call">${uprightBody(ch, x, y)}<g class="talk" visibility="hidden">${mouth.svg()}</g></g>`
       + deskFront('working', name, opts) + deskTop('working', { ...opts, offHook: true }, 'open') + restingHand(ch, x, y)
       + `<g class="pick-up"><g class="frame f1" visibility="hidden">${phoneArm(ch, 'reach')}</g><g class="frame f2" visibility="hidden">${phoneArm(ch, 'lift')}</g>`
       + `<g class="frame at-ear">${phoneArm(ch, 'ear')}<g class="call-bubble">${bubble.svg()}${dot(2)}${dot(3)}</g></g></g>`;
