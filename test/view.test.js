@@ -52,7 +52,7 @@ test('the archive notice gives each orchestrator its own reason', () => {
 });
 
 // ---- QA / Ops desks and alerts ----
-const { helperRole, seatsFor, activeAlerts, newAlertKeys, recoveredAlerts } = require('../renderer/view');
+const { helperRole, seatsFor, seatSign, activeAlerts, newAlertKeys, recoveredAlerts } = require('../renderer/view');
 const boss = { slug: 'fix', color: '#fc3', name: 'Fix proxy', folder: '/data/orchestrators/fix' };
 
 test('helperRole() tells the ops agent from the QA reviewer by folder, then by name', () => {
@@ -67,6 +67,16 @@ test('helperRole() tells the ops agent from the QA reviewer by folder, then by n
 test('seatsFor() gives the boss room a QA and an Ops desk until someone sits there', () => {
   assert.deepStrictEqual(seatsFor([{ role: 'boss' }], boss).map((d) => [d.id, d.role, d.pose, d.seat]), [['seat:fix:qa', 'qa', 'empty', true], ['seat:fix:ops', 'ops', 'empty', true], ['seat:fix:slack', 'slack', 'empty', true]]);
   assert.deepStrictEqual(seatsFor([{ role: 'boss' }, { role: 'ops' }, { role: 'slack' }], boss).map((d) => d.role), ['qa']);
+});
+
+test('seatSign() keeps the role sign on a QA, Ops or Slack desk after someone sits down', () => {
+  const orch = { slug: 'fix', color: '#fc3', name: 'Fix proxy' };
+  for (const [role, title] of [['qa', 'QA'], ['ops', 'Ops'], ['slack', 'Slack']]) assert.strictEqual(seatSign({ role, pose: 'working', orch, title: 'Reviewing the diff' }), title);
+  for (const seat of seatsFor([{ role: 'boss' }], boss)) assert.strictEqual(seatSign(seat), seat.title);
+  assert.strictEqual(seatSign({ role: 'boss', orch }), null);
+  assert.strictEqual(seatSign({ role: 'worker', orch }), null);
+  assert.strictEqual(seatSign({ role: 'qa' }), null);
+  assert.strictEqual(seatSign({ role: 'toString', orch }), null);
 });
 
 test('activeAlerts() keeps open, undismissed alerts, newest first', () => {

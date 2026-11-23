@@ -135,6 +135,8 @@ body.layout-office .desk .nameplate { display: none; }
 body.layout-office .desk::after { display: none; }
 body.layout-office .desk-actions .icon-btn { background: rgba(43, 45, 66, .8); color: #fff; border-radius: 8px; }
 body.layout-office .figure-office { display: block; }
+/* above and left of the chair, clear of the bubble, the desk buttons and the row above */
+body.layout-office .seat-sign { top: 36px; left: 2px; }
 
 /* pixel figure animations: whole-unit steps so nothing blurs */
 /* arms swap whole sprite frames while the shoulder stays put; style.css's
