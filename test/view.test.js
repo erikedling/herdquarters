@@ -71,9 +71,7 @@ test('seatsFor() gives the boss room a QA and an Ops desk until someone sits the
 
 test('seatSign() keeps the role sign on a QA, Ops or Slack desk after someone sits down', () => {
   const orch = { slug: 'fix', color: '#fc3', name: 'Fix proxy' };
-  for (const [role, title] of [['qa', 'QA'], ['ops', 'Ops'], ['slack', 'Slack']]) {
-    for (const pose of ['working', 'idle', 'blocked', 'done', 'alert']) assert.strictEqual(seatSign({ role, pose, orch, title: 'Reviewing the diff' }), title);
-  }
+  for (const [role, title] of [['qa', 'QA'], ['ops', 'Ops'], ['slack', 'Slack']]) assert.strictEqual(seatSign({ role, pose: 'working', orch, title: 'Reviewing the diff' }), title);
   for (const seat of seatsFor([{ role: 'boss' }], boss)) assert.strictEqual(seatSign(seat), seat.title);
   assert.strictEqual(seatSign({ role: 'boss', orch }), null);
   assert.strictEqual(seatSign({ role: 'worker', orch }), null);

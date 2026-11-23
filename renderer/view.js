@@ -76,7 +76,7 @@
     return desk.orch && Object.hasOwn(SEATS, desk.role) ? SEATS[desk.role].title : null;
   }
   function seatsFor(desks, o) {
-    const taken = new Set(desks.filter((d) => d.role in SEATS).map((d) => d.role));
+    const taken = new Set(desks.filter((d) => Object.hasOwn(SEATS, d.role)).map((d) => d.role));
     return Object.keys(SEATS).filter((role) => !taken.has(role)).map((role) => ({
       id: `seat:${o.slug}:${role}`, seat: true, kind: 'seat', role, pose: 'empty', character: null,
       title: SEATS[role].title, about: SEATS[role].about, orch: { slug: o.slug, color: o.color, name: o.name }, seq: 0,
