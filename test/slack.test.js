@@ -84,6 +84,14 @@ test('slackDue(): an idle watcher is cleared first, then checked', () => {
   assert.strictEqual(slackDue({ ...base, slack: { interval: 10, phase: 'cleared', cleared_at: now - 3000 }, agent: idle }), 'check');
 });
 
+test('slackDue(): Codex checks on the configured interval while idle', () => {
+  const codex = { ...base, kind: 'codex', agent: idle };
+  assert.strictEqual(slackDue(codex), 'check');
+  assert.strictEqual(slackDue({ ...codex, slack: { interval: 10, last_tick: now - 9 * MIN } }), 'none');
+  assert.strictEqual(slackDue({ ...codex, slack: { interval: 10, last_tick: now - 10 * MIN } }), 'check');
+  assert.strictEqual(slackDue({ ...codex, agent: { ...idle, status: 'working' } }), 'none');
+});
+
 test('slackDue(): waits out the interval, which the user sets', () => {
   assert.strictEqual(slackDue({ ...base, slack: { interval: 10, last_tick: now - 9 * MIN }, agent: idle }), 'none');
   assert.strictEqual(slackDue({ ...base, slack: { interval: 10, last_tick: now - 10 * MIN }, agent: idle }), 'clear');
@@ -108,8 +116,8 @@ test('findSlackAgent() finds the watcher by its folder, or by name', () => {
     { pane_id: 'b', cwd: '/o/x/slackish', agent_status: 'idle' },
     { pane_id: 'c', cwd: '/elsewhere', foreground_cwd: folder, agent_status: 'working' },
   ] };
-  assert.deepStrictEqual(findSlackAgent(snap, folder, 'x-slack'), { pane_id: 'c', status: 'working' });
-  assert.deepStrictEqual(findSlackAgent({ agents: [{ pane_id: 'd', cwd: '/z', name: 'x-slack', agent_status: 'idle' }] }, folder, 'x-slack'), { pane_id: 'd', status: 'idle' });
+  assert.strictEqual(findSlackAgent(snap, folder, 'x-slack').pane_id, 'c');
+  assert.strictEqual(findSlackAgent({ agents: [{ pane_id: 'd', cwd: '/z', name: 'x-slack', agent_status: 'idle' }] }, folder, 'x-slack').pane_id, 'd');
   assert.strictEqual(findSlackAgent({ agents: [] }, folder, 'x-slack'), null);
 });
 
@@ -158,12 +166,72 @@ test('runSlack() opens a tab in the boss workspace in the slack folder and start
   const o = orch({ interval: 10 });
   const store = fakeStore([o]); const client = fakeClient();
   const started = [];
-  store.startAgent = async (pane, name) => { started.push([pane, name]); return name; };
+  store.startAgent = async (...args) => { started.push(args); };
   await runSlack({ store, client, snapshot: { agents: [] }, now });
   assert.deepStrictEqual(client.calls[0], { method: 'tab.create', params: { workspace_id: 'wB', cwd: '/o/x/slack', label: 'slack', focus: false } });
   assert.deepStrictEqual(store.prepared, ['x']); // brief, permissions and trust before Claude starts there
-  assert.deepStrictEqual(started, [['wB:p9', 'x-slack']]);
+  assert.deepStrictEqual(started, [['wB:p9', 'x-slack', [], 'claude']]);
   assert.strictEqual(o.slack.started_at, now);
+});
+
+test('runSlack() retries a busy shell in the same newly created pane', async () => {
+  const o = { ...orch({ interval: 10 }), agent: 'codex' };
+  const store = fakeStore([o]); const client = fakeClient();
+  const attempts = [];
+  store.startAgent = async (...args) => {
+    attempts.push(args);
+    if (attempts.length <= 2) throw Object.assign(new Error('pane is not an available shell'), { code: 'agent_pane_busy' });
+  };
+  await runSlack({ store, client, snapshot: { agents: [] }, now });
+  assert.deepStrictEqual(client.calls.map((call) => call.method), ['tab.create']);
+  assert.deepStrictEqual(attempts, Array.from({ length: 3 }, () => ['wB:p9', 'x-slack', ['--sandbox', 'workspace-write'], 'codex']));
+});
+
+test('runSlack() leaves unknown start outcomes alone', async (t) => {
+  const store = fakeStore([orch({})]); const client = fakeClient();
+  const start = t.mock.method(store, 'startAgent', async () => { throw new Error('agent.start: timeout'); });
+  const warn = t.mock.method(console, 'warn', () => {});
+  await runSlack({ store, client, snapshot: { agents: [] }, now });
+  assert.strictEqual(start.mock.callCount(), 1);
+  assert.deepStrictEqual(client.calls.map((call) => call.method), ['tab.create']);
+  assert.match(warn.mock.calls[0].arguments[0], /agent.start: timeout/);
+});
+
+test('runSlack() starts Codex and sends checks directly at the configured interval', async () => {
+  const o = { ...orch({ interval: 10 }), agent: 'codex' };
+  const store = fakeStore([o]); const client = fakeClient();
+  const started = [];
+  store.startAgent = async (...args) => { started.push(args); };
+  await runSlack({ store, client, snapshot: { agents: [] }, now });
+  assert.deepStrictEqual(started, [['wB:p9', 'x-slack', ['--sandbox', 'workspace-write'], 'codex']]);
+  const snapshot = { agents: [{ pane_id: 'wB:p9', workspace_id: 'wB', cwd: '/o/x/slack', name: 'x-slack', agent: 'codex', agent_status: 'idle' }] };
+  await runSlack({ store, client, snapshot, now: now + 1000 });
+  assert.deepStrictEqual(client.calls.slice(1), [
+    { method: 'agent.prompt', params: { target: 'wB:p9', text: 'Check Slack now: follow "One check" in your AGENTS.md, then stop.' } },
+  ]);
+  assert.strictEqual(o.slack.last_tick, now + 1000);
+  await runSlack({ store, client, snapshot, now: now + 9000 });
+  assert.strictEqual(client.calls.length, 2);
+  await runSlack({ store, client, snapshot, now: now + 10 * MIN + 1000 });
+  assert.deepStrictEqual(client.calls.slice(2), [client.calls[1]]);
+});
+
+test('runSlack() replaces a managed legacy Claude watcher once it is idle', async () => {
+  const o = { ...orch({ interval: 10, phase: 'cleared', started_at: now - 5000, cleared_at: now - 3000, last_tick: now - 3000 }), agent: 'codex' };
+  const store = fakeStore([o]); const client = fakeClient();
+  const started = [];
+  store.startAgent = async (...args) => { started.push(args); };
+  const oldWatcher = { pane_id: 'wB:p3', workspace_id: 'wB', cwd: '/o/x/slack', name: 'x-slack', agent: 'claude', agent_status: 'working' };
+  const snapshot = { agents: [oldWatcher] };
+  await runSlack({ store, client, snapshot, now });
+  assert.deepStrictEqual(client.calls, []);
+  oldWatcher.agent_status = 'idle';
+  await runSlack({ store, client, snapshot, now: now + 1000 });
+  assert.deepStrictEqual(client.calls.map((call) => call.method), ['pane.close', 'tab.create']);
+  assert.deepStrictEqual(client.calls[0].params, { pane_id: 'wB:p3' });
+  assert.deepStrictEqual(started, [['wB:p9', 'x-slack', ['--sandbox', 'workspace-write'], 'codex']]);
+  assert.strictEqual(o.slack.phase, null);
+  assert.strictEqual(o.slack.last_tick, null);
 });
 
 test('runSlack() skips orchestrators that are not running or have no watches', async () => {

@@ -696,7 +696,7 @@ test('every brief has the Times rule with the local zone filled in, for claude, 
       boss: path.join(s.folder(slug), file),
       qa: path.join(s.qaFolder(slug), file),
       ops: path.join(s.opsFolder(slug), file),
-      slack: path.join(s.slackFolder(slug), 'CLAUDE.md'),
+      slack: path.join(s.slackFolder(slug), agent === 'codex' ? 'AGENTS.md' : 'CLAUDE.md'),
     };
     for (const [who, p] of Object.entries(briefs)) {
       const text = fs.readFileSync(p, 'utf8');
@@ -1063,11 +1063,15 @@ test('a Codex orchestrator persists its kind and writes native briefs and skills
   assert.ok(!/CLAUDE\.md|\{\{/.test(skill));
   assert.ok(!fs.existsSync(claudeConfig));
   assert.ok(!fs.existsSync(piTrust));
-  assert.match(fs.readFileSync(path.join(s.slackFolder(json.slug), 'CLAUDE.md'), 'utf8'), /Slack watcher/);
+  const slackFolder = s.slackFolder(json.slug);
+  assert.match(fs.readFileSync(path.join(slackFolder, 'AGENTS.md'), 'utf8'), /Slack watcher/);
+  assert.ok(!fs.existsSync(path.join(slackFolder, 'CLAUDE.md')));
+  assert.ok(!fs.existsSync(path.join(slackFolder, '.claude')));
+  const watchesFile = path.join(slackFolder, 'WATCHES.md');
+  fs.appendFileSync(watchesFile, '- channel #team — Team questions\n');
   s.prepareSlack(json.slug);
-  const cfg = JSON.parse(fs.readFileSync(claudeConfig, 'utf8'));
-  assert.strictEqual(cfg.projects[s.slackFolder(json.slug)].hasTrustDialogAccepted, true);
-  assert.strictEqual(cfg.projects[s.folder(json.slug)], undefined);
+  assert.match(fs.readFileSync(watchesFile, 'utf8'), /#team — Team questions/);
+  assert.ok(!fs.existsSync(claudeConfig));
   s.dispose();
 });
 

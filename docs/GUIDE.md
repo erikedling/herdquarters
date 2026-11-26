@@ -159,9 +159,9 @@ Codex's cwd-filtered lookup and starts fresh when none exists. The app cannot
 distinguish those two outcomes from herdr's readiness response. This avoids
 depending on Codex's private session-storage layout.
 
-The assistant and Slack watcher are fixed-provider Claude services even for
-Codex/Pi orchestrators. They still require Claude Code (and the watcher's Claude
-Slack connector); selecting Codex does not migrate them.
+The Slack watcher also uses Codex for Codex orchestrators and requires a
+connected Slack integration in Codex. Claude and Pi orchestrators use the
+Claude Slack watcher. The office assistant uses Claude Code.
 
 **Boss instructions** (settings) is a free-text box whose contents go into
 every boss's brief as a "Standing instructions from the user" section, for
@@ -206,15 +206,16 @@ Under the boss's whiteboard, **Slack · …** opens a dialog: paste a Slack link
 press Enter to watch it; ✕ stops watching. You can also ask the boss ("watch
 #design-system"), and it adds the thread of any Slack link in a task on its
 own. The list is `slack/WATCHES.md` in the boss's folder. The office runs the
-clock (every 10 minutes by default, set in the dialog): it starts a Claude agent
-in `slack/` (brief: `slack-brief.md`), then before each check types `/clear` and
-sends "Check Slack now", so the agent's context does not grow over the day. Its
-memory is `slack/state.json`. Its `.claude/settings.json` allows the Slack read
-tools and denies every Slack write tool, so it never stops at a permission
-prompt and never posts. In a thread or DM, a message asking you something after
-your last reply counts as waiting. In a channel, so do @-mentions of you or your
-groups, replies in threads you posted in, and unanswered questions to the room
-that look related to the orchestrator's work (when it cannot tell, it counts).
+clock (every 10 minutes by default, set in the dialog). It starts the watcher
+in `slack/` with instructions from `slack-brief.md`. It sends "Check Slack now"
+directly to Codex. For Claude, it types `/clear` first. Its memory is
+`slack/state.json`. Codex uses `AGENTS.md` and workspace-write
+sandboxing in the watcher folder. Claude uses `CLAUDE.md` and
+`.claude/settings.json` with Slack read permissions. In a thread or DM, a message
+asking you something after your last reply counts as waiting. In a channel, so
+do @-mentions of you or your groups, replies in threads you posted in, and
+unanswered questions to the room that look related to the orchestrator's work
+(when it cannot tell, it counts).
 Each one is a file in `slack/waiting/` and shows as one reception ticket per
 orchestrator, with the newest message. The ticket is highlighted while there
 is something you have not seen in the dialog, and again when a message is
