@@ -5,6 +5,8 @@
 // to start the watcher, clear its context or ask it to check.
 // See ../designs/slack-watcher.md.
 
+const { setTimeout: delay } = require('node:timers/promises');
+
 const KINDS = ['thread', 'channel', 'dm'];
 const LINE = /^[-*]\s+(thread|channel|dm)\s+(\S+)(?:\s+[—–-]+\s+(.*))?$/;
 
@@ -53,31 +55,60 @@ function removeWatchLine(raw, target) {
 
 const DEFAULT_INTERVAL = 10; // minutes
 const BOOT_MS = 2 * 60_000;  // a watcher being started gets this long to show up
-const CLEAR_MS = 2000;       // time for /clear to land before the check prompt
+const CLEAR_MS = 2000;
 const IDLE = new Set(['idle', 'done']);
 
 // What to do now for one orchestrator: 'none', 'start', 'clear' or 'check'.
 // slack: the `slack` object in orchestrator.json ({ interval, last_tick,
-// phase, cleared_at, started_at }); agent: { pane_id, status } or null.
-function slackDue({ watches, slack = {}, agent, now }) {
+// phase, cleared_at, started_at }); agent: { status } or null.
+function slackDue({ watches, slack = {}, agent, kind = 'claude', now }) {
   if (!watches) return 'none';
   if (!agent) return slack.started_at && now - slack.started_at < BOOT_MS ? 'none' : 'start';
   if (!IDLE.has(agent.status)) return 'none';
-  if (slack.phase === 'cleared') return now - (slack.cleared_at || 0) >= CLEAR_MS ? 'check' : 'none';
+  if (kind === 'claude' && slack.phase === 'cleared') return now - (slack.cleared_at || 0) >= CLEAR_MS ? 'check' : 'none';
   const interval = (Number(slack.interval) || DEFAULT_INTERVAL) * 60_000;
-  return !slack.last_tick || now - slack.last_tick >= interval ? 'clear' : 'none';
+  if (slack.last_tick && now - slack.last_tick < interval) return 'none';
+  return kind === 'codex' ? 'check' : 'clear';
 }
 
-// The watcher's pane: an agent running in the slack folder (herdr drops the
-// agent name when the process is replaced; the folder stays), else by name.
-function findSlackAgent(snapshot, folder, name) {
-  const agents = snapshot?.agents || [];
-  const a = agents.find((x) => x.cwd === folder || x.foreground_cwd === folder) || agents.find((x) => x.name === name);
-  return a ? { pane_id: a.pane_id, status: a.agent_status } : null;
+// The watcher's pane: an agent in the Slack folder, or one named for the
+// watcher. Prefer the selected kind if a legacy watcher is also present.
+function findSlackAgent(snapshot, folder, name, kind, workspace) {
+  const inFolder = (a) => a.cwd === folder || a.foreground_cwd === folder;
+  const named = (a) => a.name === name
+    || (a.name?.startsWith(name + '-') && /^[2-9]$/.test(a.name.slice(name.length + 1)));
+  const candidates = (snapshot?.agents || []).filter((a) => (
+    (!workspace || !a.workspace_id || a.workspace_id === workspace) && (inFolder(a) || named(a))
+  ));
+  const a = candidates.find((x) => x.agent === kind && inFolder(x))
+    || candidates.find((x) => x.agent === kind)
+    || candidates.find(inFolder)
+    || candidates[0];
+  return a ? {
+    pane_id: a.pane_id,
+    status: a.agent_status,
+    kind: a.agent,
+    managed: !!workspace && a.workspace_id === workspace && inFolder(a) && named(a),
+  } : null;
 }
 
 const slackAgent = (slug) => `${slug}-slack`; // slug is at most 24 characters, so this fits herdr's 32
-const CHECK_PROMPT = 'Check Slack now: follow "One check" in your CLAUDE.md, then stop.';
+const slackAgentKind = (orchestrator) => orchestrator.agent === 'codex' ? 'codex' : 'claude';
+
+async function startSlackAgent(store, pane, name, kind) {
+  const args = kind === 'codex' ? ['--sandbox', 'workspace-write'] : [];
+  const retryDelays = [250, 500, 1000];
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await store.startAgent(pane, name, args, kind);
+    } catch (err) {
+      const retryDelay = retryDelays[attempt];
+      // A newly created tab can be visible before its shell is ready.
+      if (err.code !== 'agent_pane_busy' || retryDelay === undefined) throw err;
+      await delay(retryDelay);
+    }
+  }
+}
 
 const busy = new Set(); // slugs with a start or prompt in flight
 
@@ -87,26 +118,39 @@ async function runSlack({ store, client, snapshot, now = Date.now() }) {
     if (o.status !== 'running' || o.boss?.status !== 'started' || busy.has(o.slug)) return;
     const slack = o.slack || {};
     const folder = store.slackFolder(o.slug);
-    const agent = findSlackAgent(snapshot, folder, slackAgent(o.slug));
-    const action = slackDue({ watches: (slack.watches || []).length, slack, agent, now });
+    const name = slackAgent(o.slug);
+    const kind = slackAgentKind(o);
+    const agent = findSlackAgent(snapshot, folder, name, kind, o.boss.workspace_id);
+    const wrongKind = agent?.kind && agent.kind !== kind;
+    const replace = wrongKind && agent.managed;
+    if (replace && !IDLE.has(agent.status)) return;
+    const action = slackDue({
+      watches: (slack.watches || []).length,
+      slack: replace ? {} : slack,
+      agent: wrongKind ? null : agent,
+      kind,
+      now,
+    });
     if (action === 'none') return;
     busy.add(o.slug);
     try {
       if (action === 'start') {
-        store.slackTick(o.slug, { started_at: now, phase: null });
         store.prepareSlack(o.slug);
+        if (replace) await client.request('pane.close', { pane_id: agent.pane_id });
+        store.slackTick(o.slug, { started_at: now, phase: null, last_tick: null });
         const tab = await client.request('tab.create', { workspace_id: o.boss.workspace_id, cwd: folder, label: 'slack', focus: false });
         const pane = tab.root_pane?.pane_id || tab.pane?.pane_id;
         if (!pane) throw new Error('tab.create returned no pane');
-        await store.startAgent(pane, slackAgent(o.slug));
+        await startSlackAgent(store, pane, name, kind);
       } else if (action === 'clear') {
-        // Typed, not pasted: a pasted "/clear" would be sent to Claude as text.
+        // Type the slash command so Claude handles it as a command.
         await client.request('pane.send_text', { pane_id: agent.pane_id, text: '/clear' });
         await client.request('pane.send_keys', { pane_id: agent.pane_id, keys: ['enter'] });
         store.slackTick(o.slug, { phase: 'cleared', cleared_at: now, last_tick: now });
       } else if (action === 'check') {
-        store.slackTick(o.slug, { phase: null });
-        await client.request('agent.prompt', { target: agent.pane_id, text: CHECK_PROMPT });
+        store.slackTick(o.slug, kind === 'codex' ? { phase: null, last_tick: now } : { phase: null });
+        const brief = kind === 'codex' ? 'AGENTS.md' : 'CLAUDE.md';
+        await client.request('agent.prompt', { target: agent.pane_id, text: `Check Slack now: follow "One check" in your ${brief}, then stop.` });
       }
     } catch (err) {
       console.warn(`slack watcher ${o.slug} (${action}): ${err.message || err}`);
@@ -116,4 +160,4 @@ async function runSlack({ store, client, snapshot, now = Date.now() }) {
   }));
 }
 
-module.exports = { parseWatches, watchFromInput, addWatchLine, removeWatchLine, slackDue, findSlackAgent, slackAgent, runSlack, DEFAULT_INTERVAL };
+module.exports = { parseWatches, watchFromInput, addWatchLine, removeWatchLine, slackDue, findSlackAgent, slackAgent, slackAgentKind, runSlack, DEFAULT_INTERVAL };

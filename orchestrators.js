@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
-const { parseWatches, watchFromInput, addWatchLine, removeWatchLine, DEFAULT_INTERVAL } = require('./slack');
+const { parseWatches, watchFromInput, addWatchLine, removeWatchLine, slackAgentKind, DEFAULT_INTERVAL } = require('./slack');
 
 // git in a checkout; resolves stdout, rejects with stderr in the message.
 function git(cwd, args) {
@@ -543,32 +543,32 @@ class OrchestratorStore {
     this.writeSlackFiles(json);
   }
 
-  // The Slack watcher's brief, permissions and watch list. The watcher always
-  // runs Claude (it reads Slack through Claude's Slack connector), so its brief
-  // is CLAUDE.md whatever the orchestrator's agent kind.
+  // Write the brief for the watcher's provider and keep the existing watch list.
   writeSlackFiles(json) {
     if (!this.slackTemplate) return;
     const folder = this.slackFolder(json.slug);
-    fs.mkdirSync(path.join(folder, '.claude'), { recursive: true });
+    const kind = slackAgentKind(json);
     fs.mkdirSync(this.waitingFolder(json.slug), { recursive: true });
-    writeIfChanged(path.join(folder, 'CLAUDE.md'), this.slackBrief(json));
-    writeIfChanged(path.join(folder, '.claude', 'settings.json'), JSON.stringify(SLACK_SETTINGS, null, 2) + '\n');
+    writeIfChanged(path.join(folder, contextFile(kind)), this.slackBrief(json));
+    if (kind === 'claude') {
+      fs.mkdirSync(path.join(folder, '.claude'), { recursive: true });
+      writeIfChanged(path.join(folder, '.claude', 'settings.json'), JSON.stringify(SLACK_SETTINGS, null, 2) + '\n');
+    }
     // The list belongs to the user and the boss: a restore keeps it.
     if (!fs.existsSync(path.join(folder, 'WATCHES.md'))) fs.writeFileSync(path.join(folder, 'WATCHES.md'), WATCHES_HEAD);
   }
 
-  // Before the watcher starts: an orchestrator created before the watcher
-  // existed, or a Pi one, has no brief, permissions or Claude trust for slack/ yet.
+  // Refresh instructions before starting a watcher in an existing orchestrator.
   prepareSlack(slug) {
-    this.writeSlackFiles(this.read(slug));
-    trustFolder(this.slackFolder(slug), this.claudeConfig);
+    const json = this.read(slug);
+    this.writeSlackFiles(json);
+    if (slackAgentKind(json) === 'claude') trustFolder(this.slackFolder(slug), this.claudeConfig);
   }
 
   // Pre-accepts the agent's trust prompt for the boss, QA and ops folders (see
   // trustFolder, trustPiFolder), and Claude's for the Slack folder of a Claude
-  // orchestrator. Non-Claude orchestrators leave Claude's config alone until
-  // their watcher starts (prepareSlack). Codex manages its own interactive
-  // trust/approval prompts; do not rewrite its global TOML or bypass its sandbox.
+  // orchestrator. Pi's watcher is trusted separately when it starts. Codex
+  // manages its own interactive trust and approval prompts.
   trustFolders(json) {
     if (agentKind(json) === 'codex') return;
     const pi = agentKind(json) === 'pi';

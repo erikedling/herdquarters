@@ -111,7 +111,8 @@ You need:
 - [herdr](https://herdr.dev)
 - [Claude Code](https://claude.com/claude-code), [Pi](https://github.com/badlogic/pi-mono)
   or [Codex CLI](https://developers.openai.com/codex/cli), signed in
-  (the assistant and Slack watcher still require Claude Code)
+  (the office assistant requires Claude Code. The Slack watcher uses Codex
+  for Codex orchestrators and Claude Code otherwise.)
 - [`gh`](https://cli.github.com) for PRs and deploy watching (optional)
 
 ```sh
